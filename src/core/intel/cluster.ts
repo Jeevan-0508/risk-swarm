@@ -179,7 +179,11 @@ export function clusterItems(items: Clusterable[], options: ClusterOptions = {})
   for (const item of items) {
     let target: Cluster | null = null;
     let verdict: PairVerdict | null = null;
+    // At most one possible-duplicate pair per cluster: the closest member, so the count means
+    // "clusters this item might belong to", not "comparisons that happened".
+    const nearMisses: PossibleDuplicatePair[] = [];
     for (const cluster of clusters) {
+      let closest: PossibleDuplicatePair | null = null;
       for (const memberId of cluster.member_ids) {
         const member = items.find((i) => i.id === memberId);
         if (!member) continue;
@@ -189,17 +193,19 @@ export function clusterItems(items: Clusterable[], options: ClusterOptions = {})
           verdict = v;
           break;
         }
-        if (v.possible_duplicate) {
-          possible_duplicate_pairs.push({
+        if (v.possible_duplicate && (!closest || v.score > closest.score)) {
+          closest = {
             a: member.id,
             b: item.id,
             score: Number(v.score.toFixed(3)),
             note: 'similar wording, shared entity and overlapping time window, below the merge threshold',
-          });
+          };
         }
       }
       if (target) break;
+      if (closest) nearMisses.push(closest);
     }
+    if (!target) possible_duplicate_pairs.push(...nearMisses);
 
     if (target && verdict) {
       target.member_ids.push(item.id);
