@@ -1,0 +1,99 @@
+{
+  "schema_version": "1.0",
+  "updated": "2026-09-06",
+  "note": "Requirement summaries are plain-language paraphrases written for operational use. They are not legal text and not legal advice. Always read the cited source.",
+  "frameworks": [
+    {
+      "id": "EUAIA",
+      "name": "EU AI Act",
+      "citation": "Regulation (EU) 2024/1689 of the European Parliament and of the Council of 13 June 2024",
+      "url": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj",
+      "kind": "regulation",
+      "requirements": [
+        {"id":"EUAIA-4","ref":"Art. 4","title":"AI literacy","summary":"Providers and deployers must ensure a sufficient level of AI literacy among staff and others operating AI systems on their behalf.","applies":{"roles":["provider","deployer"],"tiers":["prohibited","high","limited","minimal"]}},
+        {"id":"EUAIA-5","ref":"Art. 5","title":"Prohibited AI practices","summary":"Certain practices are banned outright, including manipulative techniques causing significant harm, exploitation of vulnerability, social scoring, untargeted facial scraping and workplace or education emotion inference.","applies":{"roles":["provider","deployer"],"tiers":["prohibited"]}},
+        {"id":"EUAIA-6","ref":"Art. 6 + Annex III","title":"High-risk classification","summary":"A system is high-risk if it is a safety component of a regulated product or falls in an Annex III use case, unless a documented derogation assessment shows it does not pose a significant risk.","applies":{"roles":["provider","deployer"],"tiers":["high"]}},
+        {"id":"EUAIA-9","ref":"Art. 9","title":"Risk management system","summary":"A continuous, documented, iterative risk management system across the whole lifecycle: identify and evaluate known and foreseeable risks, adopt mitigations, and test that they work.","applies":{"roles":["provider"],"tiers":["high"]}},
+        {"id":"EUAIA-10","ref":"Art. 10","title":"Data and data governance","summary":"Training, validation and testing data must be governed: relevance, representativeness, bias examination and mitigation, and documented provenance and preparation.","applies":{"roles":["provider"],"tiers":["high"]}},
+        {"id":"EUAIA-11","ref":"Art. 11 + Annex IV","title":"Technical documentation","summary":"Technical documentation drawn up before placing on the market and kept up to date, sufficient to demonstrate conformity to authorities.","applies":{"roles":["provider"],"tiers":["high"]}},
+        {"id":"EUAIA-12","ref":"Art. 12","title":"Record-keeping and logging","summary":"Automatic recording of events over the system's lifetime, enabling traceability of situations that may create risk or trigger substantial modification.","applies":{"roles":["provider"],"tiers":["high"]}},
+        {"id":"EUAIA-13","ref":"Art. 13","title":"Transparency and information to deployers","summary":"Instructions for use that state capabilities, limitations, accuracy metrics, foreseeable misuse, human oversight measures and expected lifetime.","applies":{"roles":["provider"],"tiers":["high"]}},
+        {"id":"EUAIA-14","ref":"Art. 14","title":"Human oversight","summary":"Design and build the system so that natural persons can effectively oversee it: understand its limits, interpret output, decide not to use it, and intervene or stop it.","applies":{"roles":["provider","deployer"],"tiers":["high"]}},
+        {"id":"EUAIA-15","ref":"Art. 15","title":"Accuracy, robustness and cybersecurity","summary":"Appropriate levels of accuracy, robustness and cybersecurity throughout the lifecycle, with declared metrics and resilience to error, fault and adversarial attack including data poisoning.","applies":{"roles":["provider"],"tiers":["high"]}},
+        {"id":"EUAIA-17","ref":"Art. 17","title":"Quality management system","summary":"A documented QMS covering regulatory compliance strategy, design and testing procedures, data management, risk management, post-market monitoring and accountability.","applies":{"roles":["provider"],"tiers":["high"]}},
+        {"id":"EUAIA-26","ref":"Art. 26","title":"Deployer obligations","summary":"Use the system per instructions, assign competent human oversight, ensure input data relevance, monitor operation, keep logs, and inform workers before workplace deployment.","applies":{"roles":["deployer"],"tiers":["high"]}},
+        {"id":"EUAIA-27","ref":"Art. 27","title":"Fundamental rights impact assessment","summary":"Certain deployers (public bodies, and private bodies in creditworthiness and life or health insurance pricing) must assess the impact on fundamental rights before first use.","applies":{"roles":["deployer"],"tiers":["high"],"conditions":["fria_trigger"]}},
+        {"id":"EUAIA-43","ref":"Art. 43","title":"Conformity assessment","summary":"Undergo the applicable conformity assessment procedure before placing on the market, and again after substantial modification.","applies":{"roles":["provider"],"tiers":["high"]}},
+        {"id":"EUAIA-49","ref":"Art. 49","title":"Registration in the EU database","summary":"Register the high-risk system, or the derogation assessment, in the EU database before placing on the market or putting into service.","applies":{"roles":["provider","deployer"],"tiers":["high"]}},
+        {"id":"EUAIA-50","ref":"Art. 50","title":"Transparency for specific systems","summary":"Tell people they are interacting with an AI system, mark synthetic content in machine-readable form, and disclose deep fakes and emotion or biometric categorisation.","applies":{"roles":["provider","deployer"],"tiers":["high","limited"],"conditions":["interacts_with_people","generates_content","biometric_categorisation"]}},
+        {"id":"EUAIA-53","ref":"Art. 53","title":"General-purpose AI model obligations","summary":"GPAI model providers must keep technical documentation, publish a training-content summary and operate a copyright policy.","applies":{"roles":["provider"],"conditions":["gpai_model_provider"]}},
+        {"id":"EUAIA-72","ref":"Art. 72","title":"Post-market monitoring","summary":"A documented post-market monitoring plan that actively and systematically collects and analyses performance data over the system's lifetime.","applies":{"roles":["provider"],"tiers":["high"]}},
+        {"id":"EUAIA-73","ref":"Art. 73","title":"Serious incident reporting","summary":"Report serious incidents to the market surveillance authority of the Member State where the incident occurred, within the deadlines set by the Article.","applies":{"roles":["provider","deployer"],"tiers":["high"]}},
+        {"id":"EUAIA-86","ref":"Art. 86","title":"Right to explanation of individual decisions","summary":"Affected persons subject to an Annex III decision have the right to a clear and meaningful explanation of the role of the AI system in the decision procedure.","applies":{"roles":["deployer"],"tiers":["high"],"conditions":["affects_individuals"]}}
+      ]
+    },
+    {
+      "id": "GDPR",
+      "name": "GDPR",
+      "citation": "Regulation (EU) 2016/679",
+      "url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+      "kind": "regulation",
+      "requirements": [
+        {"id":"GDPR-5","ref":"Art. 5","title":"Principles of processing","summary":"Lawfulness, fairness and transparency, purpose limitation, data minimisation, accuracy, storage limitation, integrity and confidentiality, and demonstrable accountability.","applies":{"conditions":["personal_data"]}},
+        {"id":"GDPR-6","ref":"Art. 6","title":"Lawful basis","summary":"Each processing purpose needs an identified and documented lawful basis; a legitimate-interests basis needs a balancing assessment.","applies":{"conditions":["personal_data"]}},
+        {"id":"GDPR-9","ref":"Art. 9","title":"Special category data","summary":"Processing of special category data, including biometric data for unique identification, is prohibited unless a specific condition applies.","applies":{"conditions":["special_category_data"]}},
+        {"id":"GDPR-13","ref":"Art. 13-14","title":"Information to data subjects","summary":"Tell people what is done with their data, including the existence of automated decision-making and the logic involved.","applies":{"conditions":["personal_data"]}},
+        {"id":"GDPR-15","ref":"Art. 15","title":"Right of access","summary":"People can obtain confirmation, a copy of their data and meaningful information about automated decision-making applied to them.","applies":{"conditions":["personal_data"]}},
+        {"id":"GDPR-22","ref":"Art. 22","title":"Automated individual decision-making","summary":"Solely automated decisions with legal or similarly significant effect are restricted, and where permitted require human intervention, an explanation and the right to contest.","applies":{"conditions":["automated_decision"]}},
+        {"id":"GDPR-25","ref":"Art. 25","title":"Data protection by design and by default","summary":"Implement technical and organisational measures, including pseudonymisation and minimisation, at design time and by default.","applies":{"conditions":["personal_data"]}},
+        {"id":"GDPR-30","ref":"Art. 30","title":"Records of processing","summary":"Maintain a record of processing activities, including purposes, categories, recipients, transfers and retention.","applies":{"conditions":["personal_data"]}},
+        {"id":"GDPR-32","ref":"Art. 32","title":"Security of processing","summary":"Security appropriate to the risk, including confidentiality, integrity, availability and resilience, and regular testing of measures.","applies":{"conditions":["personal_data"]}},
+        {"id":"GDPR-35","ref":"Art. 35","title":"Data protection impact assessment","summary":"A DPIA is required where processing is likely to result in high risk, including systematic evaluation by automated means and large-scale special category processing.","applies":{"conditions":["dpia_trigger"]}},
+        {"id":"GDPR-44","ref":"Art. 44-49","title":"International transfers","summary":"Transfers outside the EEA need an adequacy decision, appropriate safeguards or a derogation, plus a transfer risk assessment where relevant.","applies":{"conditions":["third_country_transfer"]}}
+      ]
+    },
+    {
+      "id": "ISO42001",
+      "name": "ISO/IEC 42001",
+      "citation": "ISO/IEC 42001:2023 - Artificial intelligence management system",
+      "url": "https://www.iso.org/standard/81230.html",
+      "kind": "management_standard",
+      "requirements": [
+        {"id":"ISO42001-5.2","ref":"Cl. 5.2","title":"AI policy","summary":"Top management establishes an AI policy appropriate to the organisation's purpose, communicated and available to interested parties.","applies":{}},
+        {"id":"ISO42001-6.1.4","ref":"Cl. 6.1.4","title":"AI system impact assessment","summary":"Assess the potential consequences of AI systems for individuals, groups and society throughout the lifecycle.","applies":{}},
+        {"id":"ISO42001-A.2","ref":"Annex A.2","title":"Policies related to AI","summary":"Documented AI policies, reviewed at planned intervals and aligned with other organisational policies.","applies":{}},
+        {"id":"ISO42001-A.3","ref":"Annex A.3","title":"Internal organisation","summary":"Defined AI roles, responsibilities and reporting of concerns, including accountability for AI system outcomes.","applies":{}},
+        {"id":"ISO42001-A.4","ref":"Annex A.4","title":"Resources for AI systems","summary":"Document the resources the AI system depends on: data, tooling, compute, human competence and model provenance.","applies":{}},
+        {"id":"ISO42001-A.5","ref":"Annex A.5","title":"Assessing impacts of AI systems","summary":"A defined process for AI system impact assessment, including impacts on individuals and societies, and its documentation.","applies":{}},
+        {"id":"ISO42001-A.6","ref":"Annex A.6","title":"AI system lifecycle","summary":"Objectives, requirements, design, verification, validation, deployment, operation and monitoring defined and documented for each system.","applies":{}},
+        {"id":"ISO42001-A.7","ref":"Annex A.7","title":"Data for AI systems","summary":"Data provenance, quality, preparation and governance controls for data used in AI systems.","applies":{}},
+        {"id":"ISO42001-A.8","ref":"Annex A.8","title":"Information for interested parties","summary":"Provide the information needed by users and affected parties, including intended use, limitations and how to raise concerns.","applies":{}},
+        {"id":"ISO42001-A.9","ref":"Annex A.9","title":"Use of AI systems","summary":"Responsible use processes, including intended use boundaries and human oversight in operation.","applies":{}},
+        {"id":"ISO42001-A.10","ref":"Annex A.10","title":"Third-party and customer relationships","summary":"Allocate and manage responsibilities across suppliers, model providers and customers in the AI value chain.","applies":{"conditions":["third_party_model"]}}
+      ]
+    },
+    {
+      "id": "NIST",
+      "name": "NIST AI RMF",
+      "citation": "NIST AI Risk Management Framework 1.0 (AI 100-1), January 2023",
+      "url": "https://www.nist.gov/itl/ai-risk-management-framework",
+      "kind": "voluntary_framework",
+      "requirements": [
+        {"id":"NIST-GOVERN-1.1","ref":"GOVERN 1.1","title":"Legal and regulatory requirements understood","summary":"Legal and regulatory requirements involving AI are understood, managed and documented.","applies":{}},
+        {"id":"NIST-GOVERN-2.1","ref":"GOVERN 2.1","title":"Roles and accountability","summary":"Roles, responsibilities and lines of communication for AI risk are documented and clear to those involved.","applies":{}},
+        {"id":"NIST-GOVERN-4.1","ref":"GOVERN 4.1","title":"Risk culture and critical thinking","summary":"Organisational practices are in place that enable critical thinking and a safety-first mindset in AI design and deployment.","applies":{}},
+        {"id":"NIST-GOVERN-6.1","ref":"GOVERN 6.1","title":"Third-party risk","summary":"Policies address AI risks arising from third-party software, data and models.","applies":{"conditions":["third_party_model"]}},
+        {"id":"NIST-MAP-1.1","ref":"MAP 1.1","title":"Context established","summary":"Intended purpose, setting, deployment context and expected users are understood and documented.","applies":{}},
+        {"id":"NIST-MAP-2.3","ref":"MAP 2.3","title":"Scientific integrity and TEVV","summary":"Test, evaluation, verification and validation are documented and mapped to the intended purpose.","applies":{}},
+        {"id":"NIST-MAP-5.1","ref":"MAP 5.1","title":"Impacts on individuals and society","summary":"Likelihood and magnitude of impacts on individuals, groups, communities and society are assessed.","applies":{}},
+        {"id":"NIST-MEASURE-2.3","ref":"MEASURE 2.3","title":"Performance demonstrated","summary":"AI system performance and assurance criteria are measured and demonstrated in conditions similar to deployment.","applies":{}},
+        {"id":"NIST-MEASURE-2.7","ref":"MEASURE 2.7","title":"Security and resilience evaluated","summary":"Security and resilience of the AI system are evaluated and documented, including adversarial testing.","applies":{}},
+        {"id":"NIST-MEASURE-2.11","ref":"MEASURE 2.11","title":"Fairness and bias evaluated","summary":"Fairness and bias are evaluated and results documented, including for subgroups.","applies":{}},
+        {"id":"NIST-MEASURE-3.1","ref":"MEASURE 3.1","title":"Risk tracking mechanisms","summary":"Approaches for tracking identified and emergent AI risks over time are in place.","applies":{}},
+        {"id":"NIST-MANAGE-2.2","ref":"MANAGE 2.2","title":"Mechanisms to sustain value","summary":"Mechanisms are in place to supersede, disengage or deactivate systems that demonstrate unintended behaviour.","applies":{}},
+        {"id":"NIST-MANAGE-4.1","ref":"MANAGE 4.1","title":"Post-deployment monitoring plan","summary":"Post-deployment monitoring plans are implemented, including capture and response to incidents and user feedback.","applies":{}},
+        {"id":"NIST-MANAGE-4.3","ref":"MANAGE 4.3","title":"Incident communication","summary":"Incidents and errors are communicated to relevant AI actors, affected communities and authorities.","applies":{}}
+      ]
+    }
+  ]
+}

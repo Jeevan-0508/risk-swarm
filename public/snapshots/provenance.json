@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0",
+  "synced_at": "2026-09-12T19:09:48.281Z",
+  "synced_by": "scripts/sync-snapshots.mjs",
+  "sources": [
+    {
+      "key": "fomo",
+      "upstream_repo": "FOMO",
+      "upstream_url": "https://github.com/Jeevan-0508/FOMO",
+      "commit": "451c5c989df259553e0acc9f041dea274e929857",
+      "note": "External freight/logistics risk signals discovered by the FOMO scanner (Google News RSS).",
+      "files": [
+        {
+          "upstream_path": "data/signals.json",
+          "path": "fomo/signals.json",
+          "bytes": 564433,
+          "sha256": "0248d25e202ce0e940cc26209e4882e78de2848b40f4a965cae28be40a897dfd"
+        }
+      ]
+    },
+    {
+      "key": "freight-risk-atlas",
+      "upstream_repo": "freight-risk-atlas",
+      "upstream_url": "https://github.com/Jeevan-0508/freight-risk-atlas",
+      "commit": "fc1a66dc387bdd410eeaaf55220882097eeaef0b",
+      "note": "Freight & Carrier Fraud Risk Taxonomy model as synced into the Atlas (patterns, indicators, false positives, countermeasures, regulatory hooks).",
+      "files": [
+        {
+          "upstream_path": "data/taxonomy.json",
+          "path": "freight-risk-atlas/taxonomy.json",
+          "bytes": 93972,
+          "sha256": "bd31aafa361deea478d54508bf776589646a63442e724f7d5b09b72e626aa456"
+        }
+      ]
+    },
+    {
+      "key": "ai-governance-control-room",
+      "upstream_repo": "ai-governance-control-room",
+      "upstream_url": "https://github.com/Jeevan-0508/ai-governance-control-room",
+      "commit": "07f47ca6fd7a7e57c1d79c0837d9250215bf1801",
+      "note": "Regulatory frameworks with cited requirements, and the control catalogue mapped to them.",
+      "files": [
+        {
+          "upstream_path": "data/frameworks.json",
+          "path": "ai-governance-control-room/frameworks.json",
+          "bytes": 16246,
+          "sha256": "2a690b4d9eed2b7a380c80ac4fd2b5b457ec0f1c4edbba50c5e0b10ceacd1108"
+        },
+        {
+          "upstream_path": "data/controls.json",
+          "path": "ai-governance-control-room/controls.json",
+          "bytes": 15945,
+          "sha256": "209d3a415923e71f3e2603615bd942d269bbcab251c1eb1fc1c65be45392dfbf"
+        }
+      ]
+    }
+  ]
+}
