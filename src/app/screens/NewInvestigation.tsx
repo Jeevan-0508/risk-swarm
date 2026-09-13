@@ -33,6 +33,10 @@ const BUDGETS = [
 
 const iso = (d: string) => new Date(`${d}T00:00:00.000Z`).toISOString();
 
+/** One entry per line. Empty lines are dropped rather than sent as a blank query. */
+const lines = (text: string) => text.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+const asText = (values: string[]) => values.join('\n');
+
 export function NewInvestigation() {
   const { start, select, mode, control } = useSession();
   const navigate = useNavigate();
@@ -142,10 +146,48 @@ export function NewInvestigation() {
         </Panel>
       </div>
 
+      {mode === 'LIVE' && (
+        <Panel title="live retrieval" aside={<span className="text-2xs text-fg-mute">operator-configured</span>}>
+          <p className="text-xs leading-relaxed text-fg-dim">
+            In LIVE mode the scout retrieves from public feeds instead of the pinned snapshot. The taxonomy and
+            governance snapshots stay pinned in every mode, and tier still follows source type — a live item can add
+            evidence, never promote it.
+          </p>
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <Field label="news search terms" hint="One per line. Sent verbatim to the news feed; nothing is inferred from the question.">
+              <textarea rows={4} value={asText(form.live.terms)}
+                onChange={(e) => setForm((f) => ({ ...f, live: { ...f.live, terms: lines(e.target.value) } }))}
+                className={`${inputClass} resize-none font-mono text-2xs leading-relaxed`} />
+            </Field>
+            <Field label="regulatory feed urls" hint="Tier 1. Left empty by default: no endpoint is invented for you.">
+              <textarea rows={4} value={asText(form.live.regulatory)}
+                onChange={(e) => setForm((f) => ({ ...f, live: { ...f.live, regulatory: lines(e.target.value) } }))}
+                placeholder="https://…/rss"
+                className={`${inputClass} resize-none font-mono text-2xs leading-relaxed`} />
+            </Field>
+            <Field label="industry feed urls" hint="Tier 2.">
+              <textarea rows={3} value={asText(form.live.industry)}
+                onChange={(e) => setForm((f) => ({ ...f, live: { ...f.live, industry: lines(e.target.value) } }))}
+                className={`${inputClass} resize-none font-mono text-2xs leading-relaxed`} />
+            </Field>
+            <Field label="other web feed urls" hint="Tier 3.">
+              <textarea rows={3} value={asText(form.live.web)}
+                onChange={(e) => setForm((f) => ({ ...f, live: { ...f.live, web: lines(e.target.value) } }))}
+                className={`${inputClass} resize-none font-mono text-2xs leading-relaxed`} />
+            </Field>
+          </div>
+          <p className="mt-4 hair-t pt-3 text-xs leading-relaxed text-caution">
+            A browser cannot read a feed that forbids cross-origin access. Every blocked, failed or unparseable feed is
+            listed on the provenance screen with its reason. None of them is substituted, guessed or filled in.
+          </p>
+        </Panel>
+      )}
+
       <div className="flex items-center justify-between gap-6 hair bg-ink-800 px-4 py-3">
         <p className="text-xs leading-relaxed text-fg-mute">
-          Nothing is sent anywhere. No email, no external system, no consequential action — the run ends at a
-          recommendation awaiting your verdict.
+          {mode === 'LIVE'
+            ? 'Public feeds are read. Nothing is written anywhere, no email, no external system, no consequential action — the run ends at a recommendation awaiting your verdict.'
+            : 'Nothing is sent anywhere. No email, no external system, no consequential action — the run ends at a recommendation awaiting your verdict.'}
         </p>
         <Button onClick={submit} disabled={!ready || control !== null}>start investigation</Button>
       </div>

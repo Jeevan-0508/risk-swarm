@@ -24,8 +24,10 @@ const TIER_SOURCE: Record<number, string> = {
 };
 
 export function Provenance() {
-  const { active, mode } = useSession();
-  const result = active()?.result ?? null;
+  const { active, mode, retrieval } = useSession();
+  const run = active();
+  const result = run?.result ?? null;
+  const fetched = run === null ? undefined : retrieval[run.id];
   const [doc, setDoc] = useState<ProvenanceDoc | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,6 +63,41 @@ export function Provenance() {
       <Panel title="mode in force" aside={<Tag tone={mode === 'LIVE' ? 'caution' : 'support'}>{mode}</Tag>}>
         <p className="text-sm leading-relaxed text-fg-dim">{MODE_NOTE[mode]}</p>
       </Panel>
+
+      {fetched !== undefined && (
+        <Panel title={`live retrieval · this run`} flush
+          aside={<span className="num text-2xs text-fg-mute">{fetched.feeds.length} read · {fetched.failures.length} unavailable</span>}>
+          {fetched.feeds.length === 0 && fetched.failures.length === 0 ? <Empty>No live endpoint was configured.</Empty> : (
+            <ul className="divide-y divide-line">
+              {fetched.feeds.map((f) => (
+                <li key={`${f.source_key}:${f.endpoint}`} className="px-4 py-2.5">
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <Tag tone="support">{f.source_key}</Tag>
+                    <span className="num text-2xs text-fg-mute">{(f.bytes / 1024).toFixed(1)} kB · {f.items.length} item(s)</span>
+                  </div>
+                  <p className="num mt-1 break-all text-2xs text-fg-dim">{f.endpoint}</p>
+                  <p className="num mt-0.5 break-all text-2xs text-fg-mute">hash {f.content_hash}</p>
+                </li>
+              ))}
+              {fetched.failures.map((f) => (
+                <li key={`${f.source_key}:${f.endpoint}:${f.kind}`} className="px-4 py-2.5">
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <Tag tone="block">{f.kind}</Tag>
+                    <span className="text-2xs text-fg-dim">{f.source_key}</span>
+                  </div>
+                  <p className="num mt-1 break-all text-2xs text-fg-mute">{f.endpoint}</p>
+                  <p className="mt-0.5 text-xs leading-snug text-caution">{f.reason}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="hair-t px-4 py-2.5 text-xs leading-relaxed text-fg-mute">
+            A feed that could not be read is listed with its reason and contributes nothing. It is never replaced
+            with a plausible substitute. These hashes are session-only: a refetch produces different bytes, so they
+            are not persisted as if they were pinned.
+          </p>
+        </Panel>
+      )}
 
       <Panel title="pinned snapshots" flush>
         {doc === null ? <Empty>{error ?? 'Loading provenance…'}</Empty> : (

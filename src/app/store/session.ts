@@ -5,11 +5,12 @@
 import { create } from 'zustand';
 import type { PhaseLogEntry, RunResult } from '@core/orchestrator/run';
 import type { Budget } from '@core/agents/harness';
-import { DEMO_INPUT, runOptions, startRun, type Mode, type StartInput } from '@app/lib/engine';
+import { DEMO_INPUT, liveSignalSource, runOptions, startRun, type Mode, type StartInput } from '@app/lib/engine';
 import { forget, forgetAll, persist, persistLessons, restore, restoreLessons } from '@app/lib/persist';
 import { Lesson, Outcome } from '@core/domain/model';
 import { Minter, fixedClock } from '@core/domain/build';
 import { activeLessons, buildLesson, buildOutcome, proposeLesson, vetLesson, type LessonLedgerEntry } from '@core/learning/lessons';
+import type { LiveFetchResult } from '@core/sources/types';
 
 export type RunStatus = 'running' | 'complete' | 'stopped' | 'failed';
 
@@ -48,6 +49,8 @@ interface SessionState {
   live: PhaseLogEntry[];
   /** True only between start and settle. `live` keeps the last run's phases, so it cannot stand in for this. */
   running: boolean;
+  /** What LIVE retrieval actually fetched, per run. Session-only: a hash is worth nothing once refetched. */
+  retrieval: Record<string, LiveFetchResult>;
   spent: Budget | null;
   control: { abort: (reason: string) => void } | null;
   setMode: (mode: Mode) => void;
@@ -76,6 +79,7 @@ export const useSession = create<SessionState>()((set, get) => ({
   activeId: null,
   live: [],
   running: false,
+  retrieval: {},
   spent: null,
   control: null,
 
@@ -103,7 +107,10 @@ export const useSession = create<SessionState>()((set, get) => ({
             set((s) => ({ live: [...s.live, entry], spent }));
             await sleep(PHASE_PACE_MS);
           },
-        }, mode === 'DEMO' ? [] : activeLessonNodes(get().lessons)),
+        }, mode === 'DEMO' ? [] : activeLessonNodes(get().lessons),
+          mode === 'LIVE'
+            ? liveSignalSource(input, new Date().toISOString(), (r) => set((s) => ({ retrieval: { ...s.retrieval, [id]: r } })))
+            : undefined),
       );
       patch({ status: 'complete', result });
       const stored = get().runs.find((r) => r.id === id);
