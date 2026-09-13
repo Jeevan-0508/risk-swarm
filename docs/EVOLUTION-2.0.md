@@ -88,6 +88,20 @@ for UI phases -> commit -> push. Pages redeploys automatically on push.
   id specifically targeting SENTINEL's own checks, a poisoned snapshot file list, a graph built to
   pass schema/graph integrity but fail citation validity in a stealthier way) — planned for phase H,
   not duplicated per-phase.
+- **Post-push browser verification caught two real bugs SENTINEL going live surfaced, both fixed in
+  `7ca294b`**: (1) `serialize.ts` never round-tripped `RunResult.sentinel` through localStorage, so
+  every rehydrated run crashed the whole Provenance render on `result.sentinel.status` being
+  undefined — `STORE_VERSION` bumped 1->2, a pre-SENTINEL stored record is now dropped rather than
+  patched, matching the existing append-only persistence policy. (2) `intelligence.ts` put cluster
+  ids (never minted as graph nodes — only `Cluster.member_ids` are) into two `Observation.inputs`
+  arrays, which SENTINEL correctly read as 24 dangling citations; fixed at the source, those
+  observations now cite the real member signals. A regression test runs SENTINEL over the actual
+  `investigate()` output (not a hand-built graph) and pins the one legitimate remaining WARNING
+  (`duplicate_integrity`, two governance citations sharing a framework-level eur-lex URL — real, not
+  a defect). **Lesson for every future phase**: a hand-built minimal test graph proves the checker's
+  logic works but cannot prove the checker is *true of the real system* — run every new checker over
+  a real `investigate()` output at least once before calling a phase verified, not just its own unit
+  tests. 200/200 after this fix, tsc clean, build clean, browser-confirmed rendering.
 
 ## Next session: PULSE (phase C)
 
