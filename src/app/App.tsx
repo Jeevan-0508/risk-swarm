@@ -6,6 +6,7 @@ import { Dot, Tag } from '@app/ui/kit';
 import { CommandCenter } from '@app/screens/CommandCenter';
 import { NewInvestigation } from '@app/screens/NewInvestigation';
 import { AgentConsole } from '@app/screens/AgentConsole';
+import { DisagreementRoom } from '@app/screens/DisagreementRoom';
 import { EvidenceGraph } from '@app/screens/EvidenceGraph';
 
 const NAV: Array<{ to: string; n: string; label: string }> = [
@@ -110,7 +111,7 @@ export function App() {
           <Route path="/new" element={<NewInvestigation />} />
           <Route path="/console" element={<AgentConsole />} />
           <Route path="/graph" element={<EvidenceGraph />} />
-          <Route path="/disagreement" element={<Stub name="Disagreement Room" />} />
+          <Route path="/disagreement" element={<DisagreementRoom />} />
           <Route path="/redteam" element={<Stub name="Red Team" />} />
           <Route path="/brief" element={<Stub name="Decision Brief" />} />
           <Route path="/history" element={<Stub name="History" />} />
