@@ -5,6 +5,10 @@
 import { createFetchLoader, type SnapshotLoader } from '@core/integrations/loader';
 import { investigate, type InvestigateOptions, type RunResult } from '@core/orchestrator/run';
 import type { Lesson } from '@core/domain/model';
+import { createLiveSource } from '@core/sources/live';
+import { contentHash } from '@core/sources/hash';
+import { industrySource, newsSource, regulatorySource, webSource } from '@core/sources/registry';
+import type { FeedFailure, FetchedFeed, LiveSource } from '@core/sources/types';
 
 export type Mode = 'DEMO' | 'SNAPSHOT' | 'LIVE';
 
@@ -22,6 +26,14 @@ export function snapshotLoader(): SnapshotLoader {
   return createFetchLoader(base);
 }
 
+export interface LiveConfig {
+  /** Search terms sent to the news feed. Nothing is inferred from the question text. */
+  terms: string[];
+  regulatory: string[];
+  industry: string[];
+  web: string[];
+}
+
 export interface StartInput {
   question: string;
   geo: string[];
@@ -32,6 +44,7 @@ export interface StartInput {
   budget: { agent_call: number; retrieval: number; tokens: number };
   automatedAction: boolean;
   reversibility: 'reversible' | 'hard_to_reverse' | 'irreversible';
+  live: LiveConfig;
 }
 
 export const DEMO_INPUT: StartInput = {
@@ -44,7 +57,28 @@ export const DEMO_INPUT: StartInput = {
   budget: { agent_call: 24, retrieval: 400, tokens: 120_000 },
   automatedAction: false,
   reversibility: 'hard_to_reverse',
+  live: {
+    terms: ['freight fraud Germany', 'Frachtbetrug Spedition', 'phantom carrier haulage'],
+    regulatory: [],
+    industry: [],
+    web: [],
+  },
 };
+
+/** Built only for LIVE mode. The taxonomy and governance snapshots stay pinned in every mode. */
+export function liveSignalSource(input: StartInput, now: string, onResult: (r: { feeds: FetchedFeed[]; failures: FeedFailure[] }) => void) {
+  const sources: LiveSource[] = [newsSource()];
+  if (input.live.regulatory.length > 0) sources.push(regulatorySource(input.live.regulatory));
+  if (input.live.industry.length > 0) sources.push(industrySource(input.live.industry));
+  if (input.live.web.length > 0) sources.push(webSource(input.live.web));
+  return createLiveSource({
+    sources,
+    query: { terms: input.live.terms, geo: input.geo },
+    deps: { fetchImpl: globalThis.fetch.bind(globalThis), hash: contentHash },
+    now,
+    onResult,
+  });
+}
 
 export function runOptions(
   input: StartInput,
@@ -52,6 +86,7 @@ export function runOptions(
   runId: string,
   hooks: Pick<InvestigateOptions, 'onPhase' | 'onStart'>,
   lessons: Lesson[] = [],
+  signals?: InvestigateOptions['signals'],
 ): InvestigateOptions {
   return {
     loader: snapshotLoader(),
@@ -64,6 +99,7 @@ export function runOptions(
     automatedAction: input.automatedAction,
     reversibility: input.reversibility,
     lessons,
+    signals,
     ...hooks,
   };
 }

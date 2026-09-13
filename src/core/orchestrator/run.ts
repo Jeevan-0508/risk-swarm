@@ -22,6 +22,7 @@ import { runRedTeam, type RedTeamOutput } from '../agents/redteam';
 import { runDecision, type DecisionOutput } from '../agents/decision';
 import { createHarness, type Budget, type Harness } from '../agents/harness';
 import type { SnapshotLoader } from '../integrations/loader';
+import type { SignalSource } from '../integrations/fomo';
 import type { Reasoner } from '../reasoner/types';
 
 /** Defects in how the investigation was built. Re-running the chain can actually fix these. */
@@ -37,6 +38,8 @@ export interface InvestigateOptions {
   minFreightRelevance?: number;
   indicatorStates?: Record<string, IndicatorState>;
   lessons?: Lesson[];
+  /** Replaces the pinned signal snapshot. Everything else stays pinned, so only discovery goes live. */
+  signals?: SignalSource;
   reasoner?: Reasoner;
   budget?: Partial<Budget>;
   maxRework?: number;
@@ -91,6 +94,7 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
     run_id: options.run_id,
     now: options.now,
     reasoner: options.reasoner,
+    signals: options.signals,
     budget: options.budget,
   });
   const { ctx } = harness;

@@ -4,7 +4,7 @@
  */
 import { Minter, fixedClock } from '../domain/build';
 import { createAtlasMatcher } from '../integrations/atlas';
-import { createFomoSource } from '../integrations/fomo';
+import { createFomoSource, type SignalSource } from '../integrations/fomo';
 import { createGovernanceMapper } from '../integrations/governance';
 import { createDeterministicReasoner } from '../reasoner/deterministic';
 import type { SnapshotLoader } from '../integrations/loader';
@@ -45,6 +45,8 @@ export function createHarness(options: {
   now: string;
   reasoner?: Reasoner;
   budget?: Partial<Budget>;
+  /** LIVE mode supplies its own signal source. The taxonomy and governance snapshots stay pinned. */
+  signals?: SignalSource;
 }): Harness {
   const budget = { ...DEFAULT_BUDGET, ...options.budget };
   const spent: Budget = { agent_call: 0, retrieval: 0, tokens: 0 };
@@ -56,7 +58,8 @@ export function createHarness(options: {
     now: options.now,
     reasoner: options.reasoner ?? createDeterministicReasoner(),
     tools: {
-      signals: createFomoSource(options.loader),
+      // A live source may be supplied in place of the pinned snapshot. Nothing downstream branches on it.
+      signals: options.signals ?? createFomoSource(options.loader),
       atlas: createAtlasMatcher(options.loader),
       governance: createGovernanceMapper(options.loader),
     },
