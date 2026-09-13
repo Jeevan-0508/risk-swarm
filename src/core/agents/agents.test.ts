@@ -6,10 +6,11 @@ import { runIntelligence } from './intelligence';
 import { runAnalyst, type AnalystFinding } from './analyst';
 import { runGovernance } from './governance';
 import { runChallenger } from './challenger';
-import { runRedTeam } from './redteam';
+import { RED_TEAM_CHECKS, runRedTeam } from './redteam';
 import { runDecision } from './decision';
 import { computeScore, type EvidenceRef } from '../scoring/score';
 import { DEFAULT_POLICY } from '../scoring/policy';
+import { RedTeamClass } from '../domain/model';
 
 const NOW = '2026-09-13T00:00:00.000Z';
 const SCOPE = { geo: ['DE', 'AT', 'CH'], mode: ['road'], from: '2024-09-01T00:00:00.000Z', to: '2026-09-01T00:00:00.000Z' };
@@ -193,6 +194,15 @@ describe('red team', () => {
     const out = runRedTeam(h.ctx, input({ findings: analyst.findings, unknown_indicator_share: 1 }));
     expect(out.findings.length).toBeGreaterThan(0);
     for (const f of out.findings) expect(f.clears_when.length).toBeGreaterThan(10);
+  });
+
+  it('publishes a named check list that matches the number of checks it actually ran', async () => {
+    const h = harness();
+    const out = runRedTeam(h.ctx, input({}));
+    expect(RED_TEAM_CHECKS.length).toBe(out.checks_run);
+    const classes = RED_TEAM_CHECKS.map((c) => c.finding_class);
+    expect(new Set(classes).size).toBe(classes.length);
+    expect(new Set(classes)).toEqual(new Set(RedTeamClass.options));
   });
 
   it('passes cleanly only when nothing matched, and says a pass is not a proof', async () => {

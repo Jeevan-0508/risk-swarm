@@ -48,6 +48,33 @@ const CLEARS: Record<RedTeamClass, string> = {
   missing_evidence: 'The indicator states are assessed rather than unknown.',
 };
 
+/**
+ * The standing check list, in the order runRedTeam applies it. Exported so the UI can name what ran
+ * instead of printing a bare count; a test asserts it stays the same length as checks_run and covers
+ * every RedTeamClass exactly once.
+ */
+export interface RedTeamCheck {
+  n: number;
+  finding_class: RedTeamClass;
+  name: string;
+  looks_for: string;
+}
+
+export const RED_TEAM_CHECKS: readonly RedTeamCheck[] = [
+  { n: 1, finding_class: 'hallucination', name: 'Fabricated references', looks_for: 'A cited id that does not exist as a node in this run.' },
+  { n: 2, finding_class: 'same_source_echo', name: 'One event read as a pattern', looks_for: 'The whole conclusion tracing to a single event cluster.' },
+  { n: 3, finding_class: 'confirmation_bias', name: 'Source concentration', looks_for: 'One publisher supplying more than 60% of incident evidence.' },
+  { n: 4, finding_class: 'weak_source_chain', name: 'Weightless source chain', looks_for: 'No tier-1 or tier-2 source anywhere under an incident claim.' },
+  { n: 5, finding_class: 'duplicate_evidence', name: 'Double-counted reporting', looks_for: 'One incident url appearing as more than one evidence object.' },
+  { n: 6, finding_class: 'regulatory_misinterpretation', name: 'Uncitable regulatory claim', looks_for: 'A regulator-tier claim with no resolvable citation.' },
+  { n: 7, finding_class: 'circular_reasoning', name: 'Circular support', looks_for: 'A node that supports itself transitively.' },
+  { n: 8, finding_class: 'impact_overestimate', name: 'Magnitude without basis', looks_for: 'A quantified claim that names no basis or unit.' },
+  { n: 9, finding_class: 'unsupported_claim', name: 'Unfalsifiable hypothesis', looks_for: 'A hypothesis whose falsification test is too thin to run.' },
+  { n: 10, finding_class: 'normal_variation', name: 'Ordinary commercial distress', looks_for: 'Half or more of surviving signals being insolvency events.' },
+  { n: 11, finding_class: 'missing_evidence', name: 'Conclusion over unmeasured data', looks_for: 'More than 80% of indicator weight left unassessed.' },
+  { n: 12, finding_class: 'correlation_as_causation', name: 'Vocabulary mistaken for mechanism', looks_for: 'A pattern linked only by shared wording, with no mechanism evidenced.' },
+];
+
 export function runRedTeam(ctx: AgentContext, input: RedTeamInput): RedTeamOutput {
   const started = Date.now();
   ctx.assertAlive();

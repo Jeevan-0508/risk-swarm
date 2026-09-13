@@ -8,6 +8,7 @@ import { NewInvestigation } from '@app/screens/NewInvestigation';
 import { AgentConsole } from '@app/screens/AgentConsole';
 import { DisagreementRoom } from '@app/screens/DisagreementRoom';
 import { EvidenceGraph } from '@app/screens/EvidenceGraph';
+import { RedTeam } from '@app/screens/RedTeam';
 
 const NAV: Array<{ to: string; n: string; label: string }> = [
   { to: '/', n: '01', label: 'Command Center' },
@@ -112,7 +113,7 @@ export function App() {
           <Route path="/console" element={<AgentConsole />} />
           <Route path="/graph" element={<EvidenceGraph />} />
           <Route path="/disagreement" element={<DisagreementRoom />} />
-          <Route path="/redteam" element={<Stub name="Red Team" />} />
+          <Route path="/redteam" element={<RedTeam />} />
           <Route path="/brief" element={<Stub name="Decision Brief" />} />
           <Route path="/history" element={<Stub name="History" />} />
           <Route path="/agents" element={<Stub name="Agent Performance" />} />
