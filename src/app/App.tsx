@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect } from 'react';
-import { NavLink, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, NavLink, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { BrowserRouter } from 'react-router-dom';
 import { useSession } from '@app/store/session';
 import { MODE_NOTE, type Mode } from '@app/lib/engine';
@@ -93,6 +93,11 @@ function Frame() {
         <div className="hair-t px-5 py-3">
           <div className="label">investigations</div>
           <div className="num mt-1 text-lg font-light">{runs.length}</div>
+        </div>
+        <div className="hair-t px-5 py-3">
+          <Link to="/pantheon" className="text-2xs uppercase tracking-[0.14em] text-fg-mute transition-colors hover:text-fg">
+            Meet the Agents &#8599;
+          </Link>
         </div>
       </aside>
 

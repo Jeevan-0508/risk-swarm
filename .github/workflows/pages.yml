@@ -37,6 +37,13 @@ jobs:
       - name: build
         run: bun run build
 
+      # GitHub Pages is a static file server with no SPA fallback: a direct load or reload of a
+      # client-side route (e.g. /pantheon) 404s before React ever runs. The standard fix is to ship
+      # the same index.html as 404.html, so Pages serves the app shell for any unmatched path and
+      # BrowserRouter (with basename already baked into the built asset paths) takes it from there.
+      - name: spa fallback for client-side routes
+        run: cp dist/index.html dist/404.html
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
