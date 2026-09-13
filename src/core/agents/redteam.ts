@@ -103,6 +103,8 @@ export function runRedTeam(ctx: AgentContext, input: RedTeamInput): RedTeamOutpu
 
   const known = new Set(input.known_node_ids);
   const incident = input.evidence.filter((e) => e.incident_claim);
+  // Sentinel used everywhere a challenge or finding needs a target and there is no hypothesis to name.
+  // It was never minted as a node, so it must never be checked as if it were a citation.
   const runTarget = input.findings[0]?.hypothesis.id ?? 'run';
 
   // 1. Fabricated references. The cheapest and most damaging failure, so it is checked first.
@@ -110,7 +112,7 @@ export function runRedTeam(ctx: AgentContext, input: RedTeamInput): RedTeamOutpu
   const cited = [
     ...input.challenges.flatMap((c) => [c.target_id, ...c.evidence_ids]),
     ...input.findings.flatMap((f) => [...f.supporting_evidence_ids, f.hypothesis.id]),
-  ];
+  ].filter((id) => id !== runTarget);
   const fabricated = [...new Set(cited.filter((id) => !known.has(id)))];
   if (fabricated.length > 0) {
     flag(runTarget, 'hallucination', 'blocking', `${fabricated.length} cited id(s) do not exist in this run: ${fabricated.slice(0, 5).join(', ')}. Any conclusion resting on them is void.`);

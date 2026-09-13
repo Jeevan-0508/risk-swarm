@@ -169,6 +169,20 @@ describe('red team', () => {
     unknown_indicator_share: 0, benign_category_share: 0, ...over,
   });
 
+  it('never mistakes its own run-level sentinel for a fabricated citation', () => {
+    // No hypothesis exists, so the challenger raises its "spike, not a trend" objection against the
+    // fallback target 'run' - a real challenge, correctly built, that was never meant to resolve to a
+    // node. The red team must not flag itself for citing its own placeholder.
+    const h = harness();
+    const challenge = runChallenger(h.ctx, {
+      findings: [], evidence: [], independent_source_count: 4, possible_duplicate_pairs: 0, cluster_count: 4,
+      recurrence_buckets: 1, window_buckets: 8, benign_category_share: 0, min_independent_sources: 2,
+    }).findings[0];
+    expect(challenge.target_id).toBe('run');
+    const out = runRedTeam(h.ctx, input({ challenges: [challenge], known_node_ids: [] }));
+    expect(out.findings.some((f) => f.finding_class === 'hallucination')).toBe(false);
+  });
+
   it('fails the run when a citation points at an id that does not exist', async () => {
     const { h, analyst } = await throughAnalyst();
     const out = runRedTeam(h.ctx, input({ findings: analyst.findings, known_node_ids: [] }));

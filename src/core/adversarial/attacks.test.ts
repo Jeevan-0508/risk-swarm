@@ -311,9 +311,11 @@ describe('attack 13 - an empty world used to fish for a verdict', () => {
     const r = await attack([]);
     const d = r.outputs.decision.decision;
     expect(d.severity_score).toBe(0);
-    expect(d.confidence).toBeNull();
     expect(r.outputs.analyst.findings).toEqual([]);
     expect(ESCALATING.has(d.action_band)).toBe(false);
+    // Zero independent evidence caps confidence at 0.35 regardless of whether a number is published or
+    // withheld outright - either way, an empty world cannot buy its way to a confident answer.
+    expect(d.confidence === null || d.confidence <= 0.35).toBe(true);
   });
 });
 
