@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Suspense, lazy, useEffect } from 'react';
+import { NavLink, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { BrowserRouter } from 'react-router-dom';
 import { useSession } from '@app/store/session';
 import { MODE_NOTE, type Mode } from '@app/lib/engine';
@@ -15,6 +15,13 @@ import { Provenance } from '@app/screens/Provenance';
 import { EvidenceGraph } from '@app/screens/EvidenceGraph';
 import { RedTeam } from '@app/screens/RedTeam';
 import { ScenarioRoom } from '@app/screens/ScenarioRoom';
+
+/**
+ * The showcase page is lazy so it never enters the console's bundle, and it lives outside `Frame` so it
+ * has no sidebar, no mode switch and no nav entry. It is reachable only by url, on purpose: it is a story
+ * about the system, not a screen of it.
+ */
+const Pantheon = lazy(() => import('../showcase/Pantheon'));
 
 const NAV: Array<{ to: string; n: string; label: string }> = [
   { to: '/', n: '01', label: 'Command Center' },
@@ -62,7 +69,7 @@ function KillSwitch() {
   );
 }
 
-function Frame({ children }: { children: React.ReactNode }) {
+function Frame() {
   const { runs, live, running } = useSession();
   const location = useLocation();
   return (
@@ -100,7 +107,7 @@ function Frame({ children }: { children: React.ReactNode }) {
             <KillSwitch />
           </div>
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto p-6">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-6"><Outlet /></div>
       </main>
     </div>
   );
@@ -112,8 +119,16 @@ export function App() {
 
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
-      <Frame>
-        <Routes>
+      <Routes>
+        <Route
+          path="/pantheon"
+          element={
+            <Suspense fallback={<div className="grid h-full place-items-center"><span className="label">loading</span></div>}>
+              <Pantheon />
+            </Suspense>
+          }
+        />
+        <Route element={<Frame />}>
           <Route path="/" element={<CommandCenter />} />
           <Route path="/new" element={<NewInvestigation />} />
           <Route path="/console" element={<AgentConsole />} />
@@ -126,8 +141,8 @@ export function App() {
           <Route path="/provenance" element={<Provenance />} />
           <Route path="/orbit" element={<ScenarioRoom />} />
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Frame>
+        </Route>
+      </Routes>
     </BrowserRouter>
   );
 }

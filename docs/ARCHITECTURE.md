@@ -37,7 +37,12 @@ shipped repo in this portfolio is a live URL, so the decision was taken the othe
 
 - **`src/core`** — framework-free TypeScript engine: domain graph, agents, orchestrator, scoring,
   validators, budgets, kill switch. Pure functions, zero DOM, fully unit-testable.
-- **`src/app`** — React 18 + TS + Vite + Tailwind, 10 screens, dark Swiss enterprise.
+- **`src/app`** — React 18 + TS + Vite + Tailwind, 11 screens, dark Swiss enterprise.
+- **`src/showcase`** — one marketing-style page (`/pantheon`, "Meet the Agents"), physically separate from
+  the console: its own folder, its own stylesheet (`pn-` prefixed), its own lazy-loaded bundle chunk, no
+  sidebar entry, and it renders outside the app `Frame`. Nothing in `src/app` imports from it. The
+  console's own design language rules out imagery of that kind, so the story version lives here instead
+  of eroding Screen 1. Its closing seal reads the band from a real stored run or prints nothing at all.
 - Persistence: **IndexedDB**, storing the structured graph (objects + edges), never chat logs.
   JSON export/import for portability.
 - Reasoning: `Reasoner` interface. Default `DeterministicReasoner` (seeded, offline, zero cost) =

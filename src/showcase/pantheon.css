@@ -1,0 +1,159 @@
+/*
+ * Styles for the showcase page only. Every class is `pn-` prefixed and this file is imported by
+ * Pantheon.tsx alone, so it ships in the lazy chunk and cannot reach the ten operational screens.
+ * The console's rules (no gradients, no shadows, no rounded corners) are its own discipline; this page
+ * is allowed a warmer register, and the prefix is what keeps that from leaking back.
+ */
+
+.pn-page {
+  --pn-bg: #08090d;
+  background:
+    radial-gradient(1100px 520px at 18% -8%, rgba(120, 140, 200, 0.09), transparent 62%),
+    radial-gradient(900px 480px at 88% 12%, rgba(200, 150, 110, 0.07), transparent 60%),
+    var(--pn-bg);
+  min-height: 100%;
+}
+
+.pn-rule {
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+  height: 1px;
+  opacity: 0.35;
+}
+
+.pn-idle {
+  opacity: 0;
+}
+
+.pn-run {
+  animation-duration: 900ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: both;
+}
+
+.pn-enter {
+  animation: pn-enter 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pn-enter {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* HERMES */
+@keyframes pn-drift-in {
+  from { opacity: 0; transform: translate(-16px, 8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pn-drift-out {
+  0% { opacity: 0; transform: translate(-14px, 6px); }
+  45% { opacity: 0.85; transform: none; }
+  100% { opacity: 0; transform: translate(10px, -6px); }
+}
+.pn-drift-in { animation-name: pn-drift-in; }
+.pn-drift-out { animation-name: pn-drift-out; animation-duration: 1500ms; }
+
+/* ATHENA */
+@keyframes pn-settle {
+  from { opacity: 0; transform: scale(1.16); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pn-dash {
+  from { opacity: 0; stroke-dashoffset: 12; }
+  to { opacity: 1; stroke-dashoffset: 0; }
+}
+.pn-settle { animation-name: pn-settle; transform-origin: 60px 44px; }
+.pn-dash { animation-name: pn-dash; animation-delay: 520ms; animation-duration: 700ms; }
+
+/* APOLLO */
+@keyframes pn-close {
+  from { opacity: 0; transform: scale(1.5); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pn-crack {
+  from { opacity: 0; stroke-dasharray: 0 40; }
+  to { opacity: 1; stroke-dasharray: 40 0; }
+}
+.pn-close { animation-name: pn-close; transform-origin: 58px 45px; }
+.pn-crack { animation-name: pn-crack; animation-delay: 460ms; animation-duration: 800ms; }
+
+/* ZEUS */
+@keyframes pn-strike {
+  0% { opacity: 0; transform: translateY(-22px) scaleY(0.7); }
+  55% { opacity: 1; transform: none; }
+  70% { opacity: 0.55; }
+  100% { opacity: 0.9; transform: none; }
+}
+@keyframes pn-clamp-l {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pn-clamp-r {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: none; }
+}
+.pn-strike { animation-name: pn-strike; animation-duration: 720ms; }
+.pn-clamp-l { animation-name: pn-clamp-l; animation-delay: 520ms; }
+.pn-clamp-r { animation-name: pn-clamp-r; animation-delay: 520ms; }
+
+/* ARES */
+@keyframes pn-jab {
+  0% { opacity: 0; transform: translate(12px, -12px); }
+  60% { opacity: 1; transform: translate(-3px, 3px); }
+  100% { opacity: 0.8; transform: none; }
+}
+@keyframes pn-widen {
+  from { opacity: 0.4; stroke-width: 0.8; transform: scaleX(0.7); }
+  to { opacity: 1; stroke-width: 2; transform: none; }
+}
+@keyframes pn-draw-alt {
+  from { opacity: 0; transform: scale(0.72); }
+  to { opacity: 0.7; transform: none; }
+}
+.pn-jab { animation-name: pn-jab; animation-duration: 640ms; }
+.pn-widen { animation-name: pn-widen; animation-delay: 560ms; transform-origin: 42px 40px; }
+.pn-draw-alt { animation-name: pn-draw-alt; animation-delay: 760ms; transform-origin: 92px 46px; }
+
+/* HADES */
+@keyframes pn-gate {
+  from { opacity: 0; transform: translateY(-26px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pn-stamp {
+  0% { opacity: 0; transform: translateY(-14px) scaleX(0.6); }
+  70% { opacity: 1; transform: translateY(2px) scaleX(1.05); }
+  100% { opacity: 0.9; transform: none; }
+}
+.pn-gate { animation-name: pn-gate; animation-duration: 620ms; }
+.pn-stamp { animation-name: pn-stamp; animation-delay: 640ms; transform-origin: 56px 70px; }
+
+/* HEPHAESTUS */
+@keyframes pn-hammer {
+  0% { opacity: 0; transform: rotate(-38deg); }
+  45% { opacity: 1; transform: rotate(4deg); }
+  60% { transform: rotate(-8deg); }
+  100% { opacity: 1; transform: rotate(0deg); }
+}
+@keyframes pn-spark {
+  0% { opacity: 0; transform: scale(0.4); }
+  40% { opacity: 1; transform: scale(1.4); }
+  100% { opacity: 0; transform: scale(0.6) translate(6px, -6px); }
+}
+@keyframes pn-seal-in {
+  from { opacity: 0; transform: translateX(14px) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+.pn-hammer { animation-name: pn-hammer; animation-duration: 860ms; }
+.pn-spark { animation-name: pn-spark; animation-duration: 900ms; }
+.pn-seal-in { animation-name: pn-seal-in; animation-delay: 620ms; }
+
+/*
+ * Motion is an enhancement here, never the carrier of information: every motif's meaning is also in its
+ * caption and its aria-label, so switching all of it off loses nothing but the flourish.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .pn-idle, .pn-run, .pn-enter {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
