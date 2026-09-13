@@ -29,13 +29,13 @@ export const AGENT_REMIT: Record<AgentId, string> = {
  * A codename never appears in an id, a test assertion or a stored record, only in the UI chrome.
  */
 export const AGENT_CODENAME: Record<AgentId, string> = {
-  scout: 'ARGUS',
-  intelligence: 'ATLAS',
-  risk_analyst: 'ORACLE',
-  governance_officer: 'AEGIS',
-  challenger: 'MERCURY',
-  red_team: 'CERBERUS',
-  decision_engine: 'VERDICT',
+  scout: 'HERMES',
+  intelligence: 'ATHENA',
+  risk_analyst: 'APOLLO',
+  governance_officer: 'ZEUS',
+  challenger: 'ARES',
+  red_team: 'HADES',
+  decision_engine: 'HEPHAESTUS',
 };
 
 export const AGENT_TAGLINE: Record<AgentId, string> = {

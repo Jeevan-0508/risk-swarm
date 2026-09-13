@@ -19,7 +19,7 @@ incompatible architecture change. This doc is the cross-session anchor — read 
 
 | Phase | What | Where | Status |
 |---|---|---|---|
-| A | Agent identity layer (ARGUS/ATLAS/ORACLE/AEGIS/MERCURY/CERBERUS/VERDICT + taglines) | `src/app/lib/agents.ts` + 4 screens | **done** (`148ad21`) |
+| A | Agent identity layer (HERMES/ATHENA/APOLLO/ZEUS/ARES/HADES/HEPHAESTUS + taglines) | `src/app/lib/agents.ts` + 4 screens | **done** (`148ad21`, renamed to match Pantheon `1266d81`+1) |
 | B | SENTINEL — evidence-integrity report, engine-side, additive field on `RunResult` | `src/core/sentinel/`, `orchestrator/run.ts` | **done** (`854d20a`, bugfixes `7ca294b`/`c71d95f`) |
 | C | PULSE — system-health report over a completed `RunResult` | `src/core/pulse/` | **done** (`0bfbb51`) |
 | D | ORBIT — deterministic scenario mutators + baseline-vs-stressed diff | `src/core/orbit/` | **done** (`e1d2a1c`) |
@@ -68,7 +68,7 @@ for UI phases -> commit -> push. Pages redeploys automatically on push.
 - SENTINEL/PULSE reports live on `RunResult`, not as new `GraphNode` kinds — they describe the
   investigation, they are not evidence, a hypothesis, or a decision the graph's append-only
   provenance chain needs to reference by id. If a later phase needs one to be citable (e.g. a
-  CERBERUS attack board row linking to a SENTINEL check), it is referenced by a stable string key
+  HADES attack board row linking to a SENTINEL check), it is referenced by a stable string key
   (e.g. `sentinel:citation_validity`), not by minting a graph node for it.
 
 
@@ -77,8 +77,12 @@ for UI phases -> commit -> push. Pages redeploys automatically on push.
 - **Phase A**: `AGENT_CODENAME` / `AGENT_TAGLINE` added to `src/app/lib/agents.ts`, wired into
   CommandCenter, AgentConsole, AgentPerformance, DisagreementRoom. Codename is the primary label,
   the existing technical name is secondary. `RedTeam.tsx` / `DecisionBrief.tsx` do not look up
-  `AGENT_LABEL` and were left alone — a CERBERUS/VERDICT badge there is future cosmetic work, not
-  required for the identity layer to be genuinely present in the product.
+  `AGENT_LABEL` and were left alone — a HADES/HEPHAESTUS badge there is future cosmetic work, not
+  required for the identity layer to be genuinely present in the product. Renamed from the original
+  ARGUS/ATLAS/ORACLE/AEGIS/MERCURY/CERBERUS/VERDICT set once the Pantheon showcase (below) picked
+  actual Olympians for the same seven agents — MERCURY was the Roman name for the god the showcase
+  separately assigned to a different agent (Hermes -> scout), so the two layers now agree on one
+  mythology instead of clashing.
 - **Phase B**: `src/core/sentinel/sentinel.ts` (`runSentinel`), 10 checks, VERIFIED/WARNING/BLOCKED,
   wired into `RunResult.sentinel` inside `investigate()`, rendered on the Knowledge & Provenance
   screen. `ScoutOutput.snapshot` widened with `files: SnapshotFileProvenance[]` so SENTINEL's
