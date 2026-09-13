@@ -4,6 +4,8 @@ import { useSession } from '@app/store/session';
 import { MODE_NOTE, type Mode } from '@app/lib/engine';
 import { Dot, Tag } from '@app/ui/kit';
 import { CommandCenter } from '@app/screens/CommandCenter';
+import { NewInvestigation } from '@app/screens/NewInvestigation';
+import { AgentConsole } from '@app/screens/AgentConsole';
 
 const NAV: Array<{ to: string; n: string; label: string }> = [
   { to: '/', n: '01', label: 'Command Center' },
@@ -104,8 +106,8 @@ export function App() {
       <Frame>
         <Routes>
           <Route path="/" element={<CommandCenter />} />
-          <Route path="/new" element={<Stub name="New Investigation" />} />
-          <Route path="/console" element={<Stub name="Agent Console" />} />
+          <Route path="/new" element={<NewInvestigation />} />
+          <Route path="/console" element={<AgentConsole />} />
           <Route path="/graph" element={<Stub name="Evidence Graph" />} />
           <Route path="/disagreement" element={<Stub name="Disagreement Room" />} />
           <Route path="/redteam" element={<Stub name="Red Team" />} />
