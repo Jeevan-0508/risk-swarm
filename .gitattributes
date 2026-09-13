@@ -1,0 +1,3 @@
+# JSON snapshots are hashed in provenance.json; a CRLF/LF platform mismatch on checkout
+# breaks that hash on any machine whose git config differs from the one that ran sync.
+public/snapshots/**/*.json text eol=lf

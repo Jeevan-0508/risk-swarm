@@ -13,8 +13,8 @@
         {
           "upstream_path": "data/signals.json",
           "path": "fomo/signals.json",
-          "bytes": 564433,
-          "sha256": "0248d25e202ce0e940cc26209e4882e78de2848b40f4a965cae28be40a897dfd"
+          "bytes": 556402,
+          "sha256": "73087903d9fe46d8db680766c62901f8f908c0d2b411ea98ba21999f54ee7ec2"
         }
       ]
     },

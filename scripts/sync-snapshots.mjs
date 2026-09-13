@@ -95,8 +95,13 @@ for (const src of SOURCES) {
   }
   const entry = { key: src.key, upstream_repo: src.repo, upstream_url: src.url, commit: commitOf(repoDir), note: src.note, files: [] };
   for (const [from, to] of src.files) {
-    const buf = fs.readFileSync(path.join(repoDir, from));
-    JSON.parse(buf.toString('utf8')); // refuse to snapshot invalid JSON
+    const raw = fs.readFileSync(path.join(repoDir, from));
+    JSON.parse(raw.toString('utf8')); // refuse to snapshot invalid JSON
+    // Normalize to LF: the sibling repo's own working-tree line endings depend on its clone's
+    // git config, so a raw byte copy makes the recorded hash below reproduce only on whatever
+    // machine ran `sync`, not in CI. Safe for JSON - a literal CR/LF inside a string is already
+    // \r/\n-escaped, never a raw byte, so this only touches the file's own formatting whitespace.
+    const buf = Buffer.from(raw.toString('utf8').replace(/\r\n/g, '\n'));
     const dest = path.join(out, to);
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.writeFileSync(dest, buf);
