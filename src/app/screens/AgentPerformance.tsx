@@ -6,7 +6,7 @@
  */
 import { useState, type ReactNode } from 'react';
 import { useSession } from '@app/store/session';
-import { AGENT_LABEL, AGENT_ORDER, AGENT_REMIT, agentOutput } from '@app/lib/agents';
+import { AGENT_CODENAME, AGENT_LABEL, AGENT_ORDER, AGENT_REMIT, agentOutput } from '@app/lib/agents';
 import type { Outcome } from '@core/domain/model';
 import { Bar, Button, Empty, Field, inputClass, Metric, Panel, Row, Tag } from '@app/ui/kit';
 
@@ -53,7 +53,10 @@ export function AgentPerformance() {
           {rows.map((r) => (
             <li key={r.id} className="px-4 py-3">
               <div className="flex flex-wrap items-baseline gap-3">
-                <span className="w-44 shrink-0 text-sm text-fg">{AGENT_LABEL[r.id]}</span>
+                <span className="w-64 shrink-0 truncate text-sm text-fg">
+                  <span className="font-mono">{AGENT_CODENAME[r.id]}</span>
+                  <span className="text-fg-mute"> · {AGENT_LABEL[r.id]}</span>
+                </span>
                 <span className="num text-2xs text-fg-mute">{r.calls} call(s) · {r.ms} ms · {r.findings} finding(s)</span>
                 {r.degraded > 0 && <Tag tone="caution">degraded in {r.degraded} run(s)</Tag>}
                 <span className="num ml-auto text-xs text-fg-dim">mean confidence {r.confidence.toFixed(2)}</span>

@@ -5,7 +5,7 @@
 import { useState, type ReactNode } from 'react';
 import type { Challenge } from '@core/domain/model';
 import { useSession } from '@app/store/session';
-import { AGENT_LABEL } from '@app/lib/agents';
+import { AGENT_CODENAME, AGENT_LABEL } from '@app/lib/agents';
 import { Bar, Empty, Metric, Panel, Row, SEVERITY_TONE, Tag, type Tone } from '@app/ui/kit';
 
 const STATUS_TONE: Record<string, Tone> = {
@@ -86,7 +86,16 @@ export function DisagreementRoom() {
         <ul className="divide-y divide-line">
           {positions.map((p) => (
             <li key={p.agent} className="flex flex-wrap items-center gap-4 px-4 py-3">
-              <span className="w-44 shrink-0 text-sm text-fg">{AGENT_LABEL[p.agent as keyof typeof AGENT_LABEL] ?? p.agent}</span>
+              <span className="w-64 shrink-0 truncate text-sm text-fg">
+                {AGENT_CODENAME[p.agent as keyof typeof AGENT_CODENAME] !== undefined ? (
+                  <>
+                    <span className="font-mono">{AGENT_CODENAME[p.agent as keyof typeof AGENT_CODENAME]}</span>
+                    <span className="text-fg-mute"> · {AGENT_LABEL[p.agent as keyof typeof AGENT_LABEL]}</span>
+                  </>
+                ) : (
+                  p.agent
+                )}
+              </span>
               <Tag tone={STATUS_TONE[p.reasoning_status] ?? 'neutral'}>{p.reasoning_status.replace(/_/g, ' ')}</Tag>
               <div className="min-w-32 flex-1">
                 <Bar value={p.confidence} tone={p.confidence >= 0.6 ? 'support' : p.confidence >= 0.35 ? 'caution' : 'objection'} />

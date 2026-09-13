@@ -4,7 +4,7 @@
  */
 import { useNavigate } from 'react-router-dom';
 import { demoInput, useSession } from '@app/store/session';
-import { AGENT_LABEL, AGENT_ORDER, agentOutput } from '@app/lib/agents';
+import { AGENT_CODENAME, AGENT_LABEL, AGENT_ORDER, agentOutput } from '@app/lib/agents';
 import { BAND_TONE, Bar, Button, Dot, Empty, Metric, Panel, SEVERITY_TONE, Tag } from '@app/ui/kit';
 
 export function CommandCenter() {
@@ -64,7 +64,10 @@ export function CommandCenter() {
                 <li key={agent} className="flex items-center justify-between gap-3 hair-b px-4 py-2.5 last:border-b-0">
                   <div className="flex min-w-0 items-center gap-2.5">
                     <Dot tone={out ? 'support' : 'neutral'} />
-                    <span className="truncate text-sm">{AGENT_LABEL[agent]}</span>
+                    <span className="truncate text-sm">
+                      <span className="font-mono tracking-[0.06em]">{AGENT_CODENAME[agent]}</span>
+                      <span className="text-fg-mute"> · {AGENT_LABEL[agent]}</span>
+                    </span>
                   </div>
                   <span className="num text-2xs text-fg-mute">{out ? `${out.findings.length} findings · ${out.cost.ms}ms` : 'idle'}</span>
                 </li>

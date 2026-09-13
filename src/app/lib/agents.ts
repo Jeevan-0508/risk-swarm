@@ -23,6 +23,31 @@ export const AGENT_REMIT: Record<AgentId, string> = {
   decision_engine: 'Assembles the recommendation and its gates for a human.',
 };
 
+/**
+ * Product identity layer. Purely presentational: the technical role above (`AGENT_LABEL`) is the
+ * contract everything else in this codebase - tests, the graph, the agent modules - actually names.
+ * A codename never appears in an id, a test assertion or a stored record, only in the UI chrome.
+ */
+export const AGENT_CODENAME: Record<AgentId, string> = {
+  scout: 'ARGUS',
+  intelligence: 'ATLAS',
+  risk_analyst: 'ORACLE',
+  governance_officer: 'AEGIS',
+  challenger: 'MERCURY',
+  red_team: 'CERBERUS',
+  decision_engine: 'VERDICT',
+};
+
+export const AGENT_TAGLINE: Record<AgentId, string> = {
+  scout: 'Sees everything. Concludes nothing.',
+  intelligence: 'Turns noise into distinct events.',
+  risk_analyst: 'Explains what might be happening — and how it could be wrong.',
+  governance_officer: 'Determines what obligations attach to action.',
+  challenger: 'Builds the strongest case against the first conclusion.',
+  red_team: 'Break the investigation before the investigation breaks trust.',
+  decision_engine: 'Recommends. Never decides.',
+};
+
 /** Maps the orchestrator's phase name to the agent that ran it. */
 export const PHASE_AGENT: Record<string, AgentId> = {
   discover: 'scout',

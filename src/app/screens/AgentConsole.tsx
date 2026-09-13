@@ -4,7 +4,7 @@
  * shown is each agent's structured findings, its declared uncertainties and what it cost.
  */
 import { useSession } from '@app/store/session';
-import { AGENT_LABEL, AGENT_ORDER, AGENT_REMIT, PHASE_AGENT, agentOutput } from '@app/lib/agents';
+import { AGENT_CODENAME, AGENT_LABEL, AGENT_ORDER, AGENT_TAGLINE, PHASE_AGENT, agentOutput } from '@app/lib/agents';
 import { agentLines, agentUncertainties } from '@app/lib/summary';
 import { Bar, Button, Dot, Empty, Panel, Row, Tag, type Tone } from '@app/ui/kit';
 import type { AgentId } from '@core/domain/model';
@@ -100,8 +100,9 @@ function AgentCard({ agent, index, state }: { agent: AgentId; index: number; sta
         <div className="flex min-w-0 items-center gap-3">
           <span className="num text-2xs text-fg-mute">{String(index + 1).padStart(2, '0')}</span>
           <Dot tone={tone} pulse={state === 'active'} />
-          <span className="font-mono text-sm tracking-[0.08em]">{AGENT_LABEL[agent]}</span>
-          <span className="hidden truncate text-xs text-fg-mute md:inline">{AGENT_REMIT[agent]}</span>
+          <span className="font-mono text-sm tracking-[0.08em]">{AGENT_CODENAME[agent]}</span>
+          <span className="hidden text-2xs uppercase tracking-[0.1em] text-fg-mute sm:inline">{AGENT_LABEL[agent]}</span>
+          <span className="hidden truncate text-xs italic text-fg-mute md:inline">“{AGENT_TAGLINE[agent]}”</span>
         </div>
         <div className="flex shrink-0 items-center gap-4">
           {entry !== null && <span className="num text-2xs text-fg-mute">{entry.ms}ms</span>}
