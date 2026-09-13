@@ -1,4 +1,6 @@
 import { describe, expect, it } from '../core/test/bdd';
+import { investigate } from '../core/orchestrator/run';
+import { createFileLoader } from '../core/integrations/loader.node';
 import { sealFrom, type SealSourceRun } from './seal';
 
 function run(over: Partial<SealSourceRun> = {}): SealSourceRun {
@@ -63,5 +65,45 @@ describe('showcase seal', () => {
     const seal = sealFrom([run({ mode: 'LIVE' })]);
     if (seal.kind !== 'real') throw new Error('expected a real seal');
     expect(seal.mode).toBe('LIVE');
+  });
+
+  /**
+   * Every test above builds its own fixture, which proves sealFrom's selection logic and nothing about
+   * whether `SealSourceRun` still describes a real run. That is the gap this closes: the field path
+   * outputs.decision.decision.{action_band,severity_band,confidence} is asserted against an actual
+   * investigate() result, so a rename anywhere along it fails here instead of silently stamping
+   * undefined onto the showcase page.
+   */
+  it('reads the band off a real investigate() result, not just a hand-built fixture', async () => {
+    const result = await investigate({
+      loader: createFileLoader('public/snapshots'),
+      run_id: 'RUN-SEAL',
+      now: '2026-09-13T00:00:00.000Z',
+      question: 'Are we exposed to phantom-carrier fraud in the DACH road network?',
+      scope: { geo: ['DE', 'AT', 'CH'], mode: ['road'], from: '2024-09-01T00:00:00.000Z', to: '2026-09-01T00:00:00.000Z' },
+    });
+
+    // Shaped exactly as the session store persists a finished run.
+    const stored: SealSourceRun = {
+      id: result.run_id,
+      mode: 'DEMO',
+      status: 'complete',
+      created_at: '2026-09-13T00:00:00.000Z',
+      question: result.question,
+      result,
+    };
+
+    const seal = sealFrom([stored]);
+    if (seal.kind !== 'real') throw new Error('a completed real run must produce a real seal');
+
+    const published = result.outputs.decision.decision;
+    expect(seal.action_band).toBe(published.action_band);
+    expect(seal.severity_band).toBe(published.severity_band);
+    expect(seal.confidence).toBe(published.confidence);
+    expect(seal.run_id).toBe('RUN-SEAL');
+
+    // The band must be a real published value, never an empty string or undefined leaking through.
+    expect(typeof seal.action_band).toBe('string');
+    expect(seal.action_band.length > 0).toBe(true);
   });
 });

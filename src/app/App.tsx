@@ -12,6 +12,7 @@ import { DisagreementRoom } from '@app/screens/DisagreementRoom';
 import { AgentPerformance } from '@app/screens/AgentPerformance';
 import { DecisionBrief } from '@app/screens/DecisionBrief';
 import { History } from '@app/screens/History';
+import { CaseFile } from '@app/screens/CaseFile';
 import { Provenance } from '@app/screens/Provenance';
 import { EvidenceGraph } from '@app/screens/EvidenceGraph';
 import { RedTeam } from '@app/screens/RedTeam';
@@ -146,6 +147,8 @@ export function App() {
           <Route path="/redteam" element={<RedTeam />} />
           <Route path="/brief" element={<DecisionBrief />} />
           <Route path="/history" element={<History />} />
+          {/* A detail view of screen 08, deliberately absent from NAV: it is only reachable from a run. */}
+          <Route path="/history/:id" element={<CaseFile />} />
           <Route path="/agents" element={<AgentPerformance />} />
           <Route path="/provenance" element={<Provenance />} />
           <Route path="/orbit" element={<ScenarioRoom />} />

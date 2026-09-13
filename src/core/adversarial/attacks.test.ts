@@ -276,7 +276,7 @@ describe('attack 10 - editing the graph after the fact', () => {
 describe('attack 11 - a tampered stored run claiming a stronger answer', () => {
   it('drops a record that no longer validates rather than repairing it into something plausible', async () => {
     const r = await attack([signal(1), signal(2), signal(3)]);
-    const record = serializeRun(r, { mode: 'SNAPSHOT', created_at: NOW, status: 'complete', request: null, human: null });
+    const record = serializeRun(r, { mode: 'SNAPSHOT', created_at: NOW, completed_at: NOW, status: 'complete', request: null, human: null });
     expect(deserializeRun(record)).not.toBeNull();
 
     // The graph is the audit trail, so that is what is validated. A decision node rewritten to claim a

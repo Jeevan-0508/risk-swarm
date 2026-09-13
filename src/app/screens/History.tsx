@@ -3,6 +3,7 @@
  * whether a human ever ruled on it. A stored run is reloaded through the same schema a live one passes.
  */
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { useSession } from '@app/store/session';
 import { historyIsDurable } from '@app/lib/persist';
 import { BAND_TONE, Button, Empty, Metric, Panel, SEVERITY_TONE, Tag, type Tone } from '@app/ui/kit';
@@ -41,11 +42,21 @@ export function History() {
                     {d !== null && <Tag tone={SEVERITY_TONE[d.severity_band] ?? 'neutral'}>{d.severity_band} {d.severity_score.toFixed(3)}</Tag>}
                     {d !== null && <Tag tone={d.confidence === null ? 'block' : 'support'}>{d.confidence === null ? 'confidence withheld' : `confidence ${d.confidence.toFixed(2)}`}</Tag>}
                     {r.human !== null && <Tag tone={VERDICT_TONE[r.human.verdict] ?? 'neutral'}>human {r.human.verdict} → {r.human.band}</Tag>}
-                    <span className="num ml-auto text-2xs text-fg-mute">{r.created_at.replace('T', ' ').slice(0, 16)}</span>
+                    <span className="num ml-auto text-2xs text-fg-mute" title="asked at">{r.created_at.replace('T', ' ').slice(0, 16)}</span>
+                    <span className="num text-2xs text-fg-mute" title="result at">
+                      → {r.completed_at === null ? 'time not recorded' : r.completed_at.replace('T', ' ').slice(11, 16)}
+                      {elapsed(r.created_at, r.completed_at)}
+                    </span>
                   </div>
                   <p className="mt-1.5 text-sm leading-snug text-fg-dim">{r.question}</p>
                   {r.error !== null && <p className="mt-1.5 text-xs leading-snug text-block">{r.error}</p>}
-                  <div className="mt-2 flex gap-2">
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {r.result !== null && (
+                      <Link to={`/history/${r.id}`}
+                        className="border border-line-bright px-2 py-0.5 font-mono text-2xs uppercase tracking-[0.1em] text-fg transition-colors hover:bg-fg hover:text-ink-900">
+                        open case file
+                      </Link>
+                    )}
                     <Button variant="ghost" onClick={() => select(r.id)} disabled={r.id === activeId}>
                       {r.id === activeId ? 'loaded' : 'load'}
                     </Button>
@@ -59,6 +70,11 @@ export function History() {
       </Panel>
 
       <Panel title="what is stored">
+        <p className="mb-3 text-sm leading-relaxed text-fg-dim">
+          Opening a case file lays out one run in full — when it was asked, when it answered, what each agent
+          said in turn, who disagreed with whom, and what was recommended — and downloads it as HTML, Word,
+          markdown, JSON or a printed PDF.
+        </p>
         <p className="text-sm leading-relaxed text-fg-dim">
           A stored run holds the whole graph, every agent output, the scoring policy in force and the
           budget spent. On reload it is validated against the same schema a live run passes, and a record
@@ -68,6 +84,14 @@ export function History() {
       </Panel>
     </Screen>
   );
+}
+
+/** Blank rather than 0.0s when a run predates completion tracking: an invented duration is worse than none. */
+function elapsed(asked: string, completed: string | null): string {
+  if (completed === null) return '';
+  const ms = Date.parse(completed) - Date.parse(asked);
+  if (!Number.isFinite(ms) || ms < 0) return '';
+  return ` · ${(ms / 1000).toFixed(1)}s`;
 }
 
 function Screen({ children }: { children: ReactNode }) {

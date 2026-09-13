@@ -33,6 +33,8 @@ export interface StoredRun {
   question: string;
   input: StartInput;
   created_at: string;
+  /** When the run settled, however it settled. Null while it is still in flight. */
+  completed_at: string | null;
   status: RunStatus;
   result: RunResult | null;
   error: string | null;
@@ -92,7 +94,7 @@ export const useSession = create<SessionState>()((set, get) => ({
     const mode = get().mode;
     const run: StoredRun = {
       id, mode, question: input.question, input, created_at: new Date().toISOString(),
-      status: 'running', result: null, error: null, human: null,
+      completed_at: null, status: 'running', result: null, error: null, human: null,
     };
     set((s) => ({ runs: [run, ...s.runs], activeId: id, live: [], running: true, spent: null, control: null }));
 
@@ -112,12 +114,12 @@ export const useSession = create<SessionState>()((set, get) => ({
             ? liveSignalSource(input, new Date().toISOString(), (r) => set((s) => ({ retrieval: { ...s.retrieval, [id]: r } })))
             : undefined),
       );
-      patch({ status: 'complete', result });
+      patch({ status: 'complete', result, completed_at: new Date().toISOString() });
       const stored = get().runs.find((r) => r.id === id);
       if (stored !== undefined) persist(stored);
     } catch (error) {
       const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-      patch({ status: message.startsWith('RunAbortedError') ? 'stopped' : 'failed', error: message });
+      patch({ status: message.startsWith('RunAbortedError') ? 'stopped' : 'failed', error: message, completed_at: new Date().toISOString() });
     } finally {
       set({ control: null, running: false });
     }

@@ -117,9 +117,11 @@ recomputes a number, because a figure computed twice is a figure that can disagr
 | 05 Disagreement Room | The disagreement index with all four terms and their arithmetic, and every objection |
 | 06 Red Team | The 12 named checks, which fired, and which findings could not be cleared |
 | 07 Decision Brief | One page a human can act on, plus the markdown export and the human verdict |
-| 08 History | Past runs, restored from browser storage, each still carrying its own graph |
+| 08 History | Past runs, restored from browser storage, each still carrying its own graph — open any one as a case file |
 | 09 Agent Performance | Cost and output per agent, the outcome recorder, and the lesson ledger |
 | 10 Knowledge & Provenance | Snapshot hashes, the tier ladder, and what LIVE retrieval actually fetched |
+| 11 Scenario Room | Five stress scenarios run against the pinned baseline, and the diff between them |
+| 08a Case File | One run in full — asked and answered times, timeline, agent-by-agent, who disagreed, final result; downloadable as HTML, Word, markdown, JSON or a printed PDF |
 
 ---
 

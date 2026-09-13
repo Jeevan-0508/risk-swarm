@@ -1,6 +1,6 @@
 /**
  * The whole design system. One file on purpose: a shared vocabulary of eight primitives is what keeps
- * ten screens looking like one product, and it is easier to hold a rule than to police a folder.
+ * eleven screens looking like one product, and it is easier to hold a rule than to police a folder.
  */
 import type { ReactNode } from 'react';
 import type { IntegrityStatus } from '@core/status';

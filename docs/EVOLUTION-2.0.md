@@ -167,6 +167,29 @@ for UI phases -> commit -> push. Pages redeploys automatically on push.
   and `source_drought` (band moved MONITOR->TARGETED_INVESTIGATION, confidence resolved from withheld to
   0.368, red team fail->pass - a large, sensible, materially-changed result). Pushed as `e1d2a1c`.
 
+## Unplanned insertion: Case File (2026-09-13)
+
+Asked for directly, so it jumped the queue ahead of Phase E: History was a list of rows with no way to
+open one. A stored run is now openable as a case file at `/history/:id` - a detail view of screen 08 with
+no NAV entry, because it is only reachable from a run.
+
+- `src/core/casefile/casefile.ts` builds the model and renders one self-contained HTML document. It is a
+  projection: every figure is copied from the run, and the ticket-ready brief is `renderBrief`'s output
+  verbatim in an appendix rather than a second renderer of the same facts.
+- Agent naming is passed in as a `roster` argument rather than known in core, because a codename is a
+  presentation concern and `src/core` is not allowed to hold one. That keeps the boundary constraint
+  intact and lets `agentLines`/`agentUncertainties` stay the single source of "what an agent said".
+- Downloads: `.html`, `.doc` (the same document, Word opens it directly - no converter, no dependency),
+  `.md` (the brief), `.json` (the whole model), and PDF through the browser's own print pipeline via a
+  hidden iframe. A PDF library would have cost more than the whole app weighs.
+- `completed_at` is now stamped on every run that settles, so "asked at" and "result at" are both real.
+  It was added as `nullable().default(null)` on the same precedent as `request`, deliberately *without* a
+  `STORE_VERSION` bump: a record written before this existed still parses with the stamp left null, and
+  the case file prints "not recorded" rather than inventing a duration. Two tests hold that line.
+- 241/241 tests, tsc clean, build clean. Browser-verified: an old pre-tracking record reads "time not
+  recorded", a fresh run reads `-> 17:25 · 7.6s`, and the generated document was checked as a real file
+  (7 sections, 4 tables, 25 blocks, no script tag, no `undefined`, balanced markup).
+
 ## Next session: Phase E (Decision Lineage, Evidence Needed, Source Concentration)
 
 All three are pure derivations over data `RunResult` already carries - no new agent, no new engine

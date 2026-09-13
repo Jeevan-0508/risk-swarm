@@ -4,7 +4,7 @@ import { investigate } from '../orchestrator/run';
 import { deserializeRun, memoryStore, serializeRun, webStorageStore, STORE_VERSION } from './serialize';
 
 const NOW = '2026-09-13T00:00:00.000Z';
-const ENVELOPE = { mode: 'SNAPSHOT', created_at: NOW, status: 'complete', request: null, human: null };
+const ENVELOPE = { mode: 'SNAPSHOT', created_at: NOW, completed_at: NOW, status: 'complete', request: null, human: null };
 
 const run = () =>
   investigate({
@@ -54,6 +54,22 @@ describe('run persistence', () => {
     const back = deserializeRun(serializeRun(r, ENVELOPE))!;
     expect(back.result.sentinel.status).toBe(r.sentinel.status);
     expect(back.result.sentinel.checks.length).toBe(r.sentinel.checks.length);
+  });
+
+  it('keeps a record written before completion was tracked, with the stamp left null', async () => {
+    const r = await run();
+    const record = serializeRun(r, ENVELOPE) as Record<string, unknown>;
+    delete record.completed_at;
+    const back = deserializeRun(record);
+    expect(back).not.toBeNull();
+    expect(back!.record.completed_at).toBeNull();
+  });
+
+  it('round-trips the completion stamp beside the ask, so a duration can be read back', async () => {
+    const r = await run();
+    const back = deserializeRun(serializeRun(r, { ...ENVELOPE, completed_at: '2026-09-13T00:00:05.000Z' }))!;
+    expect(back.record.created_at).toBe(NOW);
+    expect(back.record.completed_at).toBe('2026-09-13T00:00:05.000Z');
   });
 
   it('drops a pre-SENTINEL record instead of rendering it with a missing field', async () => {

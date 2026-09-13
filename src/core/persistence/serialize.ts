@@ -20,6 +20,8 @@ const StoredRunSchema = z.object({
   question: z.string(),
   mode: z.string(),
   created_at: z.string().min(4),
+  /** When the run settled. Nullable and defaulted like `request`, so a record written before this was tracked still parses instead of being thrown away. */
+  completed_at: z.string().nullable().default(null),
   status: z.string(),
   graph: GraphJSON,
   outputs: z.record(z.string(), z.unknown()),
@@ -46,6 +48,7 @@ export type StoredRunRecord = z.infer<typeof StoredRunSchema>;
 export interface RunEnvelope {
   mode: string;
   created_at: string;
+  completed_at: string | null;
   status: string;
   request: Record<string, unknown> | null;
   human: StoredRunRecord['human'];
@@ -58,6 +61,7 @@ export function serializeRun(result: RunResult, envelope: RunEnvelope): StoredRu
     question: result.question,
     mode: envelope.mode,
     created_at: envelope.created_at,
+    completed_at: envelope.completed_at,
     status: envelope.status,
     graph: result.graph.toJSON(),
     outputs: result.outputs as unknown as Record<string, unknown>,

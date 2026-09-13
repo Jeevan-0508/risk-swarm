@@ -30,6 +30,7 @@ export function persist(run: StoredRun): void {
       serializeRun(run.result, {
         mode: run.mode,
         created_at: run.created_at,
+        completed_at: run.completed_at,
         status: run.status,
         request: run.input as unknown as Record<string, unknown>,
         human: run.human,
@@ -70,6 +71,7 @@ export function restore(): StoredRun[] {
       question: row.question,
       input: (row.request ?? {}) as unknown as StartInput,
       created_at: row.created_at,
+      completed_at: row.completed_at,
       status: 'complete',
       result: back.result as RunResult,
       error: null,
