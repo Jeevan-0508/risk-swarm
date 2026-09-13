@@ -14,7 +14,7 @@
     "skipLibCheck": true,
     "isolatedModules": true,
     "resolveJsonModule": true,
-    "types": ["bun"],
+    "types": ["bun", "vite/client"],
     "baseUrl": ".",
     "paths": { "@core/*": ["src/core/*"], "@app/*": ["src/app/*"] }
   },

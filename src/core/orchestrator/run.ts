@@ -42,6 +42,13 @@ export interface InvestigateOptions {
   maxRework?: number;
   /** True when the caller would act on the recommendation without human review. Governance needs it. */
   automatedAction?: boolean;
+  /**
+   * Called as each phase completes, with the entry that was just recorded. Awaited, so a UI can pace
+   * the reveal on real completions instead of animating a fake progress bar.
+   */
+  onPhase?: (entry: PhaseLogEntry, spent: Budget) => void | Promise<void>;
+  /** Receives the run's controls before the first phase, so an operator can stop it mid-flight. */
+  onStart?: (control: { abort: (reason: string) => void }) => void;
   reversibility?: 'reversible' | 'hard_to_reverse' | 'irreversible';
 }
 
@@ -87,9 +94,13 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
     budget: options.budget,
   });
   const { ctx } = harness;
+  options.onStart?.({ abort: harness.abort });
   const log: PhaseLogEntry[] = [];
-  const record = (phase: string, attempt: number, out: { agent: string; cost: { ms: number }; findings: unknown[]; reasoning_status: string }, note: string | null = null) =>
-    log.push({ phase, agent: out.agent, attempt, ms: out.cost.ms, findings: out.findings.length, reasoning_status: out.reasoning_status, note });
+  const record = async (phase: string, attempt: number, out: { agent: string; cost: { ms: number }; findings: unknown[]; reasoning_status: string }, note: string | null = null) => {
+    const entry: PhaseLogEntry = { phase, agent: out.agent, attempt, ms: out.cost.ms, findings: out.findings.length, reasoning_status: out.reasoning_status, note };
+    log.push(entry);
+    await options.onPhase?.(entry, { ...harness.spent });
+  };
 
   const scout = await runScout(ctx, {
     question: options.question,
@@ -97,14 +108,14 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
     limit: options.limit,
     minFreightRelevance: options.minFreightRelevance,
   });
-  record('discover', 1, scout);
+  await record('discover', 1, scout);
 
   const intelligence = runIntelligence(ctx, {
     signals: scout.findings.map((f) => f.signal),
     evidence: scout.findings.map((f) => f.evidence),
     window: { from: options.scope.from, to: options.scope.to },
   });
-  record('deduplicate', 1, intelligence);
+  await record('deduplicate', 1, intelligence);
 
   const signals = intelligence.clustered_signals;
   const incidentEvidence = intelligence.clustered_evidence;
@@ -137,7 +148,7 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
     });
     // Hypotheses the red team rejected as badly built are removed, not silently re-scored.
     analyst = excluded.length === 0 ? produced : { ...produced, findings: produced.findings.filter((f) => !excluded.includes(f.match.pattern_id)) };
-    record('analyse', attempt, analyst, excluded.length > 0 ? `excluded after rework: ${excluded.join(', ')}` : null);
+    await record('analyse', attempt, analyst, excluded.length > 0 ? `excluded after rework: ${excluded.join(', ')}` : null);
 
     policy = policyFor(analyst.findings[0]?.match.pattern_id ?? null, (options.lessons ?? []).map((l) => ({ pattern_key: l.pattern_key, rule: l.rule })));
 
@@ -149,7 +160,7 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
       model_used: ctx.reasoner.uses_network,
       unresolved_objections: 0,
     });
-    record('govern', attempt, governance);
+    await record('govern', attempt, governance);
 
     challenger = runChallenger(ctx, {
       findings: analyst.findings,
@@ -162,7 +173,7 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
       benign_category_share,
       min_independent_sources: policy.min_independent_sources,
     });
-    record('challenge', attempt, challenger);
+    await record('challenge', attempt, challenger);
 
     const governanceEvidence = governance.findings.flatMap((f) => (f.evidence ? [f.evidence] : []));
     const allEvidence = [...incidentEvidence, ...governanceEvidence];
@@ -184,7 +195,7 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
       unknown_indicator_share: analyst.unknown_indicator_share,
       benign_category_share,
     });
-    record('red_team', attempt, red_team, red_team.verdict);
+    await record('red_team', attempt, red_team, red_team.verdict);
 
     const reworkable = red_team.findings.filter((f) => f.severity === 'blocking' && REWORKABLE.has(f.finding_class));
     if (red_team.verdict !== 'fail' || reworkable.length === 0 || attempt > maxRework) {
@@ -226,7 +237,7 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
     regulatory_deadline_days: null,
     policy,
   });
-  record('decide', attempt, decision, decision.decision.action_band);
+  await record('decide', attempt, decision, decision.decision.action_band);
 
   const graph = assemble({
     scout_signals: scout.findings.map((f) => f.signal),
