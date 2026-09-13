@@ -7,6 +7,7 @@ import { CommandCenter } from '@app/screens/CommandCenter';
 import { NewInvestigation } from '@app/screens/NewInvestigation';
 import { AgentConsole } from '@app/screens/AgentConsole';
 import { DisagreementRoom } from '@app/screens/DisagreementRoom';
+import { DecisionBrief } from '@app/screens/DecisionBrief';
 import { EvidenceGraph } from '@app/screens/EvidenceGraph';
 import { RedTeam } from '@app/screens/RedTeam';
 
@@ -114,7 +115,7 @@ export function App() {
           <Route path="/graph" element={<EvidenceGraph />} />
           <Route path="/disagreement" element={<DisagreementRoom />} />
           <Route path="/redteam" element={<RedTeam />} />
-          <Route path="/brief" element={<Stub name="Decision Brief" />} />
+          <Route path="/brief" element={<DecisionBrief />} />
           <Route path="/history" element={<Stub name="History" />} />
           <Route path="/agents" element={<Stub name="Agent Performance" />} />
           <Route path="/provenance" element={<Stub name="Knowledge & Provenance" />} />
