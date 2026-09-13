@@ -1,3 +1,4 @@
+import jkLogo from '../assets/jk-logo.png';
 import { Suspense, lazy, useEffect } from 'react';
 import { Link, NavLink, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { BrowserRouter } from 'react-router-dom';
@@ -76,7 +77,10 @@ function Frame() {
     <div className="flex h-full">
       <aside className="flex w-60 shrink-0 flex-col hair-r border-r border-line bg-ink-800">
         <div className="hair-b px-5 py-5">
-          <div className="font-mono text-sm font-medium tracking-[0.2em] text-fg">RISK<span className="text-signal">//</span>SWARM</div>
+          <div className="flex items-center gap-2">
+            <div className="font-mono text-sm font-medium tracking-[0.2em] text-fg">RISK<span className="text-signal">//</span>SWARM</div>
+            <a href="https://github.com/Jeevan-0508" target="_blank" rel="noopener" title="Jeevan Siddhabhaktula" className="ml-auto shrink-0"><img src={jkLogo} alt="JK" className="h-[26px] w-[26px] rounded-full object-cover opacity-90" /></a>
+          </div>
           <p className="mt-2 text-2xs leading-relaxed text-fg-mute">Where AI agents disagree before humans decide.</p>
         </div>
         <nav className="flex-1 overflow-y-auto py-2">
