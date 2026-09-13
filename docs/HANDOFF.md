@@ -5,7 +5,7 @@ Updated after every slice. Read this first, then `git log --oneline`.
 ## Stack facts
 - One package, no monorepo. `src/core` (engine, no DOM) + `src/app` (React, later slices).
 - Runtime + tests: **bun** (`bun test`). BDD functions come from `src/core/test/bdd.ts` only.
-- Typecheck: `./node_modules/.bin/tsc -p tsconfig.app.json --noEmit` (bun has no `bunx` here).
+- Typecheck: `./node_modules/.bin/tsc -b --noEmit` (bun has no `bunx` here).
 - Snapshots: `bun run snapshot:sync` (from sibling clones) / `snapshot:check` (hash verify, CI).
 
 ## Done (all green)
@@ -28,13 +28,24 @@ Updated after every slice. Read this first, then `git log --oneline`.
 | Harness: reproducible context, budget ledger, kill switch | `src/core/agents/harness.ts` | covered above |
 | Orchestrator: fixed phase order, graph assembly, bounded rework | `src/core/orchestrator/run.ts` | 9 |
 | Demo CLI (`bun run scripts/demo-run.ts`) | `scripts/demo-run.ts` | — |
+| Brief renderer (markdown, node-referenced, no free strings) | `src/core/brief/render.ts` | 5 |
+| Versioned run persistence; a record that fails validation is dropped | `src/core/persistence/serialize.ts` | 6 |
+| Learning loop: outcome -> tighten-only lesson -> ledger with expiry | `src/core/learning/lessons.ts` | 10 |
+| LIVE sources: feed parsing, content hashing, operator-configured registry | `src/core/sources/*` | 11 |
+| Adversarial suite: 15 attacks on the guards | `src/core/adversarial/attacks.test.ts` | 16 |
+| Ten screens, pure renderer over `RunResult` | `src/app/**` | covered by the engine suites |
+| CI (typecheck, snapshot hashes, tests, build) and Pages deploy | `.github/workflows/*.yml` | — |
 
-## Next, in order
-1. `tests/adversarial` — the 15 attacks in `docs/TEST-STRATEGY.md` (5 are already covered by the agent suite).
-2. `src/core/learning/` — outcome → lesson → bounded scoring delta (policy side already done).
-3. `src/core/brief/` — node-referenced brief renderer (no free strings).
-4. `src/app/` — 10 screens, dark Swiss enterprise.
-5. README (diagram, worked example, honest limitations), CI, Pages deploy.
+Totals: **186 tests across 15 files, 0 fail**, `tsc -b --noEmit` clean, `bun run build` clean
+(403 kB JS / 19.4 kB CSS).
+
+## Open, and needs a human
+1. **GitHub Pages is not enabled yet.** Settings → Pages → Source = **GitHub Actions**. The `pages`
+   workflow is committed and will publish `https://jeevan-0508.github.io/risk-swarm/` on the next push
+   once the source is set. Nothing else is blocking the live demo.
+2. **No screenshots in the README.** They need a visible browser, so they were not faked.
+3. LIVE mode is limited by cross-origin refusals from a static host. Every refusal is reported on
+   screen 10 with its reason; substituting an item would be worse than reporting the gap.
 
 ## Demo result, verified (`bun run scripts/demo-run.ts`)
 24-month DACH road window over 874 FOMO signals: 12 survive, 12 distinct event clusters, 8 publishers,
@@ -45,6 +56,17 @@ Updated after every slice. Read this first, then `git log --oneline`.
 findings. Four escalation requirements unmet: blocking findings open, confidence withheld,
 false-positive risk 0.41, and no tier-1/2 source behind the incident claim. This is the honest answer
 and the README must keep it: the demo proves the system's point instead of flattering it.
+
+## Decisions taken while wiring the UI and the loop
+- **The UI recomputes nothing.** Every screen reads the run record. A figure computed twice is a figure
+  that can disagree with itself, and then the audit trail is a fiction.
+- **`running` is explicit state.** Using "the live phase log is non-empty" as a proxy left the demo
+  button permanently disabled after the first run, and made a loaded historical run show the wrong log.
+- **Lessons are excluded in DEMO mode**, so the byte-for-byte reproducible run stays reproducible while
+  the learning loop still applies in SNAPSHOT and LIVE.
+- **A tampered stored run is dropped, never repaired.** Repair would invent a record no human wrote.
+- **LIVE changes discovery only.** Taxonomy and governance stay pinned, and tier still follows source
+  type, so going live can add evidence but can never promote it.
 
 ## Decisions taken while wiring the agents
 - **Independence excludes structure evidence.** A regulatory citation is tier 1 but can never make an
