@@ -40,12 +40,20 @@ Totals: **186 tests across 15 files, 0 fail**, `tsc -b --noEmit` clean, `bun run
 (403 kB JS / 19.4 kB CSS).
 
 ## Open, and needs a human
-1. **GitHub Pages is not enabled yet.** Settings → Pages → Source = **GitHub Actions**. The `pages`
-   workflow is committed and will publish `https://jeevan-0508.github.io/risk-swarm/` on the next push
-   once the source is set. Nothing else is blocking the live demo.
-2. **No screenshots in the README.** They need a visible browser, so they were not faked.
-3. LIVE mode is limited by cross-origin refusals from a static host. Every refusal is reported on
+1. **No screenshots in the README.** They need a visible browser, so they were not faked.
+2. LIVE mode is limited by cross-origin refusals from a static host. Every refusal is reported on
    screen 10 with its reason; substituting an item would be worse than reporting the gap.
+
+(GitHub Pages is enabled and live at https://jeevan-0508.github.io/risk-swarm/, confirmed serving the
+build as of commit 7fa8cf0 and every push since.)
+
+## EVOLUTION 2.0 — in progress
+
+A second build pass is under way against a much larger spec (agent codenames, SENTINEL/PULSE/ORBIT,
+a dozen new screens, an adversarial audit, a README rewrite). Read `docs/EVOLUTION-2.0.md` first —
+it is the phase map and the cross-session anchor for that work, kept separate from this file so the
+1.0 build record above stays intact. Phase A (identity layer) and Phase B (SENTINEL) are done and
+pushed; Phase C (PULSE) is next.
 
 ## Demo result, verified (`bun run scripts/demo-run.ts`)
 24-month DACH road window over 874 FOMO signals: 12 survive, 12 distinct event clusters, 8 publishers,
