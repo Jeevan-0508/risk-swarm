@@ -9,14 +9,11 @@ import { FENCE_BREAKER_NAMES, INJECTION_PATTERN_NAMES } from '@core/ingest/sanit
 import { TIER_WEIGHT } from '@core/domain/model';
 import { useSession } from '@app/store/session';
 import { MODE_NOTE } from '@app/lib/engine';
-import { Empty, Metric, Panel, Row, TIER_TONE, Tag, type Tone } from '@app/ui/kit';
-import type { SentinelStatus } from '@core/sentinel/sentinel';
+import { Empty, Metric, Panel, Row, STATUS_TONE, TIER_TONE, Tag } from '@app/ui/kit';
 
 interface ProvenanceFile { upstream_path: string; path: string; bytes: number; sha256: string }
 interface ProvenanceSource { key: string; upstream_repo: string; upstream_url: string; commit: string; note: string; files: ProvenanceFile[] }
 interface ProvenanceDoc { schema_version: string; synced_at: string; synced_by: string; sources: ProvenanceSource[] }
-
-const SENTINEL_TONE: Record<SentinelStatus, Tone> = { VERIFIED: 'support', WARNING: 'caution', BLOCKED: 'block' };
 
 const TIER_SOURCE: Record<number, string> = {
   1: 'Regulator, statute or official journal',
@@ -68,12 +65,12 @@ export function Provenance() {
       </Panel>
 
       {result !== null && (
-        <Panel title="SENTINEL · evidence integrity" aside={<Tag tone={SENTINEL_TONE[result.sentinel.status]}>{result.sentinel.status}</Tag>} flush>
+        <Panel title="SENTINEL · evidence integrity" aside={<Tag tone={STATUS_TONE[result.sentinel.status]}>{result.sentinel.status}</Tag>} flush>
           <ul className="divide-y divide-line">
             {result.sentinel.checks.map((c) => (
               <li key={c.key} className="px-4 py-2.5">
                 <div className="flex flex-wrap items-baseline gap-2">
-                  <Tag tone={SENTINEL_TONE[c.status]}>{c.status}</Tag>
+                  <Tag tone={STATUS_TONE[c.status]}>{c.status}</Tag>
                   <span className="text-sm text-fg">{c.label}</span>
                   {c.node_ids.length > 0 && <span className="num ml-auto text-2xs text-fg-mute">{c.node_ids.length} node(s)</span>}
                 </div>

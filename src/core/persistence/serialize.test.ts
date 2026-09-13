@@ -64,6 +64,21 @@ describe('run persistence', () => {
     expect(deserializeRun(stale)).toBeNull();
   });
 
+  it('round-trips PULSE\'s own report rather than dropping it silently', async () => {
+    const r = await run();
+    const back = deserializeRun(serializeRun(r, ENVELOPE))!;
+    expect(back.result.pulse.status).toBe(r.pulse.status);
+    expect(back.result.pulse.checks.length).toBe(r.pulse.checks.length);
+  });
+
+  it('drops a pre-PULSE record instead of rendering it with a missing field', async () => {
+    const r = await run();
+    const record = serializeRun(r, ENVELOPE) as Record<string, unknown>;
+    delete record.pulse;
+    const stale = { ...record, store_version: 2 };
+    expect(deserializeRun(stale)).toBeNull();
+  });
+
   it('drops a corrupt row from web storage without taking the good ones with it', async () => {
     const r = await run();
     const storage = new FakeStorage();

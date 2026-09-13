@@ -5,7 +5,7 @@
 import { useNavigate } from 'react-router-dom';
 import { demoInput, useSession } from '@app/store/session';
 import { AGENT_CODENAME, AGENT_LABEL, AGENT_ORDER, agentOutput } from '@app/lib/agents';
-import { BAND_TONE, Bar, Button, Dot, Empty, Metric, Panel, SEVERITY_TONE, Tag } from '@app/ui/kit';
+import { BAND_TONE, Bar, Button, Dot, Empty, Metric, Panel, SEVERITY_TONE, STATUS_TONE, Tag } from '@app/ui/kit';
 
 export function CommandCenter() {
   const { runs, start, select, mode, running } = useSession();
@@ -125,6 +125,25 @@ export function CommandCenter() {
           )}
         </Panel>
       </div>
+
+      {result !== null && (
+        <Panel title="PULSE · system health" aside={<Tag tone={STATUS_TONE[result.pulse.status]}>{result.pulse.status}</Tag>} flush>
+          <ul className="divide-y divide-line">
+            {result.pulse.checks.map((c) => (
+              <li key={c.key} className="flex flex-wrap items-baseline gap-2 px-4 py-2">
+                <Tag tone={STATUS_TONE[c.status]}>{c.status}</Tag>
+                <span className="text-sm text-fg">{c.label}</span>
+                <span className="text-xs leading-snug text-fg-mute">{c.detail}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="hair-t px-4 py-2.5 text-xs leading-relaxed text-fg-mute">
+            PULSE reports on the investigation's own process - budget, coverage, source diversity,
+            unresolved objections. It never re-scores the risk; a WARNING here can sit next to a
+            confident, correct recommendation, and does.
+          </p>
+        </Panel>
+      )}
 
       {decision !== null && (
         <Panel title="current exposure" aside={<Tag tone={SEVERITY_TONE[decision.severity_band]}>{decision.severity_band}</Tag>}>

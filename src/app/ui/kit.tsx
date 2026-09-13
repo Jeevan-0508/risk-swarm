@@ -3,6 +3,7 @@
  * ten screens looking like one product, and it is easier to hold a rule than to police a folder.
  */
 import type { ReactNode } from 'react';
+import type { IntegrityStatus } from '@core/status';
 
 export type Tone = 'neutral' | 'signal' | 'support' | 'caution' | 'objection' | 'block' | 'hypo';
 
@@ -124,3 +125,5 @@ export const NODE_TONE: Record<string, Tone> = {
   evidence: 'support', signal: 'signal', observation: 'signal', hypothesis: 'hypo',
   challenge: 'objection', red_team_finding: 'block', decision: 'caution', action: 'neutral', outcome: 'neutral', lesson: 'neutral',
 };
+/** Shared by every VERIFIED/WARNING/BLOCKED reporter - SENTINEL, PULSE, and later ORBIT - so a fourth one has a map to reuse instead of defining its own. */
+export const STATUS_TONE: Record<IntegrityStatus, Tone> = { VERIFIED: 'support', WARNING: 'caution', BLOCKED: 'block' };

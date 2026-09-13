@@ -25,6 +25,7 @@ import type { SnapshotLoader } from '../integrations/loader';
 import type { SignalSource } from '../integrations/fomo';
 import type { Reasoner } from '../reasoner/types';
 import { runSentinel, type SentinelReport } from '../sentinel/sentinel';
+import { runPulse, type PulseReport } from '../pulse/pulse';
 
 /** Defects in how the investigation was built. Re-running the chain can actually fix these. */
 const REWORKABLE: ReadonlySet<RedTeamClass> = new Set<RedTeamClass>(['hallucination', 'unsupported_claim', 'circular_reasoning', 'duplicate_evidence']);
@@ -87,6 +88,8 @@ export interface RunResult {
   benign_category_share: number;
   /** Evidence-integrity report over the graph this run actually built. Never affects the recommendation. */
   sentinel: SentinelReport;
+  /** System-health report over this run's own process - budget, coverage, source diversity. Never affects the recommendation. */
+  pulse: PulseReport;
 }
 
 const BENIGN_CATEGORY = 'insolven';
@@ -259,6 +262,14 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
   });
 
   const sentinel = runSentinel({ graph, snapshotFiles: scout.snapshot.files });
+  const pulse = runPulse({
+    intelligence, governance, challenger, red_team, decision, policy, sentinel,
+    spent: harness.spent,
+    budget: harness.budget,
+    // Live retrieval is captured by a UI-only side channel (see `liveSignalSource` in
+    // `app/lib/engine.ts`), not returned through any agent output, so it is not yet in scope for
+    // this engine-side report - a real gap noted in `docs/EVOLUTION-2.0.md`, not a fabricated VERIFIED.
+  });
 
   return {
     run_id: options.run_id,
@@ -272,6 +283,7 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
     spent: harness.spent,
     benign_category_share,
     sentinel,
+    pulse,
   };
 }
 

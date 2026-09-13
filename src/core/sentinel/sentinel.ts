@@ -14,8 +14,11 @@ import { RiskGraph } from '../domain/graph';
 import { GraphNode, type Evidence } from '../domain/model';
 import { sourceIdentity } from '../ingest/sanitize';
 import type { SnapshotFileProvenance } from '../integrations/loader';
+import { overallStatus, type IntegrityStatus } from '../status';
 
-export type SentinelStatus = 'VERIFIED' | 'WARNING' | 'BLOCKED';
+/** SENTINEL's own name for the shared status enum. Kept as an alias, not a redefinition, so a caller that
+ *  already imports `SentinelStatus` sees no change. */
+export type SentinelStatus = IntegrityStatus;
 
 export interface SentinelCheck {
   key: string;
@@ -31,9 +34,6 @@ export interface SentinelReport {
   status: SentinelStatus;
   checks: SentinelCheck[];
 }
-
-const RANK: Record<SentinelStatus, number> = { VERIFIED: 0, WARNING: 1, BLOCKED: 2 };
-const worseOf = (a: SentinelStatus, b: SentinelStatus): SentinelStatus => (RANK[b] > RANK[a] ? b : a);
 
 /** Every id one node legitimately refers to another node by, gathered once so a dangling one cannot hide. */
 function referencedIds(node: GraphNode): string[] {
@@ -229,6 +229,6 @@ export function runSentinel(input: SentinelInput): SentinelReport {
     node_ids: [],
   });
 
-  const status = checks.reduce((acc, c) => worseOf(acc, c.status), 'VERIFIED' as SentinelStatus);
+  const status = overallStatus(checks.map((c) => c.status));
   return { status, checks };
 }

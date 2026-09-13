@@ -36,6 +36,8 @@ export const DEFAULT_BUDGET: Budget = { agent_call: 24, retrieval: 400, tokens: 
 export interface Harness {
   ctx: AgentContext;
   spent: Budget;
+  /** The resolved cap this run is metered against (defaults merged with whatever the caller supplied). */
+  budget: Budget;
   abort: (reason: string) => void;
 }
 
@@ -72,5 +74,5 @@ export function createHarness(options: {
     },
   };
 
-  return { ctx, spent, abort: (reason) => { aborted = reason; } };
+  return { ctx, spent, budget, abort: (reason) => { aborted = reason; } };
 }

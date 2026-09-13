@@ -9,7 +9,7 @@ import { Edge, GraphNode } from '../domain/model';
 import { RiskGraph } from '../domain/graph';
 import type { RunResult } from '../orchestrator/run';
 
-export const STORE_VERSION = 2;
+export const STORE_VERSION = 3;
 
 const GraphJSON = z.object({ nodes: z.array(GraphNode), edges: z.array(Edge) });
 
@@ -31,6 +31,8 @@ const StoredRunSchema = z.object({
   benign_category_share: z.number(),
   /** SENTINEL's own report, stored verbatim like outputs and policy. Its absence is why STORE_VERSION bumped to 2: an older record has no way to satisfy this and is dropped, not backfilled. */
   sentinel: z.record(z.string(), z.unknown()),
+  /** PULSE's own report, stored verbatim for the same reason - STORE_VERSION bumped to 3 for this one. */
+  pulse: z.record(z.string(), z.unknown()),
   /** The request that produced the run, stored opaquely: provenance, never re-interpreted here. */
   request: z.record(z.string(), z.unknown()).nullable().default(null),
   human: z
@@ -66,6 +68,7 @@ export function serializeRun(result: RunResult, envelope: RunEnvelope): StoredRu
     spent: result.spent,
     benign_category_share: result.benign_category_share,
     sentinel: result.sentinel as unknown as Record<string, unknown>,
+    pulse: result.pulse as unknown as Record<string, unknown>,
     request: envelope.request,
     human: envelope.human,
   };
@@ -99,6 +102,7 @@ export function deserializeRun(raw: unknown): RehydratedRun | null {
     spent: record.spent,
     benign_category_share: record.benign_category_share,
     sentinel: record.sentinel,
+    pulse: record.pulse,
   } as unknown as RunResult;
   return { record, result };
 }
