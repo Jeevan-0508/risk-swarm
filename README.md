@@ -49,7 +49,7 @@ bun run scripts/demo-run.ts     # the whole investigation, printed
 | Why the band is not higher | `decision.gates_failed` and `decision.caps_applied`, both printed |
 | What it cost and whether it was stopped | `result.spent` (agent calls / retrievals / tokens) and `result.attempts` |
 | Whether an agent was allowed to phrase something with a model | `degraded_reason` on the agent output; absent means deterministic wording |
-| That the behaviour is enforced, not described | `bun test` — 186 tests across 15 files, 15 of them attacks |
+| That the behaviour is enforced, not described | `bun test` — 229 tests across 19 files, 16 of them adversarial attacks |
 
 The same record drives the UI. The browser build is a **pure renderer** over `RunResult`: no screen
 recomputes a number, because a figure computed twice is a figure that can disagree with itself.
@@ -214,7 +214,7 @@ added because the upstream feed matches news by OR'd keywords, so its own labels
 bun install
 bun run scripts/demo-run.ts        # the full investigation, no key, no network
 bun run dev                        # the ten screens at /risk-swarm/
-bun test                           # 186 tests, 15 files
+bun test                           # 229 tests, 19 files
 ./node_modules/.bin/tsc -b --noEmit # typecheck
 bun run snapshot:check              # verify snapshots against their recorded hashes
 ```
