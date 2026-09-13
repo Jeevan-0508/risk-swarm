@@ -27,6 +27,10 @@ const INJECTION_PATTERNS: Array<[string, RegExp]> = [
   ['chat_role_marker', /(^|\n)\s*(system|assistant|user)\s*:/i],
 ];
 
+/** Names only, for display. The patterns themselves stay private so nothing can mutate them. */
+export const INJECTION_PATTERN_NAMES: readonly string[] = INJECTION_PATTERNS.map(([name]) => name);
+export const FENCE_BREAKER_NAMES: readonly string[] = ['triple_backtick', 'special_token', 'data_fence'];
+
 /** Sequences that could break out of a prompt data fence. Replaced with a visible marker. */
 const FENCE_BREAKERS: Array<[string, RegExp, string]> = [
   ['triple_backtick', /```/g, "'''"],

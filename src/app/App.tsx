@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { BrowserRouter } from 'react-router-dom';
 import { useSession } from '@app/store/session';
@@ -7,7 +8,10 @@ import { CommandCenter } from '@app/screens/CommandCenter';
 import { NewInvestigation } from '@app/screens/NewInvestigation';
 import { AgentConsole } from '@app/screens/AgentConsole';
 import { DisagreementRoom } from '@app/screens/DisagreementRoom';
+import { AgentPerformance } from '@app/screens/AgentPerformance';
 import { DecisionBrief } from '@app/screens/DecisionBrief';
+import { History } from '@app/screens/History';
+import { Provenance } from '@app/screens/Provenance';
 import { EvidenceGraph } from '@app/screens/EvidenceGraph';
 import { RedTeam } from '@app/screens/RedTeam';
 
@@ -100,11 +104,10 @@ function Frame({ children }: { children: React.ReactNode }) {
   );
 }
 
-const Stub = ({ name }: { name: string }) => (
-  <div className="hair bg-ink-800 p-10 text-center text-sm text-fg-mute">{name} — next slice.</div>
-);
-
 export function App() {
+  const hydrate = useSession((s) => s.hydrate);
+  useEffect(() => hydrate(), [hydrate]);
+
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Frame>
@@ -116,9 +119,9 @@ export function App() {
           <Route path="/disagreement" element={<DisagreementRoom />} />
           <Route path="/redteam" element={<RedTeam />} />
           <Route path="/brief" element={<DecisionBrief />} />
-          <Route path="/history" element={<Stub name="History" />} />
-          <Route path="/agents" element={<Stub name="Agent Performance" />} />
-          <Route path="/provenance" element={<Stub name="Knowledge & Provenance" />} />
+          <Route path="/history" element={<History />} />
+          <Route path="/agents" element={<AgentPerformance />} />
+          <Route path="/provenance" element={<Provenance />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Frame>

@@ -6,6 +6,7 @@ import { create } from 'zustand';
 import type { PhaseLogEntry, RunResult } from '@core/orchestrator/run';
 import type { Budget } from '@core/agents/harness';
 import { DEMO_INPUT, runOptions, startRun, type Mode, type StartInput } from '@app/lib/engine';
+import { forget, forgetAll, persist, restore } from '@app/lib/persist';
 
 export type RunStatus = 'running' | 'complete' | 'stopped' | 'failed';
 
@@ -42,6 +43,10 @@ interface SessionState {
   start: (input: StartInput) => Promise<string>;
   stop: (reason: string) => void;
   recordVerdict: (id: string, verdict: HumanVerdict) => void;
+  /** Reads finished runs back out of browser storage. Called once, from the app shell. */
+  hydrate: () => void;
+  discard: (id: string) => void;
+  discardAll: () => void;
   active: () => StoredRun | null;
 }
 
@@ -85,6 +90,8 @@ export const useSession = create<SessionState>()((set, get) => ({
         }),
       );
       patch({ status: 'complete', result });
+      const stored = get().runs.find((r) => r.id === id);
+      if (stored !== undefined) persist(stored);
     } catch (error) {
       const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
       patch({ status: message.startsWith('RunAbortedError') ? 'stopped' : 'failed', error: message });
@@ -98,7 +105,32 @@ export const useSession = create<SessionState>()((set, get) => ({
     get().control?.abort(reason);
   },
 
-  recordVerdict: (id, human) => set((s) => ({ runs: s.runs.map((r) => (r.id === id ? { ...r, human } : r)) })),
+  recordVerdict: (id, human) => {
+    set((s) => ({ runs: s.runs.map((r) => (r.id === id ? { ...r, human } : r)) }));
+    const stored = get().runs.find((r) => r.id === id);
+    if (stored !== undefined) persist(stored);
+  },
+
+  hydrate: () => {
+    const restored = restore();
+    if (restored.length === 0) return;
+    set((s) => {
+      const known = new Set(s.runs.map((r) => r.id));
+      const merged = [...s.runs, ...restored.filter((r) => !known.has(r.id))];
+      merged.sort((a, b) => b.created_at.localeCompare(a.created_at));
+      return { runs: merged, activeId: s.activeId ?? merged[0]?.id ?? null };
+    });
+  },
+
+  discard: (id) => {
+    forget(id);
+    set((s) => ({ runs: s.runs.filter((r) => r.id !== id), activeId: s.activeId === id ? null : s.activeId }));
+  },
+
+  discardAll: () => {
+    forgetAll();
+    set({ runs: [], activeId: null });
+  },
 }));
 
 export const demoInput = (): StartInput => ({ ...DEMO_INPUT });
