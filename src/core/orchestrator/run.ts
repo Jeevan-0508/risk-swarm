@@ -24,6 +24,7 @@ import { createHarness, type Budget, type Harness } from '../agents/harness';
 import type { SnapshotLoader } from '../integrations/loader';
 import type { SignalSource } from '../integrations/fomo';
 import type { Reasoner } from '../reasoner/types';
+import { runSentinel, type SentinelReport } from '../sentinel/sentinel';
 
 /** Defects in how the investigation was built. Re-running the chain can actually fix these. */
 const REWORKABLE: ReadonlySet<RedTeamClass> = new Set<RedTeamClass>(['hallucination', 'unsupported_claim', 'circular_reasoning', 'duplicate_evidence']);
@@ -84,6 +85,8 @@ export interface RunResult {
   log: PhaseLogEntry[];
   spent: Budget;
   benign_category_share: number;
+  /** Evidence-integrity report over the graph this run actually built. Never affects the recommendation. */
+  sentinel: SentinelReport;
 }
 
 const BENIGN_CATEGORY = 'insolven';
@@ -255,6 +258,8 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
     decision,
   });
 
+  const sentinel = runSentinel({ graph, snapshotFiles: scout.snapshot.files });
+
   return {
     run_id: options.run_id,
     question: options.question,
@@ -266,6 +271,7 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
     log,
     spent: harness.spent,
     benign_category_share,
+    sentinel,
   };
 }
 

@@ -9,6 +9,7 @@ import { canonicalHost, sanitiseText } from '../ingest/sanitize';
 import type { Evidence, Signal } from '../domain/model';
 import { classifySource, emptyCost, type AgentContext, type AgentOutput } from './types';
 import type { SignalQueryStats } from '../integrations/fomo';
+import type { SnapshotFileProvenance } from '../integrations/loader';
 
 export interface ScoutInput {
   question: string;
@@ -24,7 +25,8 @@ export interface ScoutFinding {
 
 export interface ScoutOutput extends AgentOutput<ScoutFinding> {
   stats: SignalQueryStats;
-  snapshot: { upstream_repo: string; commit: string | null; synced_files: number };
+  /** `files` is the pinned-snapshot hash record as synced, so SENTINEL can check it without re-fetching. */
+  snapshot: { upstream_repo: string; commit: string | null; synced_files: number; files: SnapshotFileProvenance[] };
 }
 
 export async function runScout(ctx: AgentContext, input: ScoutInput): Promise<ScoutOutput> {
@@ -108,6 +110,6 @@ export async function runScout(ctx: AgentContext, input: ScoutInput): Promise<Sc
     recommended_next_step: findings.length === 0 ? 'Widen the window or the geography before drawing any conclusion.' : 'Cluster and deduplicate before interpretation.',
     cost: { ...emptyCost(), calls: 1, ms: Date.now() - started },
     stats: result.stats,
-    snapshot: { upstream_repo: result.provenance.upstream_repo, commit: result.provenance.commit, synced_files: result.provenance.files.length },
+    snapshot: { upstream_repo: result.provenance.upstream_repo, commit: result.provenance.commit, synced_files: result.provenance.files.length, files: result.provenance.files },
   };
 }
