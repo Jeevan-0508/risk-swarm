@@ -78,3 +78,22 @@ export function restore(): StoredRun[] {
   }
   return out;
 }
+
+const LESSON_KEY = 'risk-swarm:lessons';
+
+/** The lesson ledger, including rejected entries: an invisible rejection hides an attempted attack. */
+export function persistLessons(ledger: unknown): void {
+  try {
+    window.localStorage.setItem(LESSON_KEY, JSON.stringify(ledger));
+  } catch { /* history is a convenience, never a blocker */ }
+}
+
+export function restoreLessons<T>(validate: (raw: unknown) => T[]): T[] {
+  try {
+    const raw = window.localStorage.getItem(LESSON_KEY);
+    if (raw === null) return [];
+    return validate(JSON.parse(raw));
+  } catch {
+    return [];
+  }
+}

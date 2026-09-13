@@ -6,7 +6,8 @@
 import { useState, type ReactNode } from 'react';
 import { renderBrief } from '@core/brief/render';
 import { useSession } from '@app/store/session';
-import { BAND_TONE, Bar, Button, Empty, Metric, Panel, Row, SEVERITY_TONE, Tag, type Tone } from '@app/ui/kit';
+import { ACTION_LADDER } from '@core/domain/model';
+import { BAND_TONE, Bar, Button, Empty, Field, inputClass, Metric, Panel, Row, SEVERITY_TONE, Tag, type Tone } from '@app/ui/kit';
 
 const APPLICABILITY_TONE: Record<string, Tone> = { established: 'support', possible: 'caution', not_established: 'neutral' };
 
@@ -147,7 +148,77 @@ export function DecisionBrief() {
           <pre className="mt-4 max-h-96 overflow-auto bg-ink-900 p-4 text-2xs leading-relaxed text-fg-dim">{markdown}</pre>
         )}
       </Panel>
+      <HumanRuling runId={run!.id} recommended={d.action_band} />
     </Screen>
+  );
+}
+
+function HumanRuling({ runId, recommended }: { runId: string; recommended: string }) {
+  const { active, recordVerdict } = useSession();
+  const human = active()?.human ?? null;
+  const [verdict, setVerdict] = useState<'accepted' | 'overridden' | 'rejected'>('accepted');
+  const [band, setBand] = useState(recommended);
+  const [note, setNote] = useState('');
+
+  const submit = () => {
+    recordVerdict(runId, { verdict, band: verdict === 'accepted' ? recommended : band, note, at: new Date().toISOString() });
+  };
+
+  if (human !== null) {
+    return (
+      <Panel title="human ruling" aside={<Tag tone={human.verdict === 'accepted' ? 'support' : human.verdict === 'overridden' ? 'caution' : 'objection'}>{human.verdict}</Tag>}>
+        <div className="divide-y divide-line">
+          <Row k="Band the human settled on" v={human.band.replace(/_/g, ' ')} tone={human.band === recommended ? 'support' : 'caution'} />
+          <Row k="System recommended" v={recommended.replace(/_/g, ' ')} />
+          <Row k="Recorded at" v={human.at} />
+          <Row k="Note" v={human.note.trim().length === 0 ? 'none recorded' : human.note} />
+        </div>
+        <p className="mt-4 text-xs leading-relaxed text-fg-mute">
+          The recommendation node was not edited. A human ruling is recorded beside it, so the record still
+          shows what the system said and what a person decided to do about it.
+        </p>
+      </Panel>
+    );
+  }
+
+  return (
+    <Panel title="human ruling" aside={<span className="text-2xs text-fg-mute">the system recommends · a person decides</span>}>
+      <div className="flex flex-wrap gap-2">
+        {(['accepted', 'overridden', 'rejected'] as const).map((v) => (
+          <button key={v} onClick={() => setVerdict(v)}
+            className={`border px-3 py-1.5 font-mono text-2xs uppercase tracking-[0.12em] ${verdict === v ? 'border-line-bright text-fg' : 'border-line text-fg-mute'}`}>
+            {v}
+          </button>
+        ))}
+      </div>
+      <p className="mt-2 text-xs leading-snug text-fg-mute">
+        {verdict === 'accepted' && `Accept the recommendation as it stands: ${recommended.replace(/_/g, ' ')}.`}
+        {verdict === 'overridden' && 'Act at a different band. Both bands are kept, so the disagreement stays on the record.'}
+        {verdict === 'rejected' && 'Reject the finding entirely. Nothing is actioned.'}
+      </p>
+
+      {verdict === 'overridden' && (
+        <div className="mt-4">
+          <Field label="band you are acting at">
+            <select value={band} onChange={(e) => setBand(e.target.value)} className={inputClass}>
+              {ACTION_LADDER.map((b) => <option key={b} value={b}>{b.replace(/_/g, ' ')}</option>)}
+            </select>
+          </Field>
+        </div>
+      )}
+
+      <div className="mt-4">
+        <Field label="note" hint="Why. Recorded verbatim and never summarised by the system.">
+          <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} className={inputClass}
+            placeholder="What you know that the record does not." />
+        </Field>
+      </div>
+
+      <div className="mt-4 flex items-center gap-3">
+        <Button onClick={submit}>record ruling</Button>
+        <span className="text-2xs text-fg-mute">Stored on this device. Nothing is dispatched, emailed or escalated by this action.</span>
+      </div>
+    </Panel>
   );
 }
 

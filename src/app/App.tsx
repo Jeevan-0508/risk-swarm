@@ -61,7 +61,7 @@ function KillSwitch() {
 }
 
 function Frame({ children }: { children: React.ReactNode }) {
-  const { runs, live } = useSession();
+  const { runs, live, running } = useSession();
   const location = useLocation();
   return (
     <div className="flex h-full">
@@ -91,7 +91,7 @@ function Frame({ children }: { children: React.ReactNode }) {
         <header className="flex shrink-0 items-center justify-between gap-6 hair-b bg-ink-800 px-6 py-3">
           <div className="flex items-center gap-4">
             <span className="kicker">{NAV.find((n) => n.to === location.pathname)?.label ?? 'Command Center'}</span>
-            {live.length > 0 && <Tag tone="signal"><Dot tone="signal" pulse /> {live.length}/7 phases</Tag>}
+            {running && <Tag tone="signal"><Dot tone="signal" pulse /> {live.length}/7 phases</Tag>}
           </div>
           <div className="flex items-center gap-6">
             <ModeSwitch />

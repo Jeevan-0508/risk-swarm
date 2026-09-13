@@ -13,11 +13,13 @@ import { useNavigate } from 'react-router-dom';
 const STATUS_ICON: Record<string, string> = { supported: '✓', partially_supported: '~', hypothesis_only: '~', insufficient_evidence: '!' };
 
 export function AgentConsole() {
-  const { active, live, spent, control, stop } = useSession();
+  const { active, live, running, spent, control, stop } = useSession();
   const navigate = useNavigate();
   const run = active();
   const result = run?.result ?? null;
-  const done = new Set(live.map((l) => PHASE_AGENT[l.phase]));
+  // While a run is in flight the reveal follows `live`; once it settles the run's own log is the record.
+  const phases = running ? live : result?.log ?? [];
+  const done = new Set(phases.map((l) => PHASE_AGENT[l.phase]));
 
   if (!run) {
     return (
@@ -54,7 +56,7 @@ export function AgentConsole() {
         </div>
       )}
 
-      <Panel title="budget ledger" aside={<span className="label">{live.length}/7 phases</span>}>
+      <Panel title="budget ledger" aside={<span className="label">{phases.length}/7 phases</span>}>
         <div className="grid gap-6 sm:grid-cols-3">
           {([
             ['agent calls', spent?.agent_call ?? 0, budget.agent_call],
@@ -74,7 +76,7 @@ export function AgentConsole() {
 
       <div className="space-y-3">
         {AGENT_ORDER.map((agent, index) => (
-          <AgentCard key={agent} agent={agent} index={index} state={done.has(agent) ? (result ? 'done' : 'running') : live.length === index ? 'active' : 'pending'} />
+          <AgentCard key={agent} agent={agent} index={index} state={done.has(agent) ? (result ? 'done' : 'running') : phases.length === index ? 'active' : 'pending'} />
         ))}
       </div>
     </div>
@@ -82,10 +84,10 @@ export function AgentConsole() {
 }
 
 function AgentCard({ agent, index, state }: { agent: AgentId; index: number; state: 'pending' | 'active' | 'running' | 'done' }) {
-  const { active, live } = useSession();
+  const { active, live, running } = useSession();
   const run = active();
   const result = run?.result ?? null;
-  const entry = live.find((l) => PHASE_AGENT[l.phase] === agent) ?? null;
+  const entry = (running ? live : result?.log ?? []).find((l) => PHASE_AGENT[l.phase] === agent) ?? null;
   const out = result ? agentOutput(result, agent) : null;
   const lines = result ? agentLines(result, agent) : [];
   const uncertainties = result ? agentUncertainties(result, agent) : [];

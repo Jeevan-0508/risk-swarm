@@ -8,7 +8,7 @@ import { AGENT_LABEL, AGENT_ORDER, agentOutput } from '@app/lib/agents';
 import { BAND_TONE, Bar, Button, Dot, Empty, Metric, Panel, SEVERITY_TONE, Tag } from '@app/ui/kit';
 
 export function CommandCenter() {
-  const { runs, start, select, mode, live } = useSession();
+  const { runs, start, select, mode, running } = useSession();
   const navigate = useNavigate();
   const latest = runs.find((r) => r.result !== null) ?? null;
   const result = latest?.result ?? null;
@@ -35,7 +35,7 @@ export function CommandCenter() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="ghost" onClick={runDemo} disabled={live.length > 0}>run demo investigation</Button>
+          <Button variant="ghost" onClick={runDemo} disabled={running}>run demo investigation</Button>
           <Button onClick={() => navigate('/new')}>new investigation</Button>
         </div>
       </div>

@@ -4,6 +4,7 @@
  */
 import { createFetchLoader, type SnapshotLoader } from '@core/integrations/loader';
 import { investigate, type InvestigateOptions, type RunResult } from '@core/orchestrator/run';
+import type { Lesson } from '@core/domain/model';
 
 export type Mode = 'DEMO' | 'SNAPSHOT' | 'LIVE';
 
@@ -45,7 +46,13 @@ export const DEMO_INPUT: StartInput = {
   reversibility: 'hard_to_reverse',
 };
 
-export function runOptions(input: StartInput, mode: Mode, runId: string, hooks: Pick<InvestigateOptions, 'onPhase' | 'onStart'>): InvestigateOptions {
+export function runOptions(
+  input: StartInput,
+  mode: Mode,
+  runId: string,
+  hooks: Pick<InvestigateOptions, 'onPhase' | 'onStart'>,
+  lessons: Lesson[] = [],
+): InvestigateOptions {
   return {
     loader: snapshotLoader(),
     run_id: mode === 'DEMO' ? 'RUN-DEMO' : runId,
@@ -56,6 +63,7 @@ export function runOptions(input: StartInput, mode: Mode, runId: string, hooks: 
     budget: input.budget,
     automatedAction: input.automatedAction,
     reversibility: input.reversibility,
+    lessons,
     ...hooks,
   };
 }
