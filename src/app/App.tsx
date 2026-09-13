@@ -14,6 +14,7 @@ import { History } from '@app/screens/History';
 import { Provenance } from '@app/screens/Provenance';
 import { EvidenceGraph } from '@app/screens/EvidenceGraph';
 import { RedTeam } from '@app/screens/RedTeam';
+import { ScenarioRoom } from '@app/screens/ScenarioRoom';
 
 const NAV: Array<{ to: string; n: string; label: string }> = [
   { to: '/', n: '01', label: 'Command Center' },
@@ -26,6 +27,7 @@ const NAV: Array<{ to: string; n: string; label: string }> = [
   { to: '/history', n: '08', label: 'History' },
   { to: '/agents', n: '09', label: 'Agent Performance' },
   { to: '/provenance', n: '10', label: 'Knowledge & Provenance' },
+  { to: '/orbit', n: '11', label: 'Scenario Room' },
 ];
 
 const MODES: Mode[] = ['DEMO', 'SNAPSHOT', 'LIVE'];
@@ -122,6 +124,7 @@ export function App() {
           <Route path="/history" element={<History />} />
           <Route path="/agents" element={<AgentPerformance />} />
           <Route path="/provenance" element={<Provenance />} />
+          <Route path="/orbit" element={<ScenarioRoom />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Frame>

@@ -92,7 +92,8 @@ export interface RunResult {
   pulse: PulseReport;
 }
 
-const BENIGN_CATEGORY = 'insolven';
+/** Exported so ORBIT's false-positive-wave scenario can inject signals in the same category this run treats as benign, rather than guessing a string. */
+export const BENIGN_CATEGORY = 'insolven';
 
 export async function investigate(options: InvestigateOptions): Promise<RunResult> {
   const harness: Harness = createHarness({

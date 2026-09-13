@@ -20,10 +20,10 @@ incompatible architecture change. This doc is the cross-session anchor — read 
 | Phase | What | Where | Status |
 |---|---|---|---|
 | A | Agent identity layer (ARGUS/ATLAS/ORACLE/AEGIS/MERCURY/CERBERUS/VERDICT + taglines) | `src/app/lib/agents.ts` + 4 screens | **done** (`148ad21`) |
-| B | SENTINEL — evidence-integrity report, engine-side, additive field on `RunResult` | `src/core/sentinel/`, `orchestrator/run.ts` | **done** (`854d20a`) |
-| C | PULSE — system-health report over a completed `RunResult` | `src/core/pulse/` | next |
-| D | ORBIT — deterministic scenario mutators + baseline-vs-stressed diff | `src/core/orbit/` | |
-| E | Decision Lineage, Evidence Needed, Source Concentration (pure derivations, no new agent) | `src/core/lineage/` or inline in `decision.ts` output | |
+| B | SENTINEL — evidence-integrity report, engine-side, additive field on `RunResult` | `src/core/sentinel/`, `orchestrator/run.ts` | **done** (`854d20a`, bugfixes `7ca294b`/`c71d95f`) |
+| C | PULSE — system-health report over a completed `RunResult` | `src/core/pulse/` | **done** (`0bfbb51`) |
+| D | ORBIT — deterministic scenario mutators + baseline-vs-stressed diff | `src/core/orbit/` | **done** (`e71cf98`) |
+| E | Decision Lineage, Evidence Needed, Source Concentration (pure derivations, no new agent) | `src/core/lineage/` or inline in `decision.ts` output | next |
 | F | Run Comparison / "What Changed?" diff engine (reused by ORBIT and by repeat-investigation) | `src/core/compare/` | |
 | G | New/updated UI screens: Deliberation Room, Decision Lineage, Evidence Needed, Run Comparison,
     Source Concentration, upgraded Evidence Graph/Red Team/Governance/Provenance, Human Decision
@@ -103,30 +103,96 @@ for UI phases -> commit -> push. Pages redeploys automatically on push.
   a real `investigate()` output at least once before calling a phase verified, not just its own unit
   tests. 200/200 after this fix, tsc clean, build clean, browser-confirmed rendering.
 
-## Next session: PULSE (phase C)
+## Phase C, closed out (2026-09-13)
 
-- Pure function over a **completed** `RunResult` (not the live graph mid-run): reads
-  `disagreement_index`, `independent_evidence_count`, `benign_category_share`, `red_team.verdict`,
-  `red_team.checks_run`, `spent` vs `budget`, `log` (agent execution health/timing), `sentinel.status`
-  — no new engine computation, only synthesis of numbers that already exist on `RunResult`/`ScoreResult`.
-  `benign_category_share` and `spent` are already on `RunResult`; the budget cap itself lives on
-  `StoredRun.input.budget` in the UI store, not on `RunResult` — PULSE's "budget utilization" metric
-  either needs the cap passed in as an argument (`runPulse(result, { budget: StoredRun['input']['budget'] })`)
-  or the cap added to `RunResult` itself. Decide this without asking: **pass it in as an argument**,
-  since the budget is a run *configuration*, not something the engine computes — adding it to
-  `RunResult` would duplicate `StoredRun.input.budget` and the two could drift.
-- Explicit rule to encode, not skip: high `agent_agreement` + low `independent_evidence_count` /
-  `cluster_count` must be flagged as a health WARNING, never silently read as "healthy". Same shape
-  as SENTINEL's status enum (VERIFIED/WARNING/BLOCKED) — probably reuse literally, or a sibling
-  `PulseStatus` type of the same three values so the UI can share one status-to-tone map.
-  Consider promoting a single shared `IntegrityStatus` type into `src/core/domain/model.ts` or a
-  small shared module, since SENTINEL, PULSE and (later) ORBIT's per-check results will otherwise
-  redefine the same three-value enum three times.
-- UI surface: PULSE has no obvious existing screen to attach to (unlike SENTINEL/Provenance). The
-  spec's own "redesigned Command Center" phase (G) is probably the right home, but a minimal PULSE
-  panel could ship on Command Center immediately after Phase C's engine module, ahead of the full
-  redesign — do that, rather than leaving PULSE UI-invisible until phase G.
-- Test file: `src/core/pulse/pulse.test.ts`, same pattern as `sentinel.test.ts` (`Minter`/`fixedClock`
-  fixtures, or lighter — PULSE reads `RunResult`-shaped data, so a hand-built minimal `RunResult` or a
-  real `investigate()` call over `createMemoryLoader` fixtures may be cleaner than hand-assembling a
-  graph, since PULSE never touches the graph directly).
+- **PULSE**: `src/core/pulse/pulse.ts` (`runPulse`), 9 checks (`record_integrity`, `source_diversity`,
+  `evidence_volume`, `governance_coverage`, `red_team_outcome`, `unresolved_blockers`,
+  `budget_utilization`, `retrieval_health`, `outcome_history`), same VERIFIED/WARNING/BLOCKED shape as
+  SENTINEL, wired into `RunResult.pulse` inside `investigate()`. A shared `src/core/status.ts` now
+  exports `IntegrityStatus`/`worseStatus`/`overallStatus`, so SENTINEL and PULSE both point at one enum
+  instead of redefining it a second time, per the note this doc left for itself. `Harness` (`agents/
+  harness.ts`) now also returns `budget` (the resolved cap), so PULSE's budget-utilization check reads a
+  real value rather than needing a second argument threaded through `investigate()`.
+- Shipped on Command Center immediately (a `PULSE · system health` panel), not deferred to phase G, per
+  this doc's own instruction. `STATUS_TONE` added to `app/ui/kit.tsx` and Provenance's SENTINEL panel
+  was refactored onto it, so there is exactly one status-to-tone map for both reports.
+- Persistence lesson from Phase B applied proactively this time: `pulse` was added to `StoredRunSchema`
+  and `STORE_VERSION` bumped 2->3 in the *same* commit that added the field, not discovered as a crash
+  afterwards. 12 new tests (`pulse.test.ts`) including one run over a real `investigate()` output,
+  pinning the exact 9-check ordering - the standing lesson from Phase B, applied again, passed cleanly
+  on the first attempt. 214/214 total after this phase, tsc clean, build clean, browser-verified
+  (Command Center's panel and Provenance's refactored panel both confirmed live). Pushed as `0bfbb51`.
+
+## Phase D, closed out (2026-09-13)
+
+- **ORBIT**: `src/core/orbit/orbit.ts` (`runScenario`), a "what would this look like under stress"
+  tool. It runs `investigate()` twice - once against the real signal set, once against a deterministic
+  mutation of it - and diffs the two published `RunResult`s over 10 named fields (action band, severity
+  band, urgency, confidence, independent-evidence count, disagreement index, gates failed, red-team
+  verdict, SENTINEL status, PULSE status). It never hand-edits a `RunResult`; the only lever is
+  `InvestigateOptions.signals`, the same seam LIVE mode already uses, wrapped around whatever source the
+  caller already supplied.
+- **Scope decision, made without asking**: shipped 5 scenarios that are each a pure `RawSignal[]`
+  transform - `source_drought`, `source_concentration`, `duplicate_amplification`, `evidence_poisoning`,
+  `false_positive_wave`. A fuller catalogue (regulatory change, delayed governance update, operational-
+  data availability) would need either the `lessons` seam or per-pattern indicator ids that only exist
+  *after* the analyst has matched a pattern - a materially bigger seam than "mutate the signal list",
+  and genuinely a different feature (stress-testing a hypothetical indicator answer, not a hypothetical
+  evidence set). Deferred, not dropped; the fix for a future session is to accept a resolved
+  `pattern_id` (from a prior baseline run) as an argument rather than trying to predict it.
+- Synthetic signals for `evidence_poisoning`/`false_positive_wave` are built by calling the real,
+  exported `toRawSignal()` over a synthetic `UpstreamSignal` - injection detection, category
+  derivation and freight-relevance are computed by the actual ingestion code, never hand-set, so the
+  scenario tests the real pipeline's real classifiers. `false_positive_wave`'s titles are guarded by a
+  module-load assertion that they still derive to the benign category (`BENIGN_CATEGORY`, exported from
+  `orchestrator/run.ts` for this reuse) - this guard fired once during development (one title's phrasing
+  didn't match the keyword rule) and was the intended catch, not a bug.
+- UI: a new screen, `src/app/screens/ScenarioRoom.tsx` (nav `11`, route `/orbit`) - pick a scenario, run
+  it, see the baseline-vs-stressed diff table. It always stresses the fixed reference investigation
+  (`DEMO_INPUT`), not an arbitrary stored run, because `InvestigateOptions.loader` is not serialisable
+  and reconstructing "this exact past run's own options" is a separate feature `StoredRun` doesn't
+  support yet - noted here rather than silently faked with the wrong scope.
+- Test file `orbit.test.ts`: 8 tests, every one of them runs a real `investigate()` twice (the module's
+  own nature makes the Phase B/C "run it over the real thing, not just a fixture" lesson automatic here)
+  - including one that asserts SENTINEL actually flags the injected signal as `unsupported_reference`
+  (WARNING) on the stressed run while the baseline stays VERIFIED on that same check, proving the
+  scenario exercises a real downstream detector, not just a signal-count change. 222/222 total after
+  this phase, tsc clean, build clean. Browser-verified live: ran `evidence_poisoning` (band held at
+  MONITOR, independent-source count rose 8->9 because the injected signal's own source identity counts
+  as one more nominally-independent publisher - a real and useful thing for this tool to have surfaced)
+  and `source_drought` (band moved MONITOR->TARGETED_INVESTIGATION, confidence resolved from withheld to
+  0.368, red team fail->pass - a large, sensible, materially-changed result). Pushed as `e71cf98`.
+
+## Next session: Phase E (Decision Lineage, Evidence Needed, Source Concentration)
+
+All three are pure derivations over data `RunResult` already carries - no new agent, no new engine
+computation, per the phase map's own description. Likely home: a `src/core/lineage/` module (or three
+small sibling files if that reads better once written) exporting one function per concept, consumed by
+new screens in phase G; nothing stops a minimal panel shipping immediately the way SENTINEL/PULSE/ORBIT
+did, if there is an obvious screen to attach to (Decision Brief is the obvious one for lineage and
+evidence-needed; Provenance or a new Source Concentration panel for the third).
+
+- **Decision Lineage**: "why did the system conclude this" as a chain, not a paragraph. `RiskGraph`
+  already has `evidenceChain(id)` (`domain/graph.ts:100`), which walks backward from a node through
+  `supports`/`corroborates`/`based_on` edges to the evidence at the root. For each id in
+  `decision.hypothesis_ids`, call `graph.evidenceChain(id)` and assemble an ordered list: decision ->
+  hypothesis -> observation(s) -> evidence. This is close to free: the graph already does the walk,
+  lineage just needs to call it per hypothesis and shape the result for display.
+- **Evidence Needed**: "what would change the band" as a concrete ask, not a vague caveat.
+  `AnalystOutput`'s `coverage: CoverageResult` (`integrations/atlas.ts:94`) already carries
+  `unknown_indicator_ids` and `absent_weight` - the indicators nobody has looked at, weighted. Evidence
+  Needed is: for the lead hypothesis's matched pattern, look up each unknown indicator's real text via
+  `atlas.pattern(patternId)` (already the pattern object AnalystOutput's coverage was computed against)
+  and surface it as "this indicator, worth this much weight, is still unknown" - ranked by weight, so the
+  highest-leverage missing evidence is first. No new indicator taxonomy, no invented weights.
+- **Source Concentration**: how much of the evidence base is really independent voices vs. one loud one.
+  `IntelligenceOutput.clusters` and the signals underneath already carry `publisher`/`source_identity`
+  (same fields ORBIT's `source_concentration` scenario groups by). This is the *permanent, every-run*
+  version of that same grouping - share of evidence weight (or signal count) held by the top publisher,
+  computed once per run and displayed, not just something a stress test can reveal. Reuse the grouping
+  logic ORBIT already wrote rather than reimplementing it a second time; if it needs to move to a shared
+  location for that reuse, `src/core/lineage/` or a new tiny `src/core/concentration.ts` both work -
+  decide by whichever avoids a circular import, not by trying to predict every future caller.
+- None of the three needs a new `IntegrityStatus`-shaped enum; they are numbers, ranked lists and
+  chains, not health checks. Reuse `STATUS_TONE`/`BAND_TONE`/`SEVERITY_TONE` from `app/ui/kit.tsx` for
+  whatever coloring the eventual screens need, rather than adding a fourth tone map.
