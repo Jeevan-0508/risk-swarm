@@ -22,7 +22,7 @@ incompatible architecture change. This doc is the cross-session anchor — read 
 | A | Agent identity layer (ARGUS/ATLAS/ORACLE/AEGIS/MERCURY/CERBERUS/VERDICT + taglines) | `src/app/lib/agents.ts` + 4 screens | **done** (`148ad21`) |
 | B | SENTINEL — evidence-integrity report, engine-side, additive field on `RunResult` | `src/core/sentinel/`, `orchestrator/run.ts` | **done** (`854d20a`, bugfixes `7ca294b`/`c71d95f`) |
 | C | PULSE — system-health report over a completed `RunResult` | `src/core/pulse/` | **done** (`0bfbb51`) |
-| D | ORBIT — deterministic scenario mutators + baseline-vs-stressed diff | `src/core/orbit/` | **done** (`e71cf98`) |
+| D | ORBIT — deterministic scenario mutators + baseline-vs-stressed diff | `src/core/orbit/` | **done** (`e1d2a1c`) |
 | E | Decision Lineage, Evidence Needed, Source Concentration (pure derivations, no new agent) | `src/core/lineage/` or inline in `decision.ts` output | next |
 | F | Run Comparison / "What Changed?" diff engine (reused by ORBIT and by repeat-investigation) | `src/core/compare/` | |
 | G | New/updated UI screens: Deliberation Room, Decision Lineage, Evidence Needed, Run Comparison,
@@ -161,7 +161,7 @@ for UI phases -> commit -> push. Pages redeploys automatically on push.
   MONITOR, independent-source count rose 8->9 because the injected signal's own source identity counts
   as one more nominally-independent publisher - a real and useful thing for this tool to have surfaced)
   and `source_drought` (band moved MONITOR->TARGETED_INVESTIGATION, confidence resolved from withheld to
-  0.368, red team fail->pass - a large, sensible, materially-changed result). Pushed as `e71cf98`.
+  0.368, red team fail->pass - a large, sensible, materially-changed result). Pushed as `e1d2a1c`.
 
 ## Next session: Phase E (Decision Lineage, Evidence Needed, Source Concentration)
 
