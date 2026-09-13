@@ -49,7 +49,26 @@ which requirement it failed and why the recommendation was held back. A human de
 
 It runs with **no API key, no network and no paid service**. The demo below is reproducible byte for byte.
 
-**[Open the live demo](https://jeevan-0508.github.io/risk-swarm/)** — ten screens, no sign-in, no backend.
+**[Open the live demo](https://jeevan-0508.github.io/risk-swarm/)** — eleven screens, no sign-in, no backend.
+
+---
+
+## Screenshots
+
+Captured from the live demo, DEMO mode, one reproducible run of the reference DACH road-fraud question.
+
+| | |
+|---|---|
+| ![Command Center](docs/command-center.png) | ![New Investigation](docs/new-investigation.png) |
+| **Command Center** — seven agents, one complete run. Disagreement index 79.4, red team **fail**, exposure MONITOR, confidence **withheld**. PULSE health checks below. | **New Investigation** — the question, geography and date bounds, evidence depth, budget. Reaching a limit stops the run; it does not silently continue. |
+| ![Agent Console](docs/agent-console.png) | ![Disagreement Room](docs/disagreement-room.png) |
+| **Agent Console**, mid-run — phase 2 of 7, budget ledger counting calls and retrievals, and each agent's constraint printed beside it. | **Disagreement Room** — the index computed term by term, and where each agent stood. APOLLO held at *hypothesis only* while five others supported. |
+| ![Red Team](docs/red-team.png) | ![Scenario Room](docs/scenario-room.png) |
+| **Red Team** — verdict fail. 12 standing checks, 5 findings, 1 blocking: the run went back instead of publishing. | **Scenario Room** — five deterministic stresses. A scenario can only change what the scout was given to find. |
+
+[![Pantheon](docs/pantheon.png)](https://jeevan-0508.github.io/risk-swarm/#/pantheon)
+
+**Pantheon** — the seven agents as the gods they are named after, each next to the thing it is forbidden to do.
 
 ---
 
@@ -212,7 +231,7 @@ only **tighten** a gate for the pattern it was learned on:
 
 ## The adversarial suite
 
-`src/core/adversarial/attacks.test.ts` holds 15 attacks on the guards rather than tests of the features.
+`src/core/adversarial/attacks.test.ts` holds 16 attacks on the guards rather than tests of the features.
 Each one tries to make the system say something it cannot support: instructions hidden in retrieved text,
 a fence breaker, a pile-on from one publisher wearing many names, one event syndicated to look like a
 trend, an aggregator posing as the publisher, a caller supplying its own tier, a lesson that loosens a
@@ -248,7 +267,7 @@ added because the upstream feed matches news by OR'd keywords, so its own labels
 ```bash
 bun install
 bun run scripts/demo-run.ts        # the full investigation, no key, no network
-bun run dev                        # the ten screens at /risk-swarm/
+bun run dev                        # the eleven screens at /risk-swarm/
 bun test                           # 229 tests, 19 files
 ./node_modules/.bin/tsc -b --noEmit # typecheck
 bun run snapshot:check              # verify snapshots against their recorded hashes
@@ -272,8 +291,8 @@ src/core/sources/      LIVE retrieval: feed parsing, content hashing, an operato
 src/core/learning/     outcomes and tighten-only lessons
 src/core/persistence/  versioned run records; a record that fails validation is dropped
 src/core/brief/        the markdown decision brief
-src/core/adversarial/  15 attacks on the guards
-src/app/               the ten screens: a pure renderer over the run record
+src/core/adversarial/  16 attacks on the guards
+src/app/               the eleven screens: a pure renderer over the run record
 docs/                  architecture, domain model, agent contracts, scoring, integrations, test strategy
 ```
 
