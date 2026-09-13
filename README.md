@@ -1,6 +1,41 @@
 <p align="center"><img src="assets/jk-brand-banner.png" alt="Jeevan Siddhabhaktula — Risk. Governance. AI." width="280"></p>
 
-# RISK//SWARM
+<div align="center">
+
+```
+██████╗ ██╗███████╗██╗  ██╗    ██╗ ██╗███████╗██╗    ██╗ █████╗ ██████╗ ███╗   ███╗
+██╔══██╗██║██╔════╝██║ ██╔╝   ██╔╝██╔╝██╔════╝██║    ██║██╔══██╗██╔══██╗████╗ ████║
+██████╔╝██║███████╗█████╔╝   ██╔╝██╔╝ ███████╗██║ █╗ ██║███████║██████╔╝██╔████╔██║
+██╔══██╗██║╚════██║██╔═██╗  ██╔╝██╔╝  ╚════██║██║███╗██║██╔══██║██╔══██╗██║╚██╔╝██║
+██║  ██║██║███████║██║  ██╗██╔╝██╔╝   ███████║╚███╔███╔╝██║  ██║██║  ██║██║ ╚═╝ ██║
+╚═╝  ╚═╝╚═╝╚══════╝╚═╝  ╚═╝╚═╝ ╚═╝    ╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝
+                                                                                   
+```
+
+### WHERE AI AGENTS DISAGREE BEFORE HUMANS DECIDE
+
+*Seven agents investigate, challenge each other, and hand a traceable recommendation to a human*
+
+![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![tests](https://img.shields.io/badge/tests-229_passing-22c55e?style=for-the-badge)
+![attacks](https://img.shields.io/badge/adversarial_attacks-16-ef4444?style=for-the-badge)
+![Pages](https://img.shields.io/badge/GitHub%20Pages-LIVE-22c55e?style=for-the-badge&logo=github)
+![MIT](https://img.shields.io/badge/Licence-MIT-38bdf8?style=for-the-badge)
+
+<table>
+<tr><td align="center">🧠</td><td align="center">🏛️</td><td align="center">⚔️</td><td align="center">👁️</td></tr>
+<tr>
+<td align="center"><a href="https://jeevan-0508.github.io/risk-swarm/"><b>LIVE DEMO</b></a></td>
+<td align="center"><a href="#the-seven-agents"><b>THE SEVEN AGENTS</b></a></td>
+<td align="center"><a href="#the-adversarial-suite"><b>ADVERSARIAL SUITE</b></a></td>
+<td align="center"><a href="#where-to-watch-the-agents-work"><b>WATCH THEM WORK</b></a></td>
+</tr>
+<tr><td align="center">Run an investigation</td><td align="center">Who does what</td><td align="center">16 attacks</td><td align="center">Screen by screen</td></tr>
+</table>
+
+</div>
 
 **Where AI agents disagree before humans decide.**
 
