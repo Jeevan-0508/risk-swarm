@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/jk-brand-banner.png" alt="Jeevan Siddhabhaktula — Risk. Governance. AI." width="280"></p>
+
 # RISK//SWARM
 
 **Where AI agents disagree before humans decide.**
