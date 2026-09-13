@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useSession } from '@app/store/session';
 import { historyIsDurable } from '@app/lib/persist';
+import { elapsedMs } from '@core/casefile/casefile';
 import { BAND_TONE, Button, Empty, Metric, Panel, SEVERITY_TONE, Tag, type Tone } from '@app/ui/kit';
 
 const STATUS_TONE: Record<string, Tone> = { complete: 'support', running: 'signal', stopped: 'caution', failed: 'block' };
@@ -45,7 +46,7 @@ export function History() {
                     <span className="num ml-auto text-2xs text-fg-mute" title="asked at">{r.created_at.replace('T', ' ').slice(0, 16)}</span>
                     <span className="num text-2xs text-fg-mute" title="result at">
                       → {r.completed_at === null ? 'time not recorded' : r.completed_at.replace('T', ' ').slice(11, 16)}
-                      {elapsed(r.created_at, r.completed_at)}
+                      {formatElapsed(r.created_at, r.completed_at)}
                     </span>
                   </div>
                   <p className="mt-1.5 text-sm leading-snug text-fg-dim">{r.question}</p>
@@ -86,12 +87,10 @@ export function History() {
   );
 }
 
-/** Blank rather than 0.0s when a run predates completion tracking: an invented duration is worse than none. */
-function elapsed(asked: string, completed: string | null): string {
-  if (completed === null) return '';
-  const ms = Date.parse(completed) - Date.parse(asked);
-  if (!Number.isFinite(ms) || ms < 0) return '';
-  return ` · ${(ms / 1000).toFixed(1)}s`;
+/** Blank rather than 0.0s when the wait cannot be known. The judgement of when that is lives in `elapsedMs`. */
+function formatElapsed(asked: string, completed: string | null): string {
+  const ms = elapsedMs(asked, completed);
+  return ms === null ? '' : ` · ${(ms / 1000).toFixed(1)}s`;
 }
 
 function Screen({ children }: { children: ReactNode }) {

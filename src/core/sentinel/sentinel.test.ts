@@ -51,6 +51,69 @@ describe('SENTINEL', () => {
     expect(g.all().length).toBe(before);
   });
 
+  /**
+   * The next four checks are standing regression guards, not live filters: `RiskGraph` rejects an invalid
+   * node on `add()` and a dangling edge on `link()`, and the `Evidence` schema rejects a blank title or a
+   * blank source, so no public call can put a graph into these states. They exist so that a *future* schema
+   * or graph change cannot admit one silently. Driving them therefore means mutating the objects the graph
+   * handed out - which is exactly the state the guard is there to catch - rather than pretending an API
+   * exists that would produce it.
+   */
+  it('blocks on schema integrity when a node in the graph no longer validates', () => {
+    const g = new RiskGraph();
+    const m = mint();
+    g.add(evidence(m, { id: 'E-001' }));
+    const clean = runSentinel({ graph: g, snapshotFiles: [goodFile] });
+    expect(clean.checks.find((c) => c.key === 'schema_integrity')!.status).toBe('VERIFIED');
+
+    (g.all()[0] as { tier: number }).tier = 99;
+    const report = runSentinel({ graph: g, snapshotFiles: [goodFile] });
+    const check = report.checks.find((c) => c.key === 'schema_integrity')!;
+    expect(check.status).toBe('BLOCKED');
+    expect(check.node_ids).toContain('E-001');
+    expect(report.status).toBe('BLOCKED');
+  });
+
+  it('blocks on graph integrity when an edge no longer resolves at both ends', () => {
+    const g = new RiskGraph();
+    const m = mint();
+    const a = evidence(m, { id: 'E-001' });
+    const b = evidence(m, { id: 'E-002', url: 'https://trans.info/other' });
+    g.add(a);
+    g.add(b);
+    g.link({ from: a.id, to: b.id, kind: 'corroborates', weight: 1, created_by: 'intelligence' });
+    expect(runSentinel({ graph: g, snapshotFiles: [goodFile] }).checks.find((c) => c.key === 'graph_integrity')!.status).toBe('VERIFIED');
+
+    (g.edges()[0] as { to: string }).to = 'E-404';
+    const report = runSentinel({ graph: g, snapshotFiles: [goodFile] });
+    expect(report.checks.find((c) => c.key === 'graph_integrity')!.status).toBe('BLOCKED');
+    expect(report.status).toBe('BLOCKED');
+  });
+
+  it('warns on provenance completeness when a citation loses a field a human would need to check it', () => {
+    const g = new RiskGraph();
+    const m = mint();
+    g.add(evidence(m, { id: 'E-001' }));
+    (g.all()[0] as { title: string }).title = '   ';
+    const report = runSentinel({ graph: g, snapshotFiles: [goodFile] });
+    const check = report.checks.find((c) => c.key === 'provenance_completeness')!;
+    expect(check.status).toBe('WARNING');
+    expect(check.node_ids).toContain('E-001');
+  });
+
+  it('warns on source identity when an evidence item resolves to no identifiable publisher', () => {
+    const g = new RiskGraph();
+    const m = mint();
+    g.add(evidence(m, { id: 'E-001' }));
+    const node = g.all()[0] as { url: string | null; source: string };
+    node.url = null;
+    node.source = '';
+    const report = runSentinel({ graph: g, snapshotFiles: [goodFile] });
+    const check = report.checks.find((c) => c.key === 'source_identity')!;
+    expect(check.status).toBe('WARNING');
+    expect(check.node_ids).toContain('E-001');
+  });
+
   it('blocks on citation validity when a node cites an id that was never minted', () => {
     const g = new RiskGraph();
     const m = mint();

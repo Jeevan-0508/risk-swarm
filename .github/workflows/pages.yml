@@ -25,7 +25,9 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          # Pinned, not `latest`. A toolchain that changes under a green pipeline is the same class of
+          # failure as the line-ending mismatch that kept this workflow red: local and CI must agree.
+          bun-version: 1.3.14
 
       - name: install
         run: bun install --frozen-lockfile

@@ -19,7 +19,7 @@
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![tests](https://img.shields.io/badge/tests-229_passing-22c55e?style=for-the-badge)
+![tests](https://img.shields.io/badge/tests-262_passing-22c55e?style=for-the-badge)
 ![attacks](https://img.shields.io/badge/adversarial_attacks-16-ef4444?style=for-the-badge)
 ![Pages](https://img.shields.io/badge/GitHub%20Pages-LIVE-22c55e?style=for-the-badge&logo=github)
 ![MIT](https://img.shields.io/badge/Licence-MIT-38bdf8?style=for-the-badge)
@@ -32,7 +32,7 @@
 <td align="center"><a href="#the-adversarial-suite"><b>ADVERSARIAL SUITE</b></a></td>
 <td align="center"><a href="#where-to-watch-the-agents-work"><b>WATCH THEM WORK</b></a></td>
 </tr>
-<tr><td align="center">Run an investigation</td><td align="center">Who does what</td><td align="center">16 attacks</td><td align="center">Screen by screen</td></tr>
+<tr><td align="center">Run an investigation</td><td align="center">Who does what</td><td align="center">15 attacks</td><td align="center">Screen by screen</td></tr>
 </table>
 
 </div>
@@ -103,7 +103,7 @@ bun run scripts/demo-run.ts     # the whole investigation, printed
 | Why the band is not higher | `decision.gates_failed` and `decision.caps_applied`, both printed |
 | What it cost and whether it was stopped | `result.spent` (agent calls / retrievals / tokens) and `result.attempts` |
 | Whether an agent was allowed to phrase something with a model | `degraded_reason` on the agent output; absent means deterministic wording |
-| That the behaviour is enforced, not described | `bun test` — 229 tests across 19 files, 16 of them adversarial attacks |
+| That the behaviour is enforced, not described | `bun test` — 262 tests across 20 files, 16 of them adversarial attacks |
 
 The same record drives the UI. The browser build is a **pure renderer** over `RunResult`: no screen
 recomputes a number, because a figure computed twice is a figure that can disagree with itself.
@@ -233,7 +233,7 @@ only **tighten** a gate for the pattern it was learned on:
 
 ## The adversarial suite
 
-`src/core/adversarial/attacks.test.ts` holds 16 attacks on the guards rather than tests of the features.
+`src/core/adversarial/attacks.test.ts` holds 15 attacks on the guards rather than tests of the features.
 Each one tries to make the system say something it cannot support: instructions hidden in retrieved text,
 a fence breaker, a pile-on from one publisher wearing many names, one event syndicated to look like a
 trend, an aggregator posing as the publisher, a caller supplying its own tier, a lesson that loosens a
@@ -270,7 +270,7 @@ added because the upstream feed matches news by OR'd keywords, so its own labels
 bun install
 bun run scripts/demo-run.ts        # the full investigation, no key, no network
 bun run dev                        # the eleven screens at /risk-swarm/
-bun test                           # 229 tests, 19 files
+bun test                           # 262 tests, 20 files
 ./node_modules/.bin/tsc -b --noEmit # typecheck
 bun run snapshot:check              # verify snapshots against their recorded hashes
 ```
@@ -293,7 +293,7 @@ src/core/sources/      LIVE retrieval: feed parsing, content hashing, an operato
 src/core/learning/     outcomes and tighten-only lessons
 src/core/persistence/  versioned run records; a record that fails validation is dropped
 src/core/brief/        the markdown decision brief
-src/core/adversarial/  16 attacks on the guards
+src/core/adversarial/  15 attacks on the guards
 src/app/               the eleven screens: a pure renderer over the run record
 docs/                  architecture, domain model, agent contracts, scoring, integrations, test strategy
 ```

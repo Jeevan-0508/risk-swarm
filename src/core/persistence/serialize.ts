@@ -20,7 +20,7 @@ const StoredRunSchema = z.object({
   question: z.string(),
   mode: z.string(),
   created_at: z.string().min(4),
-  /** When the run settled. Nullable and defaulted like `request`, so a record written before this was tracked still parses instead of being thrown away. */
+  /** When the run settled. Nullable and defaulted like `request`, so a v3 record written before this field existed still parses with the stamp left null instead of being thrown away. A genuinely older record still fails on `store_version`, as it always did. */
   completed_at: z.string().nullable().default(null),
   status: z.string(),
   graph: GraphJSON,

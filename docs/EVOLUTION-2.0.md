@@ -186,9 +186,45 @@ no NAV entry, because it is only reachable from a run.
   It was added as `nullable().default(null)` on the same precedent as `request`, deliberately *without* a
   `STORE_VERSION` bump: a record written before this existed still parses with the stamp left null, and
   the case file prints "not recorded" rather than inventing a duration. Two tests hold that line.
-- 241/241 tests, tsc clean, build clean. Browser-verified: an old pre-tracking record reads "time not
-  recorded", a fresh run reads `-> 17:25 · 7.6s`, and the generated document was checked as a real file
-  (7 sections, 4 tables, 25 blocks, no script tag, no `undefined`, balanced markup).
+- 262/262 tests, tsc clean, build clean. The document's structure is asserted in
+  `casefile.test.ts` (every section heading, the escaping of a hostile string, no script tag, no
+  `undefined`, and every "nothing here" branch stating the absence in its own words) rather than eyeballed.
+  Browser-verified separately: an old pre-tracking record reads "time not recorded" and a fresh run reads
+  `-> 17:25 · 7.6s`.
+
+## Audit round after the Case File (2026-09-13)
+
+Three read-only audits - architecture/boundaries, test coverage, documentation honesty - over the case-file
+commit and the repo as a whole. Everything they raised is closed:
+
+- **Duplicated elapsed-time logic.** `History.tsx` blanked a backwards-clock record while `casefile.ts`
+  clamped it to `0.0s`, so the same record read differently in two places. One exported `elapsedMs()` now
+  owns that judgement and returns null rather than zero when the wait cannot be known.
+- **Two overstated comments.** `casefile.ts` claimed "nothing is recomputed" while summing per-phase
+  timings and rolling up a log that can hold several rows per agent after rework; `serialize.ts` claimed
+  any record written before `completed_at` existed still parses, true only of v3 records. Both corrected.
+- **Case-file branches never exercised**: the roster-fallback path, the `scope === null` path, and every
+  "nothing here" branch of the document renderer. Six tests added, including one that proves an agent
+  missing from the roster is named by its raw id rather than rendered blank.
+- **SENTINEL's four silent checks.** `schema_integrity`, `graph_integrity`, `provenance_completeness` and
+  `source_identity` had never been driven to a non-VERIFIED verdict. All four now are. Worth knowing why
+  they were untested: no public call can produce those states - the graph rejects an invalid node and a
+  dangling edge, and the schema rejects a blank title or source - so they are standing guards against a
+  future change, and the tests say so and mutate the objects the graph handed out.
+- **Red team's nine unproven classes.** The check list named twelve defects but only three
+  (hallucination, same_source_echo, circular_reasoning) had ever been driven to their own finding. All
+  twelve now are, several with a negative case beside them so a threshold cannot silently drift.
+- **Stale and overstated counts.** README said 229 tests / 19 files (real: 262 / 20) and "16 attacks" in
+  two places; `attacks.test.ts` really holds **15** attacks across 16 tests, which `docs/HANDOFF.md` had
+  right all along. Corrected to match.
+- **`bun-version: latest`** in both workflows, pinned to 1.3.14. Same failure class as the line-ending
+  mismatch that kept `ci` red for four phases: a toolchain that moves under a green pipeline is not a
+  green pipeline.
+
+Out of scope but flagged: the freight-taxonomy figures in README (12 patterns, 77 indicators, 31 false
+positives, 137 countermeasures) come from `freight-risk-atlas` / `freight-fraud-taxonomy` and cannot be
+verified from this repo. `docs/HANDOFF.md`'s bundle figures are stale but explicitly frozen as the 1.0
+build record, so they were deliberately left alone.
 
 ## Next session: Phase E (Decision Lineage, Evidence Needed, Source Concentration)
 

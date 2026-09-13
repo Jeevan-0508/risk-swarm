@@ -1,7 +1,7 @@
 import { describe, expect, it } from '../test/bdd';
 import { createFileLoader } from '../integrations/loader.node';
 import { investigate, type RunResult } from '../orchestrator/run';
-import { buildCaseFile, caseFileHtml, type CaseFileMeta, type RosterEntry } from './casefile';
+import { buildCaseFile, caseFileHtml, elapsedMs, type CaseFileMeta, type RosterEntry } from './casefile';
 
 const ASKED = '2026-09-13T00:00:00.000Z';
 const DONE = '2026-09-13T00:00:04.500Z';
@@ -37,6 +37,15 @@ const meta = (result: RunResult, over: Partial<CaseFileMeta> = {}): CaseFileMeta
   ...over,
 });
 
+describe('elapsed', () => {
+  it('is the one place the history list and the case file both ask, so they cannot disagree', () => {
+    expect(elapsedMs(ASKED, DONE)).toBe(4500);
+    expect(elapsedMs(ASKED, null)).toBe(null);
+    expect(elapsedMs(DONE, ASKED)).toBe(null);
+    expect(elapsedMs(ASKED, 'not a date')).toBe(null);
+  });
+});
+
 describe('case file', () => {
   it('stamps both times and the wait between them', async () => {
     const r = await run();
@@ -49,6 +58,12 @@ describe('case file', () => {
   it('leaves elapsed null rather than guessing when no completion was recorded', async () => {
     const r = await run();
     const file = buildCaseFile(r, meta(r, { completed_at: null }));
+    expect(file.elapsed_ms).toBe(null);
+  });
+
+  it('reports no duration rather than zero when the stamps run backwards', async () => {
+    const r = await run();
+    const file = buildCaseFile(r, meta(r, { asked_at: DONE, completed_at: ASKED }));
     expect(file.elapsed_ms).toBe(null);
   });
 
@@ -122,6 +137,45 @@ describe('case file', () => {
     const html = caseFileHtml(buildCaseFile(r, meta(r, { human: { verdict: 'overridden', band: 'ESCALATE', note: hostile, at: DONE } })));
     expect(html).not.toContain('<img src=x');
     expect(html).toContain('&lt;img src=x');
+  });
+
+  it('names an agent by its raw id rather than blank when the roster does not cover it', async () => {
+    const r = await run();
+    const short = roster(r).filter((e) => e.id !== 'red_team');
+    const file = buildCaseFile(r, meta(r, { roster: short }));
+    expect(file.agents.length).toBe(6);
+    const fromRedTeam = file.disagreements.filter((d) => d.by === 'red_team');
+    expect(fromRedTeam.length).toBe(r.outputs.red_team.findings.length);
+    expect(fromRedTeam[0]?.by_codename).toBe('red_team');
+  });
+
+  it('says plainly that nothing was contested rather than printing an empty list', async () => {
+    const r = await run();
+    const html = caseFileHtml({ ...buildCaseFile(r, meta(r)), disagreements: [] });
+    expect(html).toContain('Nothing was contested on this run.');
+  });
+
+  it('omits the scope row entirely when no scope was recorded', async () => {
+    const r = await run();
+    expect(caseFileHtml(buildCaseFile(r, meta(r, { scope: null })))).not.toContain('>scope<');
+    expect(caseFileHtml(buildCaseFile(r, meta(r)))).toContain('>scope<');
+  });
+
+  it('states each absence in its own words instead of leaving a section blank', async () => {
+    const r = await run();
+    const base = buildCaseFile(r, meta(r));
+    const html = caseFileHtml({
+      ...base,
+      problem: { ...base.problem, rework_history: [] },
+      agents: base.agents.map((a) => ({ ...a, statements: [], uncertainties: [] })),
+      final: { ...base.final, rationale: [], unresolved_objections: [], gates_failed: [], caps_applied: [], actions: [] },
+    });
+    expect(html).toContain('No phase was sent back for rework.');
+    expect(html).toContain('Published nothing on this run.');
+    expect(html).toContain('Nothing was asserted.');
+    expect(html).toContain('No objection was left unresolved.');
+    expect(html).toContain('No gate reduced this recommendation.');
+    expect(html).toContain('None. The band does not authorise action.');
   });
 
   it('records a human ruling beside the system band, never in place of it', async () => {

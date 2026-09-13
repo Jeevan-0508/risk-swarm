@@ -203,6 +203,124 @@ describe('red team', () => {
     expect(out.findings.some((f) => f.finding_class === 'circular_reasoning')).toBe(true);
   });
 
+  /**
+   * One test per remaining check class. A check list that names twelve defects but only ever proves three
+   * of them is a claim, not a guard, so every class below is driven to its own finding and asserted by
+   * class - not merely counted.
+   */
+  const ev = (h: ReturnType<typeof harness>, over: Partial<Parameters<typeof h.ctx.minter.evidence>[1]> = {}) =>
+    h.ctx.minter.evidence('scout', {
+      source: 'Trans.INFO',
+      source_type: 'news',
+      url: 'https://trans.info/example',
+      title: 'Carrier insolvency wave in Germany',
+      publication_date: '2026-09-10',
+      retrieved_at: NOW,
+      claim: 'A German road carrier entered insolvency.',
+      excerpt_or_summary: 'Report of an insolvency filing.',
+      reliability: 0.55,
+      relevance: 0.8,
+      agents_that_used_it: ['scout'],
+      cluster_id: 'CL-1',
+      injection_suspected: false,
+      incident_claim: true,
+      ...over,
+    });
+
+  const classes = (out: ReturnType<typeof runRedTeam>) => out.findings.map((f) => f.finding_class);
+
+  it('flags source concentration when one publisher supplies most of the incident record', () => {
+    const h = harness();
+    const evidence = [ev(h, { id: 'E-1' }), ev(h, { id: 'E-2', url: 'https://trans.info/b' }), ev(h, { id: 'E-3', url: 'https://trans.info/c' })];
+    const out = runRedTeam(h.ctx, input({ evidence }));
+    expect(classes(out)).toContain('confirmation_bias');
+    expect(out.findings.find((f) => f.finding_class === 'confirmation_bias')!.severity).toBe('material');
+  });
+
+  it('does not flag concentration when no single publisher passes the threshold', () => {
+    const h = harness();
+    const evidence = [
+      ev(h, { id: 'E-1' }),
+      ev(h, { id: 'E-2', source: 'Verkehrsrundschau', url: 'https://trans.info/b' }),
+      ev(h, { id: 'E-3', source: 'BAG', url: 'https://trans.info/c' }),
+    ];
+    expect(classes(runRedTeam(h.ctx, input({ evidence })))).not.toContain('confirmation_bias');
+  });
+
+  it('blocks a chain whose incident evidence carries no evidential weight at all', async () => {
+    const { h, analyst } = await throughAnalyst();
+    const known = analyst.findings.flatMap((f) => [f.hypothesis.id, ...f.supporting_evidence_ids]);
+    const out = runRedTeam(h.ctx, input({
+      findings: analyst.findings, known_node_ids: known,
+      evidence: [ev(h, { id: 'E-9', source_type: 'llm_reasoning', url: null })],
+    }));
+    const weak = out.findings.find((f) => f.finding_class === 'weak_source_chain')!;
+    expect(weak.severity).toBe('blocking');
+  });
+
+  it('downgrades to material when the record is real reporting but no regulator or industry body', async () => {
+    const { h, analyst } = await throughAnalyst();
+    const known = analyst.findings.flatMap((f) => [f.hypothesis.id, ...f.supporting_evidence_ids]);
+    const out = runRedTeam(h.ctx, input({ findings: analyst.findings, known_node_ids: known, evidence: [ev(h, { id: 'E-8' })] }));
+    expect(out.findings.find((f) => f.finding_class === 'weak_source_chain')!.severity).toBe('material');
+  });
+
+  it('flags one incident url minted as two evidence objects', () => {
+    const h = harness();
+    const out = runRedTeam(h.ctx, input({ evidence: [ev(h, { id: 'E-1' }), ev(h, { id: 'E-2' })] }));
+    expect(classes(out)).toContain('duplicate_evidence');
+  });
+
+  it('blocks a regulator-tier claim that carries no resolvable citation', () => {
+    const h = harness();
+    const out = runRedTeam(h.ctx, input({ evidence: [ev(h, { id: 'E-1', source_type: 'regulator', url: null, incident_claim: false })] }));
+    const f = out.findings.find((x) => x.finding_class === 'regulatory_misinterpretation')!;
+    expect(f.severity).toBe('blocking');
+  });
+
+  it('flags a magnitude that names no basis, and leaves one that does alone', () => {
+    const h = harness();
+    const flagged = runRedTeam(h.ctx, input({ quantified_claims: [{ node_id: 'H-001', text: 'losses of about 4 million', has_basis: false }] }));
+    expect(classes(flagged)).toContain('impact_overestimate');
+    expect(flagged.findings.find((f) => f.finding_class === 'impact_overestimate')!.target_id).toBe('H-001');
+    const clean = runRedTeam(h.ctx, input({ quantified_claims: [{ node_id: 'H-001', text: 'losses of about 4 million', has_basis: true }] }));
+    expect(classes(clean)).not.toContain('impact_overestimate');
+  });
+
+  it('blocks a hypothesis whose falsification test is too thin to run', async () => {
+    const { h, analyst } = await throughAnalyst();
+    const known = analyst.findings.flatMap((f) => [f.hypothesis.id, ...f.supporting_evidence_ids]);
+    (analyst.findings[0]!.hypothesis as { falsification_test: string }).falsification_test = 'ask around';
+    const out = runRedTeam(h.ctx, input({ findings: analyst.findings, known_node_ids: known }));
+    const f = out.findings.find((x) => x.finding_class === 'unsupported_claim')!;
+    expect(f.severity).toBe('blocking');
+    expect(f.target_id).toBe(analyst.findings[0]!.hypothesis.id);
+  });
+
+  it('argues ordinary commercial distress when half the surviving signals are insolvencies', async () => {
+    const { h, analyst } = await throughAnalyst();
+    const known = analyst.findings.flatMap((f) => [f.hypothesis.id, ...f.supporting_evidence_ids]);
+    expect(classes(runRedTeam(h.ctx, input({ findings: analyst.findings, known_node_ids: known, benign_category_share: 0.5 })))).toContain('normal_variation');
+    expect(classes(runRedTeam(h.ctx, input({ findings: analyst.findings, known_node_ids: known, benign_category_share: 0.49 })))).not.toContain('normal_variation');
+  });
+
+  it('blocks a conclusion drawn where almost no indicator was measured', async () => {
+    const { h, analyst } = await throughAnalyst();
+    const known = analyst.findings.flatMap((f) => [f.hypothesis.id, ...f.supporting_evidence_ids]);
+    const out = runRedTeam(h.ctx, input({ findings: analyst.findings, known_node_ids: known, unknown_indicator_share: 0.81 }));
+    expect(out.findings.find((f) => f.finding_class === 'missing_evidence')!.severity).toBe('blocking');
+    expect(classes(runRedTeam(h.ctx, input({ findings: analyst.findings, known_node_ids: known, unknown_indicator_share: 0.8 })))).not.toContain('missing_evidence');
+  });
+
+  it('flags a pattern linked to this network only by shared vocabulary', async () => {
+    const { h, analyst } = await throughAnalyst();
+    const known = analyst.findings.flatMap((f) => [f.hypothesis.id, ...f.supporting_evidence_ids]);
+    const lexical = analyst.findings.filter((f) => f.match.basis === 'lexical_topic_match' && f.coverage.completeness === 0);
+    expect(lexical.length).toBeGreaterThan(0);
+    const out = runRedTeam(h.ctx, input({ findings: analyst.findings, known_node_ids: known }));
+    expect(out.findings.filter((f) => f.finding_class === 'correlation_as_causation').length).toBe(lexical.length);
+  });
+
   it('states what would clear every finding it raises', async () => {
     const { h, analyst } = await throughAnalyst();
     const out = runRedTeam(h.ctx, input({ findings: analyst.findings, unknown_indicator_share: 1 }));

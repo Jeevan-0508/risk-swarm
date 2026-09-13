@@ -3,9 +3,11 @@
  * asked and when, what the swarm actually did, what each agent said in turn, who disagreed with whom, and
  * what was recommended in the end.
  *
- * It is a projection, not a second opinion. Every figure is copied from the run; nothing is recomputed and
- * nothing is inferred. Agent naming is passed in as a roster rather than known here, because a codename is
- * a presentation concern and this module is not allowed to hold one.
+ * It is a projection, not a second opinion. Every judgement - band, severity, confidence, disagreement
+ * index - is copied from the run, never recomputed. The only arithmetic here is over the run's own clock:
+ * the wall-clock wait, the total of the per-phase timings, and the per-agent rollup of a log that can hold
+ * more than one row per agent after rework. Agent naming is passed in as a roster rather than known here,
+ * because a codename is a presentation concern and this module is not allowed to hold one.
  */
 import type { RunResult } from '../orchestrator/run';
 import { renderBrief } from '../brief/render';
@@ -182,9 +184,6 @@ export function buildCaseFile(result: RunResult, meta: CaseFileMeta): CaseFile {
     })),
   ];
 
-  const elapsed_ms =
-    meta.completed_at === null ? null : Math.max(0, Date.parse(meta.completed_at) - Date.parse(meta.asked_at));
-
   return {
     run_id: result.run_id,
     question: result.question,
@@ -192,7 +191,7 @@ export function buildCaseFile(result: RunResult, meta: CaseFileMeta): CaseFile {
     status: meta.status,
     asked_at: meta.asked_at,
     completed_at: meta.completed_at,
-    elapsed_ms: Number.isFinite(elapsed_ms as number) ? elapsed_ms : null,
+    elapsed_ms: elapsedMs(meta.asked_at, meta.completed_at),
     engine_ms: result.log.reduce((a, l) => a + l.ms, 0),
     scope: meta.scope,
     problem: {
@@ -224,6 +223,17 @@ export function buildCaseFile(result: RunResult, meta: CaseFileMeta): CaseFile {
     human: meta.human,
     brief: renderBrief(result, { human: meta.human }),
   };
+}
+
+/**
+ * The wait between asking and answering. Null rather than zero when it cannot be known: a record with no
+ * completion stamp, or one whose stamps run backwards, has no duration to report and inventing one would be
+ * worse than leaving the field blank. Exported so the history list and the case file cannot disagree.
+ */
+export function elapsedMs(asked: string, completed: string | null): number | null {
+  if (completed === null) return null;
+  const ms = Date.parse(completed) - Date.parse(asked);
+  return Number.isFinite(ms) && ms >= 0 ? ms : null;
 }
 
 const esc = (s: string) =>
