@@ -20,18 +20,19 @@ Updated after every slice. Read this first, then `git log --oneline`.
 | FOMO adapter (874 real signals, category distrust, aggregator handling) | `src/core/integrations/fomo.ts` | 15 |
 | Atlas adapter (12 patterns / 77 indicators / 31 gates, coverage maths) | `src/core/integrations/atlas.ts` | 10 |
 | Control Room adapter (4 frameworks / 56 requirements, citation gate) | `src/core/integrations/governance.ts` | 8 |
-| RISK//OS export sink (import-shaped candidate risk) | `src/core/integrations/riskos.ts` | pending |
+| RISK//OS export sink (import-shaped candidate risk) | `src/core/integrations/riskos.ts` | via decision tests |
+| Scoring: ten factors, disagreement index, hard caps, action ladder | `src/core/scoring/score.ts` | 18 |
+| Learning policy: tighten-only lesson deltas | `src/core/scoring/policy.ts` | 4 |
 
 ## Next, in order
-1. `src/core/scoring/` — ten factors, disagreement index, hard caps, action-band ladder (`docs/SCORING.md`).
-2. `src/core/reasoner/` — `Reasoner` interface + `DeterministicReasoner`.
-3. `src/core/agents/` — the seven agents against `docs/AGENT-CONTRACTS.md`.
-4. `src/core/orchestrator/` — plan, budget ledger, state machine, kill switch, rework loop.
-5. `tests/adversarial` — the 15 attacks in `docs/TEST-STRATEGY.md`.
-6. `src/core/learning/` — outcome → lesson → bounded scoring delta.
-7. `src/core/brief/` — node-referenced brief renderer (no free strings).
-8. `src/app/` — 10 screens, dark Swiss enterprise.
-9. README (diagram, worked example, honest limitations), CI, Pages deploy.
+1. `src/core/reasoner/` — `Reasoner` interface + `DeterministicReasoner`.
+2. `src/core/agents/` — the seven agents against `docs/AGENT-CONTRACTS.md`.
+3. `src/core/orchestrator/` — plan, budget ledger, state machine, kill switch, rework loop.
+4. `tests/adversarial` — the 15 attacks in `docs/TEST-STRATEGY.md`.
+5. `src/core/learning/` — outcome → lesson → bounded scoring delta.
+6. `src/core/brief/` — node-referenced brief renderer (no free strings).
+7. `src/app/` — 10 screens, dark Swiss enterprise.
+8. README (diagram, worked example, honest limitations), CI, Pages deploy.
 
 ## Findings that shape the demo (real data, 24-month DACH window)
 - 12 signals survive filtering out of 874 scanned: 7 insolvency, 1 carrier fraud, 2 disruption,
