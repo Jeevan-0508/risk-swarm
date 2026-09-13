@@ -12,6 +12,8 @@ which requirement it failed and why the recommendation was held back. A human de
 
 It runs with **no API key, no network and no paid service**. The demo below is reproducible byte for byte.
 
+**[Open the live demo](https://jeevan-0508.github.io/risk-swarm/)** — ten screens, no sign-in, no backend.
+
 ---
 
 ## The seven agents
@@ -45,10 +47,23 @@ bun run scripts/demo-run.ts     # the whole investigation, printed
 | Why the band is not higher | `decision.gates_failed` and `decision.caps_applied`, both printed |
 | What it cost and whether it was stopped | `result.spent` (agent calls / retrievals / tokens) and `result.attempts` |
 | Whether an agent was allowed to phrase something with a model | `degraded_reason` on the agent output; absent means deterministic wording |
-| That the behaviour is enforced, not described | `bun test` — 137 tests across 10 files |
+| That the behaviour is enforced, not described | `bun test` — 186 tests across 15 files, 15 of them attacks |
 
-The 10-screen UI (agent console, evidence graph, disagreement view, decision brief) is the next slice.
-Until it lands, the CLI above and the graph JSON are the complete picture.
+The same record drives the UI. The browser build is a **pure renderer** over `RunResult`: no screen
+recomputes a number, because a figure computed twice is a figure that can disagree with itself.
+
+| Screen | What it is for |
+|---|---|
+| 01 Command Center | The last run's answer, its gates and the mode in force |
+| 02 New Investigation | Question, scope, depth and budget — set before the run, not raised mid-flight |
+| 03 Agent Console | Each phase as it really completes, with findings, uncertainties and cost |
+| 04 Evidence Graph | The append-only graph, layered by node kind; click any node for its evidence chain |
+| 05 Disagreement Room | The disagreement index with all four terms and their arithmetic, and every objection |
+| 06 Red Team | The 12 named checks, which fired, and which findings could not be cleared |
+| 07 Decision Brief | One page a human can act on, plus the markdown export and the human verdict |
+| 08 History | Past runs, restored from browser storage, each still carrying its own graph |
+| 09 Agent Performance | Cost and output per agent, the outcome recorder, and the lesson ledger |
+| 10 Knowledge & Provenance | Snapshot hashes, the tier ladder, and what LIVE retrieval actually fetched |
 
 ---
 
@@ -119,9 +134,54 @@ These are enforced in code and covered by tests, not stated as intentions.
   `FabricatedCitationError` otherwise.
 - **The band is the highest rung whose requirements are met**, not one demotion per failed gate. Four
   ordinary shortfalls should not collapse a real multi-publisher signal to "nothing to see".
+- **A stored run that no longer validates is dropped, never repaired.** A tampered record fails the
+  schema and disappears; it is not coerced into something plausible.
+- **The UI recomputes nothing.** Every figure on every screen is read from the run record, so the screens
+  and the audit trail cannot drift apart.
 - **Rework is only for construction defects** — a fabricated id, a circular chain, an untestable
   hypothesis. A defect in the *evidence that exists* (one publisher, no internal data) is published and
   caps the band, because re-running cannot conjure evidence.
+
+---
+
+## Three modes, and what changes between them
+
+| Mode | Knowledge | Clock | Reproducible |
+|---|---|---|---|
+| **DEMO** | pinned snapshots | fixed instant, fixed run id | byte for byte |
+| **SNAPSHOT** | pinned snapshots | real clock | same knowledge, live timing |
+| **LIVE** | public feeds for discovery; taxonomy and governance stay pinned | real clock | no — and it says so |
+
+LIVE changes discovery and nothing else. Tier still follows source type, so a live item can add evidence
+but can never promote it. A browser cannot read a feed that forbids cross-origin access, and a feed that
+could not be read is listed on the provenance screen with its reason — never substituted with a
+plausible item. Lessons are excluded in DEMO mode so the reproducible run stays reproducible.
+
+---
+
+## The learning loop, and why it cannot be poisoned
+
+A human records what actually happened. Only a **false positive** produces a lesson, and a lesson may
+only **tighten** a gate for the pattern it was learned on:
+
+- a *correct* outcome proposes nothing — being right is not evidence the gates are too strict;
+- a *false negative* proposes nothing either, because the only change that would have caught it is a
+  looser gate, and a run of planted misses would otherwise train the system into recklessness;
+- the delta schema cannot even express a looser gate, and `applyPolicyDelta` throws
+  `PolicyDeltaRejected` on one handed in past the type;
+- every lesson expires after a stated number of runs, and rejected lessons stay visible in the ledger.
+
+---
+
+## The adversarial suite
+
+`src/core/adversarial/attacks.test.ts` holds 15 attacks on the guards rather than tests of the features.
+Each one tries to make the system say something it cannot support: instructions hidden in retrieved text,
+a fence breaker, a pile-on from one publisher wearing many names, one event syndicated to look like a
+trend, an aggregator posing as the publisher, a caller supplying its own tier, a lesson that loosens a
+gate, a success story used to argue for less scrutiny, an expired lesson, an edit to the graph after the
+fact, a tampered stored run, an escalation demanded without operational evidence, an empty world fished
+for a verdict, a red team that can never be satisfied, and a run pushed past its budget.
 
 ---
 
@@ -151,7 +211,8 @@ added because the upstream feed matches news by OR'd keywords, so its own labels
 ```bash
 bun install
 bun run scripts/demo-run.ts        # the full investigation, no key, no network
-bun test                           # 137 tests, 10 files
+bun run dev                        # the ten screens at /risk-swarm/
+bun test                           # 186 tests, 15 files
 ./node_modules/.bin/tsc -b --noEmit # typecheck
 bun run snapshot:check              # verify snapshots against their recorded hashes
 ```
@@ -170,6 +231,12 @@ src/core/scoring/      ten factors, disagreement index, hard caps, requirement l
 src/core/reasoner/     the model seam: deterministic default, optional BYO-key LLM
 src/core/agents/       the seven agents, plus the reproducible harness (budget + kill switch)
 src/core/orchestrator/ fixed phase order, graph assembly, bounded rework
+src/core/sources/      LIVE retrieval: feed parsing, content hashing, an operator-configured registry
+src/core/learning/     outcomes and tighten-only lessons
+src/core/persistence/  versioned run records; a record that fails validation is dropped
+src/core/brief/        the markdown decision brief
+src/core/adversarial/  15 attacks on the guards
+src/app/               the ten screens: a pure renderer over the run record
 docs/                  architecture, domain model, agent contracts, scoring, integrations, test strategy
 ```
 
@@ -184,7 +251,10 @@ docs/                  architecture, domain model, agent contracts, scoring, int
 - **Framework summaries are plain-language paraphrases**, not legal text, and none of this is legal advice.
 - **A red-team pass means "no known defect"**, not "sound". 12 checks run; a weakness outside them passes
   unnoticed.
-- **No UI yet.** The engine, the tests and the CLI are complete; the 10 screens are the next slice.
+- **History lives in browser storage.** It is per-browser and per-device, and it is cleared with the
+  screen's own discard button. There is no server, so there is nowhere else for it to live.
+- **LIVE mode is limited by the browser.** Many feeds refuse cross-origin reads from a static host. The
+  system reports each refusal instead of working around it.
 
 ## Licence
 

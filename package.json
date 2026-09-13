@@ -13,8 +13,7 @@
     "test:watch": "bun test --watch",
     "typecheck": "tsc -b --noEmit",
     "snapshot:check": "node scripts/sync-snapshots.mjs --check",
-    "snapshot:sync": "node scripts/sync-snapshots.mjs",
-    "deploy": "bun run build && node scripts/copy-dist-to-docs.mjs"
+    "snapshot:sync": "node scripts/sync-snapshots.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
