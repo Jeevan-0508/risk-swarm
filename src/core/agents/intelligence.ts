@@ -83,13 +83,13 @@ export function runIntelligence(ctx: AgentContext, input: IntelligenceInput): In
   obs(
     `${clustered.independent_source_count} independent publisher(s) across those clusters`,
     'distinct canonical publisher identity, counted once per cluster, aggregator hosts excluded',
-    clustered.clusters.map((c) => c.id),
+    clustered.clusters.flatMap((c) => c.member_ids),
     clustered.independent_source_count,
   );
   obs(
     `Clusters fall in ${buckets.length} distinct 7-day bucket(s) of ${window_buckets} in the window`,
     'fixed 7-day bucketing of the latest date in each cluster',
-    clustered.clusters.map((c) => c.id),
+    clustered.clusters.flatMap((c) => c.member_ids),
     buckets.length,
   );
   for (const [category, count] of [...categories.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))) {

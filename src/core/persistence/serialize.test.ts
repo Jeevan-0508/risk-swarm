@@ -49,6 +49,21 @@ describe('run persistence', () => {
     expect(deserializeRun({ ...{}, store_version: 99 })).toBeNull();
   });
 
+  it('round-trips SENTINEL\'s own report rather than dropping it silently', async () => {
+    const r = await run();
+    const back = deserializeRun(serializeRun(r, ENVELOPE))!;
+    expect(back.result.sentinel.status).toBe(r.sentinel.status);
+    expect(back.result.sentinel.checks.length).toBe(r.sentinel.checks.length);
+  });
+
+  it('drops a pre-SENTINEL record instead of rendering it with a missing field', async () => {
+    const r = await run();
+    const record = serializeRun(r, ENVELOPE) as Record<string, unknown>;
+    delete record.sentinel;
+    const stale = { ...record, store_version: 1 };
+    expect(deserializeRun(stale)).toBeNull();
+  });
+
   it('drops a corrupt row from web storage without taking the good ones with it', async () => {
     const r = await run();
     const storage = new FakeStorage();

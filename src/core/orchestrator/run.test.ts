@@ -84,4 +84,16 @@ describe('a full investigation over the pinned snapshots', () => {
     expect(r.outputs.decision.decision.rationale.join(' ')).toContain('no risk statement is made');
     expect(r.outputs.scout.uncertainties.join(' ')).toContain('absence of evidence must not be read as evidence of absence');
   });
+
+  it('is bookkeeping-sound: SENTINEL finds no dangling citation or broken chain over what the agents actually produced', async () => {
+    const r = await run();
+    const blocked = r.sentinel.checks.filter((c) => c.status === 'BLOCKED');
+    expect(blocked.map((c) => `${c.key}: ${c.detail}`)).toEqual([]);
+    // The only known WARNING on this canonical run: two governance citations share a framework-level
+    // eur-lex URL because AI Act and GDPR requirements are cited at the regulation, not the article -
+    // a real, honestly-reported characteristic of the record, not a defect. Pinned so a *new*,
+    // unexplained WARNING on a future change gets noticed rather than waved through.
+    const warnings = r.sentinel.checks.filter((c) => c.status === 'WARNING');
+    expect(warnings.map((c) => c.key)).toEqual(['duplicate_integrity']);
+  });
 });
