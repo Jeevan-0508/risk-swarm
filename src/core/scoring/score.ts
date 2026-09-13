@@ -145,7 +145,11 @@ export function computeScore(input: ScoringInput): ScoreResult {
   const signal_recurrence = clamp01(input.recurrence_buckets / Math.max(1, input.window_buckets));
 
   // ---- factor 4: independent sources (distinct publishers, one per cluster)
-  const identities = new Set(perCluster.map((e) => e.source_identity));
+  // Independence is about corroboration of an *incident*. A regulatory citation is tier 1 and does
+  // count towards source quality, but it can never make an event independently reported, so structure
+  // evidence is excluded here. Without this, the governance officer could satisfy the escalation gate
+  // on its own by citing more law.
+  const identities = new Set(perCluster.filter((e) => e.incident_claim).map((e) => e.source_identity));
   const independent_evidence_count = identities.size;
   const independence_norm = clamp01(independent_evidence_count / policy.escalate_min_independent_sources);
 
@@ -284,20 +288,31 @@ export function computeScore(input: ScoringInput): ScoreResult {
   const urgencyScore = 0.5 * (severityIndex / 3) + 0.35 * time_sensitivity + 0.15 * irreversibility;
   const urgency: Urgency = urgencyScore >= 0.66 ? 'IMMEDIATE' : urgencyScore >= 0.4 ? 'ELEVATED' : 'ROUTINE';
 
-  // ---- action band ladder: start at the top and drop one step per failed gate
-  let band: ActionBand = 'ESCALATE';
-  const drop = (reason: string) => {
-    gates_failed.push(reason);
-    band = band === 'ESCALATE' ? 'TARGETED_INVESTIGATION' : band === 'TARGETED_INVESTIGATION' ? 'MONITOR' : 'NOTE';
-  };
+  // ---- action band: the highest rung whose requirements are all met.
+  //
+  // This is a ladder of requirements, not a penalty count. Subtracting one rung per failed gate would
+  // let four ordinary shortfalls collapse a real, multi-publisher signal to "nothing to see", which is
+  // how a system trains its users to ignore it. Every unmet escalation requirement is still named in
+  // gates_failed so the brief can print exactly what was missing.
+  const bestIncidentTier = incidentEvidence.length === 0 ? null : Math.min(...incidentEvidence.map((e) => e.tier));
 
-  if (confidence === null) drop(`unresolved blocking finding(s): escalation withheld`);
-  else if (confidence < policy.escalate_min_confidence) drop(`confidence ${round(confidence, 2)} below ${policy.escalate_min_confidence}`);
-  if (independent_evidence_count < policy.escalate_min_independent_sources) {
-    drop(`${independent_evidence_count} independent source(s), ${policy.escalate_min_independent_sources} required to escalate`);
-  }
-  if (false_positive_risk >= policy.escalate_max_fp_risk) drop(`false-positive risk ${round(false_positive_risk, 2)} at or above ${policy.escalate_max_fp_risk}`);
-  if (!perCluster.some((e) => e.tier <= 2)) drop('no tier-1 or tier-2 source supports the finding');
+  const escalateRequirements: Array<[boolean, string]> = [
+    [confidence !== null, 'unresolved blocking finding(s): escalation withheld'],
+    [confidence !== null && confidence >= policy.escalate_min_confidence, `confidence ${confidence === null ? 'withheld' : round(confidence, 2)} below ${policy.escalate_min_confidence}`],
+    [independent_evidence_count >= policy.escalate_min_independent_sources, `${independent_evidence_count} independent source(s), ${policy.escalate_min_independent_sources} required to escalate`],
+    [false_positive_risk < policy.escalate_max_fp_risk, `false-positive risk ${round(false_positive_risk, 2)} at or above ${policy.escalate_max_fp_risk}`],
+    // The tier gate is judged on incident evidence only. A regulator citation is tier 1 and belongs in
+    // the record, but it describes an obligation - it can never be well-sourced proof of an event.
+    [bestIncidentTier !== null && bestIncidentTier <= 2, bestIncidentTier === null ? 'no incident evidence at all: there is nothing to act on' : 'no tier-1 or tier-2 source supports the incident claim'],
+    [input.pattern !== null, 'no taxonomy pattern matched, so an escalation has no described mechanism'],
+  ];
+  for (const [met, reason] of escalateRequirements) if (!met) gates_failed.push(reason);
+
+  // Investigating is how an open objection gets resolved, so a blocking finding does not forbid it.
+  const canInvestigate = incidentEvidence.length > 0 && independent_evidence_count >= policy.min_independent_sources && false_positive_risk <= 0.6;
+  const canMonitor = incidentEvidence.length > 0;
+
+  let band: ActionBand = gates_failed.length === 0 ? 'ESCALATE' : canInvestigate ? 'TARGETED_INVESTIGATION' : canMonitor ? 'MONITOR' : 'NOTE';
 
   if (false_positive_risk > 0.6) {
     band = 'NOTE';
@@ -307,11 +322,6 @@ export function computeScore(input: ScoringInput): ScoreResult {
     band = 'MONITOR';
     caps_applied.push('action band capped at MONITOR: an unresolved blocking finding stands');
   }
-  if (input.pattern === null && band === 'ESCALATE') {
-    band = 'TARGETED_INVESTIGATION';
-    gates_failed.push('no taxonomy pattern matched, so an escalation has no described mechanism');
-  }
-
   return {
     factors,
     disagreement_index,
