@@ -261,11 +261,21 @@ replays the *stored record*, and the record says so.
 | 4 | `core/research/providers/` — 8 verified providers + opt-in proxy; fix R13, R14 | medium: real network |
 | 5 | `core/research/normalize.ts` — provider result → `Evidence`/`Signal`, source quality, duplication | medium: touches evidence |
 | 6 | knowledge packages; dynamic participation; DEFENSE/REBUTTAL from real output | **high: touches run.ts and agents** |
-| 7 | `core/knowledge/delta.ts` + research ledger | low |
+| 7 | `core/knowledge/delta.ts` + research ledger | low - **done** |
 | 8 | taxonomy proposal → validation → approval workflow | low |
 | 9 | SENTINEL/PULSE/ORBIT extensions; close the `run.ts:275` gap | medium: exact-key tests |
 | 10 | Council Core visual layer, state-driven | low, isolated in `src/council` |
 | 11 | replay, performance, responsive, docs | low |
+
+**Phase 7 note, said plainly:** `core/knowledge/delta.ts` builds a `KnowledgeDelta` from a
+`QuestionModel` + `ResearchPlan` + `NormalizedEvidence[]` and appends it to an in-memory
+`ResearchLedger` - pure, deterministic, fully unit-tested (`delta.test.ts`). It has **no live caller
+yet**, for the same reason `plan.ts`/`execute.ts`/`normalize.ts` (phases 4-5) had none until this
+phase: `orchestrator/run.ts` does not run the research pipeline at all today, and neither does
+`app/lib/engine.ts` (which still runs the pre-Phase-4 demo path R12/R13 described). Wiring a real,
+open-ended question through plan → execute → normalize → propose-a-delta into a live surface is an
+app-layer concern, not this module's - it belongs to whichever of phases 8-11 first gives the UI an
+open-ended question box. Recorded here so it isn't mistaken for done when it is only *buildable*.
 
 Every phase ends `bun run typecheck` → `bun test` → `bun run build` → commit. No phase may leave a
 red test or a fabricated capability behind.
