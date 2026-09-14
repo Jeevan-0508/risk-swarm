@@ -6,6 +6,7 @@
   "type": "module",
   "description": "RISK//SWARM - a multi-agent risk investigation system where AI agents disagree before humans decide",
   "scripts": {
+    "knowledge:index": "node scripts/build-knowledge-index.mjs",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
