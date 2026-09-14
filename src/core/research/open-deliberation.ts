@@ -30,7 +30,7 @@ const AGENTS: Array<[OpenAgentId, string, string]> = [
 ];
 
 function textFor(outcome: ResearchOutcome): string {
-  return outcome.merged.items.map((i) => `${i.evidence.title}. ${i.evidence.excerpt}`).join(' ');
+  return outcome.merged.items.map((i) => `${i.evidence.title}. ${i.evidence.excerpt_or_summary}`).join(' ');
 }
 
 function comparisonParts(question: string): [string, string] | null {
@@ -45,7 +45,7 @@ const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\
 
 function sideHas(evidence: ResearchOutcome['merged']['items'], side: string, terms: RegExp): boolean {
   const sideRe = new RegExp(`\\b${escapeRegExp(side)}\\b`, 'i');
-  return evidence.some((item) => sideRe.test(`${item.evidence.title} ${item.evidence.excerpt}`) && terms.test(`${item.evidence.title} ${item.evidence.excerpt}`));
+  return evidence.some((item) => sideRe.test(`${item.evidence.title} ${item.evidence.excerpt_or_summary}`) && terms.test(`${item.evidence.title} ${item.evidence.excerpt_or_summary}`));
 }
 
 function dimensionAnswer(question: string, a: string, b: string, outcome: ResearchOutcome): Array<{ label: string; winner: string; reason: string }> {
@@ -97,9 +97,12 @@ export function deliberateOpenResearch(question: string, outcome: ResearchOutcom
   ]);
 
   const sides = comparisonParts(question);
-  const dimensions = sides
-    ? dimensionAnswer(question, sides[0], sides[1], outcome)
-    : [{ label: 'Answer', winner: 'evidence-dependent', reason: 'The question is not a supported comparison shape; no winner is invented.' }];
+  const noEvidence = outcome.execution.status === 'search_failed' || evidence.length === 0;
+  const dimensions = noEvidence
+    ? [{ label: 'Answer', winner: 'evidence-dependent', reason: 'Retrieval failed or returned no evidence, so no winner is invented.' }]
+    : sides
+      ? dimensionAnswer(question, sides[0], sides[1], outcome)
+      : [{ label: 'Answer', winner: 'evidence-dependent', reason: 'The question is not a supported comparison shape; no winner is invented.' }];
   push('analyst', dimensions.map((d) => `${d.label}: ${d.winner} — ${d.reason}`));
   push('challenger', [
     'Challenge the strongest apparent conclusion and require an opposing explanation.',

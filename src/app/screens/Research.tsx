@@ -162,7 +162,7 @@ export function Research() {
           )}
 
           <Panel title="evidence actually used" aside={<span className="num text-2xs text-fg-mute">{answer.evidence_count} retained · {answer.source_count} source identities</span>} flush>
-            <ul>{outcome.merged.items.map((item) => <li key={item.evidence.id} className="hair-b px-4 py-3 last:border-b-0"><div className="flex flex-wrap items-baseline gap-3"><Tag tone="signal">{item.provenance.provider}</Tag><span className="text-sm text-fg-dim">{item.evidence.title}</span><span className="num text-2xs text-fg-mute">{item.provenance.source_identity}</span></div><p className="mt-1 text-2xs leading-relaxed text-fg-mute">{item.evidence.excerpt}</p>{item.provenance.url && <a className="mt-1 block text-2xs text-signal underline" href={item.provenance.url} target="_blank" rel="noreferrer">source</a>}</li>)}</ul>
+            <ul>{outcome.merged.items.map((item) => <li key={item.evidence.id} className="hair-b px-4 py-3 last:border-b-0"><div className="flex flex-wrap items-baseline gap-3"><Tag tone="signal">{item.provenance.provider}</Tag><span className="text-sm text-fg-dim">{item.evidence.title}</span><span className="num text-2xs text-fg-mute">{item.provenance.source_identity}</span></div><p className="mt-1 text-2xs leading-relaxed text-fg-mute">{item.evidence.excerpt_or_summary}</p>{item.evidence.url && <a className="mt-1 block text-2xs text-signal underline" href={item.evidence.url} target="_blank" rel="noreferrer">source</a>}</li>)}</ul>
           </Panel>
         </>
       )}

@@ -1,12 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from '../test/bdd';
 import { deliberateOpenResearch } from './open-deliberation';
 import type { ResearchOutcome } from './session';
 
 function outcome(excerpt: string): ResearchOutcome {
   const evidence = {
-    evidence: { id: 'EV-01', title: 'Animal reference', excerpt },
-    provenance: { source_identity: 'en.wikipedia.org', url: 'https://en.wikipedia.org/wiki/Tiger' },
-  } as ResearchOutcome['merged']['items'][number];
+    evidence: { id: 'EV-01', title: 'Animal reference', excerpt_or_summary: excerpt, url: 'https://en.wikipedia.org/wiki/Tiger' },
+    provenance: { source_identity: 'en.wikipedia.org' },
+  } as unknown as ResearchOutcome['merged']['items'][number];
   return {
     execution: { status: 'ok' },
     merged: { items: [evidence] },
