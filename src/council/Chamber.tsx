@@ -25,7 +25,10 @@ import { Core, CoreField } from '../visual/Core';
 import { RingStation, StackStation, type StationChrome } from '../visual/Station';
 import { stations } from '../visual/stations';
 import { systemState } from '../visual/state';
-import { STATE_ACCENT } from '../visual/tokens';
+import { ACCENT, STATE_ACCENT } from '../visual/tokens';
+import { visualEvents, visualFrame } from '../visual/events';
+import { EvidenceMotes } from '../visual/Motes';
+import { prefersReducedMotion } from '../visual/motion';
 
 
 export function Label({ children }: { children: ReactNode }) {
@@ -64,7 +67,13 @@ function CouncilCore({ events, cursor, onSelect, selected, participation, log, h
   const points = useMemo(() => COUNCIL_ORDER.map((_, i) => ringPoint(i, COUNCIL_ORDER.length)), []);
   const from = speaker === null ? null : points[COUNCIL_ORDER.indexOf(speaker)];
   const to = addressee === null ? null : points[COUNCIL_ORDER.indexOf(addressee)];
-  const beam = current === undefined ? TONE_COLOR.state : TONE_COLOR[EVENT_TONE[current.type]];
+  // What may be drawn at this reading position, projected from the transcript and nothing else. An empty
+  // frame draws an empty chamber; there is no idle animation standing in for one.
+  const marks = useMemo(() => visualEvents(events), [events]);
+  const frame = visualFrame(marks, current?.sequence ?? -1);
+  const alert = frame.some((v) => v.type === 'RED_TEAM_ALERT');
+  const cited = frame.find((v) => v.type === 'EVIDENCE_RECEIVED')?.evidence_ids.length ?? 0;
+  const beam = current === undefined ? TONE_COLOR.state : alert ? ACCENT.block : TONE_COLOR[EVENT_TONE[current.type]];
 
   const chrome = (id: AgentId): StationChrome => ({
     accent: COUNCIL_SEATS[id].accent,
@@ -100,6 +109,8 @@ function CouncilCore({ events, cursor, onSelect, selected, participation, log, h
           )}
         </svg>
 
+        {from !== null && <EvidenceMotes from={from} count={cited} accent={beam} />}
+
         <Core state={state} read={Math.max(0, Math.min(cursor + 1, events.length))} total={events.length}
               label={events.length === 0 ? 'no transcript' : 'exchanges read'} />
 
@@ -128,6 +139,13 @@ function Deliberation({ events, cursor, onCursor, filter }: {
   filter: AgentId | null;
 }) {
   const shown = visible(events, cursor).filter((e) => filter === null || e.from_agent === filter || e.to_agent === filter);
+  const focused = useRef<HTMLButtonElement | null>(null);
+
+  // The transcript follows the cursor, so a replay does not leave the reader scrolling after it. Smooth
+  // only when motion is wanted: a reduced-motion reader gets the jump, which is still the right row.
+  useEffect(() => {
+    focused.current?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  }, [cursor]);
 
   if (events.length === 0) {
     return <p className="px-4 py-8 text-center text-sm text-fg-mute">This run produced no deliberation transcript.</p>;
@@ -148,6 +166,7 @@ function Deliberation({ events, cursor, onCursor, filter }: {
               key={e.id}
               type="button"
               onClick={() => onCursor(e.sequence)}
+              ref={focus ? focused : null}
               style={{ ['--cn-tone' as string]: color }}
               className={`cn-event cn-enter block w-full px-4 py-3 text-left ${focus ? 'cn-event-focus' : ''}`}
             >
