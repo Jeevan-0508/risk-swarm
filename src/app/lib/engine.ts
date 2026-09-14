@@ -9,6 +9,7 @@ import { createLiveSource } from '@core/sources/live';
 import { contentHash } from '@core/sources/hash';
 import { industrySource, newsSource, regulatorySource, webSource } from '@core/sources/registry';
 import type { FeedFailure, FetchedFeed, LiveSource } from '@core/sources/types';
+import { packById } from '@core/packs/registry';
 
 export type Mode = 'DEMO' | 'SNAPSHOT' | 'LIVE';
 
@@ -36,7 +37,14 @@ export interface LiveConfig {
 
 export interface StartInput {
   question: string;
+  /**
+   * Which knowledge pack the run opens. Recommended by `recommendPack()` from the question text and
+   * always overridable: the operator, not the router, decides what expertise is applied.
+   */
+  pack_id: string;
+  /** Optional. An empty list means no geographic filter, not "match nothing" - see `fomo.ts`'s filter. */
   geo: string[];
+  /** Optional, and meaningless outside a pack whose `supports.mode_analysis` is true. */
   mode: string[];
   from: string;
   to: string;
@@ -49,6 +57,7 @@ export interface StartInput {
 
 export const DEMO_INPUT: StartInput = {
   question: 'Are we exposed to phantom-carrier fraud in the DACH road network?',
+  pack_id: 'freight-risk',
   geo: ['DE', 'AT', 'CH'],
   mode: ['road'],
   from: '2024-09-01T00:00:00.000Z',
@@ -93,6 +102,10 @@ export function runOptions(
     run_id: mode === 'DEMO' ? 'RUN-DEMO' : runId,
     now: mode === 'DEMO' ? DEMO_NOW : new Date().toISOString(),
     question: input.question,
+    // A run stored before packs were selectable in the UI carries no `pack_id`, and it really did run on
+    // the freight pack - that was the only pack the engine defaulted to. Reading it as anything else
+    // would relabel history, so the historical default is named here rather than re-recommended.
+    pack: packById(input.pack_id ?? 'freight-risk'),
     scope: { geo: input.geo, mode: input.mode, from: input.from, to: input.to },
     limit: input.limit,
     budget: input.budget,
