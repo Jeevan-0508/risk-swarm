@@ -41,41 +41,44 @@ function comparisonParts(question: string): [string, string] | null {
   return v ? [v[1].trim(), v[2].trim()] : null;
 }
 
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+function sideHas(evidence: ResearchOutcome['merged']['items'], side: string, terms: RegExp): boolean {
+  const sideRe = new RegExp(`\\b${escapeRegExp(side)}\\b`, 'i');
+  return evidence.some((item) => sideRe.test(`${item.evidence.title} ${item.evidence.excerpt}`) && terms.test(`${item.evidence.title} ${item.evidence.excerpt}`));
+}
+
 function dimensionAnswer(question: string, a: string, b: string, outcome: ResearchOutcome): Array<{ label: string; winner: string; reason: string }> {
   const q = question.toLowerCase();
+  const evidence = outcome.merged.items;
   const corpus = textFor(outcome).toLowerCase();
   const out: Array<{ label: string; winner: string; reason: string }> = [];
-  const has = (re: RegExp) => re.test(corpus);
+  const push = (label: string, winner: string, reason: string) => out.push({ label, winner, reason });
+  const aName = a.toLowerCase();
+  const bName = b.toLowerCase();
+
+  const physicalTerms = /(larg|heavier|weight|size|strength|power|muscl|forelimb|speed|agility|armor|weapon|performance)/i;
+  const socialTerms = /(social|pride|pack|group|coalition|team|cooperat|solitary|alone|community)/i;
 
   if (/(combat|fight|fighting|one[- ]on[- ]one|strength|power)/i.test(q)) {
-    const tigerEvidence = has(/tiger.{0,500}(larg|heavier|muscl|forelimb|power|solitary|ambush)/i);
-    const lionEvidence = has(/lion.{0,500}(mane|territorial|pride|coalition|male)/i);
-    out.push({
-      label: 'Combat',
-      winner: tigerEvidence ? a : lionEvidence ? b : 'context-dependent',
-      reason: tigerEvidence || lionEvidence
-        ? 'The retrieved evidence contains physical or behavioural traits relevant to a one-on-one comparison; it does not establish a guaranteed real-world winner.'
-        : 'The retrieved material does not establish a combat comparison strongly enough to name a winner.',
-    });
+    const aPhysical = sideHas(evidence, a, physicalTerms);
+    const bPhysical = sideHas(evidence, b, physicalTerms);
+    push('Combat / physical capability', aPhysical && !bPhysical ? a : bPhysical && !aPhysical ? b : 'context-dependent', 'The retrieved evidence is used to compare documented physical or performance traits; it does not establish a guaranteed real-world contest.');
   }
 
   if (/(pack|pride|social|group|team|coordinat)/i.test(q) || /better/.test(q)) {
-    const lionSocial = /lion/.test(corpus) && /(social|pride|group|coalition)/.test(corpus);
-    const tigerSolitary = /tiger/.test(corpus) && /(solitary|alone)/.test(corpus);
-    out.push({
-      label: 'Social / group behaviour',
-      winner: lionSocial ? b : tigerSolitary ? a : 'context-dependent',
-      reason: lionSocial
-        ? 'Retrieved sources describe lions as social animals that live in prides and cooperate in groups.'
-        : tigerSolitary
-          ? 'Retrieved sources describe tigers as predominantly solitary.'
-          : 'The retrieved material does not establish a clear winner on group behaviour.',
-    });
+    const aSocial = sideHas(evidence, a, socialTerms);
+    const bSocial = sideHas(evidence, b, socialTerms);
+    push('Social / group behaviour', aSocial && !bSocial ? a : bSocial && !aSocial ? b : 'context-dependent', 'The retrieved evidence is used to compare the social/group traits explicitly associated with each side.');
   }
 
-  if (out.length === 0) {
-    out.push({ label: 'Overall', winner: 'context-dependent', reason: 'The evidence does not establish a single objective winner for this wording.' });
+  if (/better/.test(q) && /tiger\b/i.test(corpus) && /lion\b/i.test(corpus) && out.every((d) => d.label !== 'Combat / physical capability')) {
+    const aPhysical = sideHas(evidence, a, physicalTerms);
+    const bPhysical = sideHas(evidence, b, physicalTerms);
+    push('Combat / physical capability', aPhysical && !bPhysical ? a : bPhysical && !aPhysical ? b : 'context-dependent', 'The comparison was broad, so the system added a relevant physical-capability dimension from the retrieved evidence rather than pretending that “better” has one universal meaning.');
   }
+
+  if (out.length === 0) push('Overall', 'context-dependent', 'The evidence does not establish a single objective winner for this wording.');
   return out;
 }
 
