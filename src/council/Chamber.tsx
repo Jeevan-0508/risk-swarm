@@ -29,6 +29,8 @@ import { ACCENT, STATE_ACCENT } from '../visual/tokens';
 import { visualEvents, visualFrame } from '../visual/events';
 import { EvidenceMotes } from '../visual/Motes';
 import { prefersReducedMotion } from '../visual/motion';
+import { citedEvidenceIds, evidenceCard } from '../visual/evidence';
+import { EvidenceInspector } from '../visual/EvidenceInspector';
 
 
 export function Label({ children }: { children: ReactNode }) {
@@ -132,11 +134,12 @@ function CouncilCore({ events, cursor, onSelect, selected, participation, log, h
 }
 
 /** ZONE 2 - LIVE DELIBERATION. The transcript, in `sequence` order, nothing inserted. */
-function Deliberation({ events, cursor, onCursor, filter }: {
+function Deliberation({ events, cursor, onCursor, filter, onEvidence }: {
   events: DeliberationEvent[];
   cursor: number;
   onCursor: (n: number) => void;
   filter: AgentId | null;
+  onEvidence: (id: string) => void;
 }) {
   const shown = visible(events, cursor).filter((e) => filter === null || e.from_agent === filter || e.to_agent === filter);
   const focused = useRef<HTMLButtonElement | null>(null);
@@ -162,13 +165,16 @@ function Deliberation({ events, cursor, onCursor, filter }: {
           const color = TONE_COLOR[EVENT_TONE[e.type]];
           const focus = e.sequence === cursor;
           return (
-            <button
+            <div
               key={e.id}
+              style={{ ['--cn-tone' as string]: color }}
+              className={`cn-event cn-enter ${focus ? 'cn-event-focus' : ''}`}
+            >
+            <button
               type="button"
               onClick={() => onCursor(e.sequence)}
               ref={focus ? focused : null}
-              style={{ ['--cn-tone' as string]: color }}
-              className={`cn-event cn-enter block w-full px-4 py-3 text-left ${focus ? 'cn-event-focus' : ''}`}
+              className="block w-full px-4 pb-2 pt-3 text-left"
             >
               <div className="flex items-baseline gap-2">
                 <span className="num text-2xs text-fg-mute">{String(e.sequence).padStart(2, '0')}</span>
@@ -190,11 +196,26 @@ function Deliberation({ events, cursor, onCursor, filter }: {
               <p className="mt-1.5 text-sm leading-relaxed text-fg-dim">{e.content}</p>
               <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-fg-mute">
                 <span className={e.status === 'unresolved' ? 'text-caution' : ''}>{e.status}</span>
-                {e.evidence_ids.length > 0 && <span className="num">{e.evidence_ids.length} evidence</span>}
                 {e.claim_ids.length > 0 && <span className="num">{e.claim_ids.length} claim</span>}
                 {e.requires_response && <span>awaiting response</span>}
               </div>
             </button>
+            {e.evidence_ids.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
+                {e.evidence_ids.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => onEvidence(id)}
+                    className="num border border-line px-1.5 py-0.5 text-2xs text-fg-mute transition-colors hover:border-line-bright hover:text-fg"
+                  >
+                    {id}
+                  </button>
+                ))}
+              </div>
+            )}
+            {e.evidence_ids.length === 0 && <div className="pb-1" />}
+            </div>
           );
         })
       )}
@@ -390,7 +411,7 @@ function AgentInspector({ result, seat, events, cursor }: {
  * so the "what would change this" list appears once the shell has loaded it and honestly says so until
  * then. It is never filled in with a guess.
  */
-function Lineage({ result, patterns }: { result: RunResult; patterns: Map<string, Pattern> | null }) {
+function Lineage({ result, patterns, onEvidence }: { result: RunResult; patterns: Map<string, Pattern> | null; onEvidence: (id: string) => void }) {
   const decision = result.outputs.decision.decision;
   const lineage = useMemo(() => decisionLineage(result.graph, decision), [result.graph, decision]);
   const concentration = useMemo(
@@ -443,6 +464,30 @@ function Lineage({ result, patterns }: { result: RunResult; patterns: Map<string
               ))}
             </div>
           )}
+          <div className="mt-4">
+            <Label>evidence the decision cites directly</Label>
+            {lineage.decision_evidence.length === 0 ? (
+              <p className="mt-2 text-2xs leading-relaxed text-fg-mute">
+                The decision cites no evidence node directly. It rests on the hypotheses above, which is a
+                weaker footing than direct citation, and is shown as such rather than summarised away.
+              </p>
+            ) : (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {lineage.decision_evidence.map((ev) => (
+                  <button
+                    key={ev.id}
+                    type="button"
+                    onClick={() => onEvidence(ev.id)}
+                    title={ev.title}
+                    className="num border border-line px-1.5 py-0.5 text-2xs text-fg-mute transition-colors hover:border-line-bright hover:text-fg"
+                  >
+                    {ev.id}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           <p className="mt-4 text-2xs leading-relaxed text-fg-mute">
             The evidence count is the full transitive chain behind the hypothesis, not only what the analyst
             cited directly - a hypothesis is linked to every observation the run produced, so this is a
@@ -498,6 +543,78 @@ function Lineage({ result, patterns }: { result: RunResult; patterns: Map<string
             )}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * ZONE 4c - THE EVIDENCE INSPECTOR. An index of every id the chamber actually cited, and the card for
+ * whichever one the reader opened.
+ *
+ * The index is built from the transcript rather than from the graph on purpose: the graph holds evidence
+ * no agent ever put on the record, and offering those first would suggest the run rested on them. A
+ * reader who wants one of those still reaches it - it appears in the card's own `what it connects to`
+ * list, from the node that does rest on it.
+ */
+function EvidenceZone({ result, selected, onSelect, onCursor }: {
+  result: RunResult;
+  selected: string | null;
+  onSelect: (id: string | null) => void;
+  onCursor: (n: number) => void;
+}) {
+  const events = result.deliberation.events;
+  const ids = useMemo(() => citedEvidenceIds(events), [events]);
+  const card = useMemo(
+    () => (selected === null ? null : evidenceCard(result.graph, selected, events)),
+    [result.graph, selected, events],
+  );
+
+  return (
+    <div className="cn-hair">
+      <div className="flex items-baseline justify-between gap-4 px-4 py-3" style={{ borderBottom: '1px solid rgba(120,140,180,0.18)' }}>
+        <Label>evidence inspector</Label>
+        <div className="flex items-center gap-3">
+          {selected !== null && (
+            <button type="button" onClick={() => onSelect(null)} className="font-mono text-2xs uppercase tracking-[0.12em] text-fg-mute hover:text-fg">
+              close
+            </button>
+          )}
+          <span className="num text-2xs text-fg-mute">{ids.length} cited</span>
+        </div>
+      </div>
+
+      {ids.length === 0 ? (
+        <p className="px-4 py-6 text-sm leading-relaxed text-fg-mute">
+          No exchange in this transcript cited an evidence id. The graph may still hold evidence; nothing in
+          the chamber pointed at any of it, and that is what is shown.
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-1.5 px-4 py-3" style={{ borderBottom: '1px solid rgba(120,140,180,0.12)' }}>
+          {ids.map((id) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onSelect(id === selected ? null : id)}
+              className={`num border px-1.5 py-0.5 text-2xs transition-colors ${
+                id === selected ? 'border-signal text-fg' : 'border-line text-fg-mute hover:border-line-bright hover:text-fg'
+              }`}
+            >
+              {id}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="p-4">
+        {card === null ? (
+          <p className="text-sm leading-relaxed text-fg-mute">
+            Open an id to read the source behind it - what it claims, how reliable and how relevant the run
+            judged it, who used it, what rests on it, and which fields this node does not record at all.
+          </p>
+        ) : (
+          <EvidenceInspector card={card} codename={(a) => AGENT_CODENAME[a]} onCursor={onCursor} />
+        )}
       </div>
     </div>
   );
@@ -699,6 +816,7 @@ export function Chamber({ result, patterns = null, humanVerdict = null }: { resu
   const events = result.deliberation.events;
   const [cursor, setCursor] = useState(events.length - 1);
   const [seat, setSeat] = useState<AgentId | null>(null);
+  const [evidence, setEvidence] = useState<string | null>(null);
 
   return (
     <div className="mx-auto grid max-w-7xl gap-8 px-6 pb-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -734,7 +852,7 @@ export function Chamber({ result, patterns = null, humanVerdict = null }: { resu
         <div style={{ borderBottom: '1px solid rgba(120,140,180,0.12)' }}>
           <Timeline events={events} cursor={cursor} onCursor={setCursor} />
         </div>
-        <Deliberation events={events} cursor={cursor} onCursor={setCursor} filter={seat} />
+        <Deliberation events={events} cursor={cursor} onCursor={setCursor} filter={seat} onEvidence={setEvidence} />
       </div>
 
       <div className="lg:col-span-2">
@@ -752,7 +870,11 @@ export function Chamber({ result, patterns = null, humanVerdict = null }: { resu
       </div>
 
       <div className="lg:col-span-2">
-        <Lineage result={result} patterns={patterns} />
+        <EvidenceZone result={result} selected={evidence} onSelect={setEvidence} onCursor={setCursor} />
+      </div>
+
+      <div className="lg:col-span-2">
+        <Lineage result={result} patterns={patterns} onEvidence={setEvidence} />
       </div>
 
       <div className="cn-hair lg:col-span-2">

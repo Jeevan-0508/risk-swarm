@@ -21,6 +21,8 @@ import { deserializeRun, serializeRun } from '../core/persistence/serialize';
 import { SYSTEM_STATE_NOTE, replayState } from '../visual/state';
 import { STATION_LABEL } from '../visual/stations';
 import { typeTally } from './derive';
+import { citedEvidenceIds, evidenceCard, EVIDENCE_GAPS } from '../visual/evidence';
+import { EvidenceInspector } from '../visual/EvidenceInspector';
 
 let cached: RunResult | null = null;
 async function reference(): Promise<RunResult> {
@@ -298,5 +300,64 @@ describe('the intelligence core', () => {
       expect(html.includes(`aria-label="${AGENT_CODENAME[id]},`)).toBe(true);
     }
     expect(html.includes('evidence cited')).toBe(true);
+  });
+});
+
+describe('the evidence inspector, over the real graph', () => {
+  it('offers every id the transcript really cited, and opens none of them by itself', async () => {
+    const result = await reference();
+    const html = draw(result);
+    const ids = citedEvidenceIds(result.deliberation.events);
+    expect(ids.length > 0).toBe(true);
+    for (const id of ids) expect(html.includes(id)).toBe(true);
+    expect(html.includes(`${ids.length} cited`)).toBe(true);
+    // Nothing is pre-opened: the invitation is on screen, the card is not.
+    expect(html.includes('Open an id to read the source behind it')).toBe(true);
+    expect(html.includes('not recorded on this node')).toBe(false);
+  });
+
+  it('prints a real source in its own words, and the two judgements unaveraged', async () => {
+    const result = await reference();
+    const id = citedEvidenceIds(result.deliberation.events)[0];
+    const card = evidenceCard(result.graph, id, result.deliberation.events);
+    const node = card.evidence;
+    expect(node !== null).toBe(true);
+    if (node === null) return;
+
+    const html = renderToStaticMarkup(
+      <EvidenceInspector card={card} codename={(a) => AGENT_CODENAME[a]} />,
+    );
+    expect(html.includes(escapeHtml(node.title))).toBe(true);
+    expect(html.includes(escapeHtml(node.claim))).toBe(true);
+    expect(html.includes(node.reliability.toFixed(2))).toBe(true);
+    expect(html.includes(node.relevance.toFixed(2))).toBe(true);
+    expect(html.includes(node.retrieved_at)).toBe(true);
+  });
+
+  it('says which fields the node does not record instead of leaving a reader to assume they passed', async () => {
+    const result = await reference();
+    const id = citedEvidenceIds(result.deliberation.events)[0];
+    const html = renderToStaticMarkup(
+      <EvidenceInspector
+        card={evidenceCard(result.graph, id, result.deliberation.events)}
+        codename={(a) => AGENT_CODENAME[a]}
+      />,
+    );
+    for (const gap of EVIDENCE_GAPS) {
+      expect(html.includes(gap.field)).toBe(true);
+      expect(html.includes(escapeHtml(gap.why))).toBe(true);
+    }
+  });
+
+  it('refuses an id the graph does not hold rather than drawing an empty card', async () => {
+    const result = await reference();
+    const html = renderToStaticMarkup(
+      <EvidenceInspector
+        card={evidenceCard(result.graph, 'EV-NOT-REAL', result.deliberation.events)}
+        codename={(a) => AGENT_CODENAME[a]}
+      />,
+    );
+    expect(html.includes('is not an evidence node in this run')).toBe(true);
+    expect(html.includes('reliability')).toBe(false);
   });
 });
