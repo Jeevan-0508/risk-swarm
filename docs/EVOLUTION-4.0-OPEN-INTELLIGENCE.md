@@ -262,7 +262,7 @@ replays the *stored record*, and the record says so.
 | 5 | `core/research/normalize.ts` — provider result → `Evidence`/`Signal`, source quality, duplication | medium: touches evidence |
 | 6 | knowledge packages; dynamic participation; DEFENSE/REBUTTAL from real output | **high: touches run.ts and agents** |
 | 7 | `core/knowledge/delta.ts` + research ledger | low - **done** |
-| 8 | taxonomy proposal → validation → approval workflow | low |
+| 8 | taxonomy proposal → validation → approval workflow | low - **done** |
 | 9 | SENTINEL/PULSE/ORBIT extensions; close the `run.ts:275` gap | medium: exact-key tests |
 | 10 | Council Core visual layer, state-driven | low, isolated in `src/council` |
 | 11 | replay, performance, responsive, docs | low |
