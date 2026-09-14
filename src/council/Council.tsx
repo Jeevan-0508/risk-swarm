@@ -14,7 +14,9 @@ import { createAtlasMatcher, type Pattern } from '../core/integrations/atlas';
 import { snapshotLoader } from '../app/lib/engine';
 import { useSession } from '../app/store/session';
 import { Chamber, Label } from './Chamber';
+import { useMotionAllowed } from '../visual/motion';
 import './council.css';
+import '../visual/console.css';
 
 /**
  * The pinned taxonomy, fetched once so the lineage zone can name the indicators nobody has looked at.
@@ -50,9 +52,12 @@ export default function Council() {
   const run = active();
   const result = run?.result ?? null;
   const patterns = usePatterns(result !== null);
+  // Motion is a class, not a media query, so a reduced-motion reader and a backgrounded tab both simply
+  // stop matching the animated selectors. `console.css` keeps the media query as a second mechanism.
+  const motion = useMotionAllowed();
 
   return (
-    <div className="cn-page h-full overflow-y-auto">
+    <div className={`cn-page rs-console h-full overflow-y-auto${motion ? ' rs-motion' : ''}`}>
       <header className="mx-auto max-w-7xl px-6 pt-14 pb-8">
         <div className="flex flex-wrap items-baseline justify-between gap-4">
           <div>
@@ -87,7 +92,7 @@ export default function Council() {
           </div>
         </div>
       ) : (
-        <Chamber key={result.run_id} result={result} patterns={patterns} />
+        <Chamber key={result.run_id} result={result} patterns={patterns} humanVerdict={run?.human?.verdict ?? null} />
       )}
 
       <footer className="mx-auto max-w-7xl px-6 pb-20 pt-4">

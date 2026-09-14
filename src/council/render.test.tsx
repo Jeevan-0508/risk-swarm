@@ -18,6 +18,8 @@ import { Chamber } from './Chamber';
 import { COUNCIL_ORDER, COUNCIL_SEATS } from './roster';
 import { openPack } from '../core/packs/registry';
 import { deserializeRun, serializeRun } from '../core/persistence/serialize';
+import { SYSTEM_STATE_NOTE, replayState } from '../visual/state';
+import { STATION_LABEL } from '../visual/stations';
 import { typeTally } from './derive';
 
 let cached: RunResult | null = null;
@@ -176,7 +178,7 @@ describe('the narrow-screen layout and the sound toggle', () => {
       expect(occurrences >= 2).toBe(true);
     }
     expect(html.includes('class="sm:hidden"')).toBe(true);
-    expect(html.includes('cn-chamber hidden sm:block')).toBe(true);
+    expect(html.includes('rs-chamber hidden sm:block')).toBe(true);
   });
 
   it('starts with sound off, so nothing plays until a human asks for it', async () => {
@@ -217,7 +219,7 @@ describe('the knowledge pack and the seats it stands down', () => {
     const result = await reference();
     expect(result.participation.every((d) => d.participating)).toBe(true);
     const html = draw(result);
-    expect(html.includes('cn-seat-stood-down')).toBe(false);
+    expect(html.includes('rs-station-down')).toBe(false);
     expect(html.includes('stood down')).toBe(false);
   });
 
@@ -235,7 +237,7 @@ describe('the knowledge pack and the seats it stands down', () => {
 
     const html = draw(open);
     // Once per layout: the column and the ring both have to say it, or the mark disappears on a phone.
-    expect(html.split('cn-seat-stood-down').length - 1).toBe(down.length * 2);
+    expect(html.split('rs-station-down').length - 1).toBe(down.length * 2);
     expect(html.includes(`${down.length} of ${open.participation.length} seats stood down`)).toBe(true);
     for (const d of down) {
       expect(html.includes(AGENT_CODENAME[d.agent])).toBe(true);
@@ -259,5 +261,42 @@ describe('the chamber over a run that came back from storage', () => {
     const html = draw(back!.result);
     expect(html.length > 2000).toBe(true);
     expect(html.includes(back!.result.pack.label)).toBe(true);
+  });
+});
+
+describe('the intelligence core', () => {
+  it('prints the state the record is really in, with the sentence that state means', async () => {
+    const result = await reference();
+    const html = draw(result);
+    const state = replayState({ events: result.deliberation.events, cursor: result.deliberation.events.length - 1, humanVerdict: null });
+    expect(state).toBe('HUMAN_REVIEW');
+    expect(html.includes(state.replace(/_/g, ' '))).toBe(true);
+    expect(html.includes(SYSTEM_STATE_NOTE[state])).toBe(true);
+  });
+
+  it('changes to RESOLVED only when a human verdict really exists', async () => {
+    const result = await reference();
+    const withVerdict = renderToStaticMarkup(
+      <StaticRouter location="/council"><Chamber result={result} patterns={null} humanVerdict="accepted" /></StaticRouter>,
+    );
+    expect(withVerdict.includes('RESOLVED')).toBe(true);
+    expect(draw(result).includes('RESOLVED')).toBe(false);
+  });
+
+  it('gives every seat a station state in words, so the ring is readable with animation off', async () => {
+    const result = await reference();
+    const html = draw(result);
+    // The reference run seats all seven, so at the end of the transcript every seat that spoke is
+    // complete and every seat that did not is idle. Both words have to be on screen.
+    expect(html.includes(STATION_LABEL.COMPLETE)).toBe(true);
+    for (const id of COUNCIL_ORDER) expect(html.includes(AGENT_CODENAME[id])).toBe(true);
+  });
+
+  it('describes each station for a screen reader without relying on a single mark', async () => {
+    const html = draw(await reference());
+    for (const id of COUNCIL_ORDER) {
+      expect(html.includes(`aria-label="${AGENT_CODENAME[id]},`)).toBe(true);
+    }
+    expect(html.includes('evidence cited')).toBe(true);
   });
 });

@@ -57,7 +57,12 @@
 
 /* --- the chamber --- */
 
-.rs-chamber { position: relative; aspect-ratio: 1 / 1; }
+/*
+ * Below `sm` the ring is replaced by the station stack, so the chamber's sizing only has to hold from
+ * `sm` up. Between `sm` and `lg` the circle is the widest thing on the page, so it is capped rather than
+ * allowed to push the transcript off screen.
+ */
+.rs-chamber { position: relative; aspect-ratio: 1 / 1; max-width: 34rem; margin-inline: auto; }
 
 .rs-band {
   position: absolute;

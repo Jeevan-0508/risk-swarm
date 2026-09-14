@@ -20,76 +20,9 @@
 
 .cn-hair { box-shadow: var(--cn-seat); }
 
-/* --- the chamber --- */
-
-.cn-chamber { aspect-ratio: 1 / 1; position: relative; }
-
-.cn-ring {
-  position: absolute;
-  inset: 0;
-  border: 1px solid rgba(120, 140, 180, 0.14);
-  border-radius: 50%;
-}
-
-.cn-ring-2 { inset: 12%; opacity: 0.7; }
-.cn-ring-3 { inset: 26%; opacity: 0.45; }
-
-.cn-seat {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  transition: opacity 220ms linear;
-}
-
-/* A seat that has not spoken yet is present but unlit - never hidden, so the roster is always complete. */
-.cn-seat-quiet { opacity: 0.42; }
-.cn-seat-spoken { opacity: 1; }
-
-/* Standing down is a different fact from having nothing to say, so it gets its own mark: the dot goes
-   hollow and dashed. Single-class specificity, matching its siblings, so ordering here is the only thing
-   that decides the outcome. */
-.cn-seat-stood-down { opacity: 0.5; }
-.cn-seat-stood-down .cn-dot {
-  background: transparent;
-  border-style: dashed;
-}
-
-.cn-dot {
-  width: 9px;
-  height: 9px;
-  border: 1px solid var(--cn-accent);
-  background: color-mix(in srgb, var(--cn-accent) 22%, transparent);
-}
-
-.cn-speaking .cn-dot {
-  background: var(--cn-accent);
-  animation: cn-breathe 1600ms ease-in-out infinite;
-}
-
-.cn-addressed .cn-dot { border-width: 2px; }
-
-@keyframes cn-breathe {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--cn-accent) 55%, transparent); }
-  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--cn-accent) 0%, transparent); }
-}
-
-/* The beam is drawn only when a real event names both a speaker and an addressee. */
-.cn-beam {
-  stroke-dasharray: 3 4;
-  animation: cn-travel 900ms linear infinite;
-}
-
-@keyframes cn-travel {
-  to { stroke-dashoffset: -14; }
-}
-
-.cn-core {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  width: 46%;
-}
+/* The chamber's own geometry now lives in `visual/console.css`, which the Council imports alongside
+   this file. What stays here is the transcript, the timeline and the page frame - everything the
+   command centre draws around, rather than the command centre itself. */
 
 /* --- the transcript --- */
 
@@ -108,13 +41,6 @@
 
 /* --- narrow screens --- */
 
-/*
- * Below `sm` the ring is replaced by a column (see `SeatColumn`), so the chamber's own sizing only has
- * to hold from `sm` up. Between `sm` and `lg` the circle is the widest thing on the page, so it is
- * capped rather than allowed to push the transcript off screen.
- */
-.cn-chamber { max-width: 34rem; margin-inline: auto; }
-
 @media (max-width: 400px) {
   /* The transcript is the page on a phone: give it the height the ring is no longer using. */
   .cn-scroll { max-height: none; }
@@ -126,14 +52,10 @@
  * loses no information at all.
  */
 @media (prefers-reduced-motion: reduce) {
-  .cn-enter, .cn-beam, .cn-speaking .cn-dot {
+  .cn-enter {
     animation: none !important;
     transform: none !important;
     opacity: 1 !important;
   }
-  .cn-beam { stroke-dasharray: none; }
-  /* The speaking seat still has to be identifiable without the breath, so it keeps a solid fill. */
-  .cn-speaking .cn-dot { background: var(--cn-accent); box-shadow: none; }
-  .cn-seat { transition: none; }
   .cn-event, .cn-event-focus { transition: none; }
 }

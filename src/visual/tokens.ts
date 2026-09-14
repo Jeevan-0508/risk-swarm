@@ -44,19 +44,3 @@ export const STATE_ACCENT: Record<SystemState, string> = {
   HUMAN_REVIEW: ACCENT.caution,
   RESOLVED: ACCENT.support,
 };
-
-/** The ring geometry, in percent of the chamber box. One radius, seven stations, twelve o'clock first. */
-export const RING = {
-  radius: 37,
-  centre: { x: 50, y: 50 },
-  /** Concentric bands drawn inside the ring. Three, because a fourth stops reading as structure. */
-  bands: [0.42, 0.62, 0.84],
-} as const;
-
-export function ringPointAt(index: number, count: number): { x: number; y: number } {
-  const angle = (index / count) * Math.PI * 2 - Math.PI / 2;
-  return {
-    x: RING.centre.x + Math.cos(angle) * RING.radius,
-    y: RING.centre.y + Math.sin(angle) * RING.radius,
-  };
-}
