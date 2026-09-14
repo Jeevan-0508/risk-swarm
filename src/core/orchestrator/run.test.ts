@@ -2,6 +2,7 @@ import { describe, expect, it } from '../test/bdd';
 import { createFileLoader } from '../integrations/loader.node';
 import { investigate } from './run';
 import { BudgetExceededError } from '../agents/harness';
+import { openPack, freightPack } from '../packs/registry';
 
 const NOW = '2026-09-13T00:00:00.000Z';
 const OPTIONS = {
@@ -95,5 +96,52 @@ describe('a full investigation over the pinned snapshots', () => {
     // unexplained WARNING on a future change gets noticed rather than waved through.
     const warnings = r.sentinel.checks.filter((c) => c.status === 'WARNING');
     expect(warnings.map((c) => c.key)).toEqual(['duplicate_integrity']);
+  });
+});
+
+describe('the knowledge pack a run loads decides what its agents can do, not what they conclude', () => {
+  it('defaults to the freight pack, so every existing caller sees the same run it always saw', async () => {
+    const r = await run();
+    expect(r.pack.id).toBe('freight-risk');
+    expect(r.participation.every((d) => d.participating)).toBe(true);
+  });
+
+  it('stands the analyst and the governance officer down for a question the open pack cannot cover, without touching the other five', async () => {
+    const r = await investigate({
+      ...OPTIONS,
+      question: 'What is the mass of the black hole at the centre of the Milky Way?',
+      pack: openPack(),
+    });
+    expect(r.pack.id).toBe('open');
+    expect(r.outputs.analyst.reasoning_status).toBe('abstained');
+    expect(r.outputs.analyst.confidence).toBe(0);
+    expect(r.outputs.governance.reasoning_status).toBe('abstained');
+    expect(r.log.find((l) => l.phase === 'analyse')!.note).toBe('abstained');
+    expect(r.log.find((l) => l.phase === 'govern')!.note).toBe('abstained');
+    expect(r.outputs.scout.agent).toBe('scout');
+    expect(r.outputs.decision.decision.hypothesis_ids).toEqual([]);
+    expect(r.graph.isIntact()).toBe(true);
+  });
+
+  it('retains signals the freight floor would have excluded, when the open pack sets no floor at all', async () => {
+    const freight = await run();
+    const open = await investigate({ ...OPTIONS, pack: openPack() });
+    expect(open.outputs.scout.findings.length).toBeGreaterThanOrEqual(freight.outputs.scout.findings.length);
+  });
+
+  it('reads the benign baseline from the pack, and shares a category count of zero when the pack names no baseline', async () => {
+    const r = await investigate({ ...OPTIONS, pack: openPack() });
+    expect(r.benign_category_share).toBe(0);
+  });
+
+  it('keeps the graph acyclic and every citation resolvable even when two agents abstained', async () => {
+    const r = await investigate({ ...OPTIONS, question: 'Explain quantum computing.', pack: openPack() });
+    expect(r.graph.cycles()).toEqual([]);
+    const blocked = r.sentinel.checks.filter((c) => c.status === 'BLOCKED');
+    expect(blocked).toEqual([]);
+  });
+
+  it('names an explicit pack the same way regardless of which one it is', () => {
+    expect(freightPack().id).not.toBe(openPack().id);
   });
 });

@@ -81,6 +81,12 @@ export const ReasoningStatus = z.enum([
   'partially_supported',
   'hypothesis_only',
   'insufficient_evidence',
+  /**
+   * The agent was not the right one to ask. Deliberately distinct from `insufficient_evidence`, which
+   * means the evidence was looked for and was not there: an abstention means nothing was looked for,
+   * and reading one as the other would turn "not my question" into "I found nothing".
+   */
+  'abstained',
 ]);
 export type ReasoningStatus = z.infer<typeof ReasoningStatus>;
 

@@ -15,6 +15,7 @@ import { GraphNode, type Evidence, type DeliberationEvent } from '../domain/mode
 import { sourceIdentity } from '../ingest/sanitize';
 import type { SnapshotFileProvenance } from '../integrations/loader';
 import { overallStatus, type IntegrityStatus } from '../status';
+import { RUN_LEVEL_TARGET } from '../agents/types';
 
 /** SENTINEL's own name for the shared status enum. Kept as an alias, not a redefinition, so a caller that
  *  already imports `SentinelStatus` sees no change. */
@@ -132,6 +133,9 @@ export function runSentinel(input: SentinelInput): SentinelReport {
   const danglingDetail: string[] = [];
   for (const n of nodes) {
     for (const ref of referencedIds(n)) {
+      // A challenge or finding raised about the run as a whole, with no hypothesis to hang it on,
+      // targets this sentinel value by convention (see `RUN_LEVEL_TARGET`) rather than a real node.
+      if (ref === RUN_LEVEL_TARGET) continue;
       if (!known.has(ref)) {
         danglingBy.push(n.id);
         danglingDetail.push(`${n.id} -> ${ref}`);

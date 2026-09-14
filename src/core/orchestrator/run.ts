@@ -27,6 +27,11 @@ import type { Reasoner } from '../reasoner/types';
 import { runSentinel, type SentinelReport } from '../sentinel/sentinel';
 import { runPulse, type PulseReport } from '../pulse/pulse';
 import { runDeliberation, type DeliberationReport } from '../deliberation/coordinator';
+import { routeQuestion } from '../question/model';
+import { freightPack } from '../packs/registry';
+import { packSummary, type KnowledgePack } from '../packs/types';
+import { decideParticipation, type ParticipationDecision } from './participation';
+import { emptyCost } from '../agents/types';
 
 /** Defects in how the investigation was built. Re-running the chain can actually fix these. */
 const REWORKABLE: ReadonlySet<RedTeamClass> = new Set<RedTeamClass>(['hallucination', 'unsupported_claim', 'circular_reasoning', 'duplicate_evidence']);
@@ -48,6 +53,11 @@ export interface InvestigateOptions {
   maxRework?: number;
   /** True when the caller would act on the recommendation without human review. Governance needs it. */
   automatedAction?: boolean;
+  /**
+   * The knowledge the run starts with. Defaults to the freight pack, which is what every existing
+   * caller expects, so loading a different pack is an explicit act rather than a silent change.
+   */
+  pack?: KnowledgePack;
   /**
    * Called as each phase completes, with the entry that was just recorded. Awaited, so a UI can pace
    * the reveal on real completions instead of animating a fake progress bar.
@@ -93,6 +103,10 @@ export interface RunResult {
   pulse: PulseReport;
   /** The Council's deliberation transcript over this run's own graph and outputs. Never affects the recommendation - it narrates the disagreement `score.ts` already computed, never recomputes it. */
   deliberation: DeliberationReport;
+  /** Which knowledge the run started with, and what that knowledge could not do. */
+  pack: { id: string; label: string; summary: string };
+  /** Who was asked to speak and why. An agent may be present and abstaining. */
+  participation: ParticipationDecision[];
 }
 
 /** Exported so ORBIT's false-positive-wave scenario can inject signals in the same category this run treats as benign, rather than guessing a string. */
@@ -108,6 +122,13 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
     budget: options.budget,
   });
   const { ctx } = harness;
+  const pack = options.pack ?? freightPack();
+  // The routed question decides participation. It does not decide what any agent concludes: routing is
+  // a statement about which agents have something to work from, never about what the answer is.
+  const question = routeQuestion(options.question);
+  const participation = decideParticipation(question, pack);
+  const speaks = (agent: ParticipationDecision['agent']) => participation.some((d) => d.agent === agent && d.participating);
+  const reasonFor = (agent: ParticipationDecision['agent']) => participation.find((d) => d.agent === agent)?.reason ?? 'No participation decision was recorded.';
   options.onStart?.({ abort: harness.abort });
   const log: PhaseLogEntry[] = [];
   const record = async (phase: string, attempt: number, out: { agent: string; cost: { ms: number }; findings: unknown[]; reasoning_status: string }, note: string | null = null) => {
@@ -120,7 +141,9 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
     question: options.question,
     scope: options.scope,
     limit: options.limit,
-    minFreightRelevance: options.minFreightRelevance,
+    // An explicit option wins; otherwise the pack decides. A pack with no floor means retain everything
+    // and report relevance, which is not the same as the adapter's historical default of 0.34.
+    minFreightRelevance: options.minFreightRelevance ?? pack.min_relevance ?? 0,
   });
   await record('discover', 1, scout);
 
@@ -134,8 +157,13 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
   const signals = intelligence.clustered_signals;
   const incidentEvidence = intelligence.clustered_evidence;
   const clusterOf = Object.fromEntries(signals.map((s) => [s.id, s.cluster_id ?? '']));
+  // A pack that names no benign baseline gets a share of zero, which is honest: there is no category
+  // this domain treats as ordinary background, so no signal can be discounted as one.
+  const benignCategory = pack.benign_category;
   const benign_category_share =
-    signals.length === 0 ? 0 : signals.filter((s) => s.category_derived.toLowerCase().includes(BENIGN_CATEGORY)).length / signals.length;
+    signals.length === 0 || benignCategory === null
+      ? 0
+      : signals.filter((s) => s.category_derived.toLowerCase().includes(benignCategory)).length / signals.length;
 
   const maxRework = options.maxRework ?? 2;
   const rework_history: string[] = [];
@@ -151,30 +179,34 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
     attempt += 1;
     ctx.assertAlive();
 
-    const produced = await runAnalyst(ctx, {
-      question: options.question,
-      signals,
-      evidence: incidentEvidence,
-      observations: intelligence.findings,
-      scope: { geo: options.scope.geo, mode: options.scope.mode },
-      clusterOf,
-      indicatorStates: options.indicatorStates,
-    });
+    const produced = speaks('risk_analyst')
+      ? await runAnalyst(ctx, {
+          question: options.question,
+          signals,
+          evidence: incidentEvidence,
+          observations: intelligence.findings,
+          scope: { geo: options.scope.geo, mode: options.scope.mode },
+          clusterOf,
+          indicatorStates: options.indicatorStates,
+        })
+      : abstainedAnalyst(options.run_id, reasonFor('risk_analyst'));
     // Hypotheses the red team rejected as badly built are removed, not silently re-scored.
     analyst = excluded.length === 0 ? produced : { ...produced, findings: produced.findings.filter((f) => !excluded.includes(f.match.pattern_id)) };
-    await record('analyse', attempt, analyst, excluded.length > 0 ? `excluded after rework: ${excluded.join(', ')}` : null);
+    await record('analyse', attempt, analyst, analyst.reasoning_status === 'abstained' ? 'abstained' : excluded.length > 0 ? `excluded after rework: ${excluded.join(', ')}` : null);
 
     policy = policyFor(analyst.findings[0]?.match.pattern_id ?? null, (options.lessons ?? []).map((l) => ({ pattern_key: l.pattern_key, rule: l.rule })));
 
-    governance = await runGovernance(ctx, {
-      question: options.question,
-      hypotheses: analyst.findings.map((f) => f.hypothesis),
-      affects_counterparty: analyst.findings.length > 0,
-      automated_action: options.automatedAction ?? false,
-      model_used: ctx.reasoner.uses_network,
-      unresolved_objections: 0,
-    });
-    await record('govern', attempt, governance);
+    governance = speaks('governance_officer')
+      ? await runGovernance(ctx, {
+          question: options.question,
+          hypotheses: analyst.findings.map((f) => f.hypothesis),
+          affects_counterparty: analyst.findings.length > 0,
+          automated_action: options.automatedAction ?? false,
+          model_used: ctx.reasoner.uses_network,
+          unresolved_objections: 0,
+        })
+      : abstainedGovernance(options.run_id, reasonFor('governance_officer'));
+    await record('govern', attempt, governance, governance.reasoning_status === 'abstained' ? 'abstained' : null);
 
     challenger = runChallenger(ctx, {
       findings: analyst.findings,
@@ -291,6 +323,48 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
     sentinel,
     pulse,
     deliberation,
+    pack: { id: pack.id, label: pack.label, summary: packSummary(pack) },
+    participation,
+  };
+}
+
+/**
+ * An abstention, not an empty result. Confidence is zero and the status is `abstained`, so nothing
+ * downstream can read this as "the analyst looked and found nothing".
+ */
+function abstainedAnalyst(run_id: string, reason: string): AnalystOutput {
+  return {
+    agent: 'risk_analyst',
+    run_id,
+    findings: [],
+    superseded: [],
+    patterns_considered: 0,
+    unknown_indicator_share: 0,
+    evidence_created: [],
+    evidence_cited: [],
+    confidence: 0,
+    uncertainties: [reason, 'No indicator was assessed, because there was no pattern to assess one against.'],
+    reasoning_status: 'abstained',
+    recommended_next_step: 'Read the retrieved evidence directly, or load a pack whose taxonomy covers this subject.',
+    cost: emptyCost(),
+  };
+}
+
+function abstainedGovernance(run_id: string, reason: string): GovernanceOutput {
+  return {
+    agent: 'governance_officer',
+    run_id,
+    findings: [],
+    implications: [],
+    requirements_considered: 0,
+    frameworks: [],
+    evidence_created: [],
+    evidence_cited: [],
+    confidence: 0,
+    uncertainties: [reason],
+    reasoning_status: 'abstained',
+    recommended_next_step: null,
+    cost: emptyCost(),
   };
 }
 

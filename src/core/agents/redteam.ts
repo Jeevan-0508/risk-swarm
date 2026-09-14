@@ -8,7 +8,7 @@
 import type { AnalystFinding } from './analyst';
 import type { Challenge, Evidence, GraphNode, RedTeamClass, RedTeamFinding, Signal } from '../domain/model';
 import { TIER_WEIGHT } from '../domain/model';
-import { emptyCost, type AgentContext, type AgentOutput } from './types';
+import { emptyCost, RUN_LEVEL_TARGET, type AgentContext, type AgentOutput } from './types';
 
 export interface RedTeamInput {
   findings: AnalystFinding[];
@@ -103,9 +103,7 @@ export function runRedTeam(ctx: AgentContext, input: RedTeamInput): RedTeamOutpu
 
   const known = new Set(input.known_node_ids);
   const incident = input.evidence.filter((e) => e.incident_claim);
-  // Sentinel used everywhere a challenge or finding needs a target and there is no hypothesis to name.
-  // It was never minted as a node, so it must never be checked as if it were a citation.
-  const runTarget = input.findings[0]?.hypothesis.id ?? 'run';
+  const runTarget = input.findings[0]?.hypothesis.id ?? RUN_LEVEL_TARGET;
 
   // 1. Fabricated references. The cheapest and most damaging failure, so it is checked first.
   checks += 1;

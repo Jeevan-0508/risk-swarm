@@ -46,6 +46,16 @@ export interface AgentContext {
 
 export const emptyCost = (): AgentCost => ({ calls: 0, ms: 0, est_tokens: 0 });
 
+/**
+ * Sentinel target for a challenge or finding that is about the run as a whole rather than about any
+ * one hypothesis - raised, for instance, when the evidence has an unmerged duplicate pair but no
+ * hypothesis exists to hang that concern on. It is deliberately never minted as a graph node, so every
+ * checker that walks citations (SENTINEL's own report, and RED_TEAM's fabricated-reference check) has
+ * to know about it and exclude it explicitly, rather than one of them silently reporting it as a
+ * dangling reference to a node that was never supposed to exist.
+ */
+export const RUN_LEVEL_TARGET = 'run';
+
 /** Source classification by host. Tier is derived from this, never chosen by an agent. */
 const REGULATOR_HOSTS = [
   'europa.eu', 'eur-lex.europa.eu', 'bund.de', 'bag.bund.de', 'bka.de', 'polizei.de', 'gov.uk', 'admin.ch', 'bmk.gv.at', 'destatis.de', 'bmdv.bund.de',

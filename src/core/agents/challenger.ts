@@ -8,7 +8,7 @@
  */
 import type { AnalystFinding } from './analyst';
 import type { Challenge, Evidence } from '../domain/model';
-import { emptyCost, type AgentContext, type AgentOutput } from './types';
+import { emptyCost, RUN_LEVEL_TARGET, type AgentContext, type AgentOutput } from './types';
 
 export interface ChallengerInput {
   findings: AnalystFinding[];
@@ -118,7 +118,7 @@ export function runChallenger(ctx: AgentContext, input: ChallengerInput): Challe
   }
 
   if (input.possible_duplicate_pairs > 0) {
-    const target = input.findings[0]?.hypothesis.id ?? 'run';
+    const target = input.findings[0]?.hypothesis.id ?? RUN_LEVEL_TARGET;
     raise(
       target,
       'material',
@@ -129,7 +129,7 @@ export function runChallenger(ctx: AgentContext, input: ChallengerInput): Challe
   }
 
   if (input.recurrence_buckets <= 1 && input.window_buckets > 1) {
-    const target = input.findings[0]?.hypothesis.id ?? 'run';
+    const target = input.findings[0]?.hypothesis.id ?? RUN_LEVEL_TARGET;
     raise(
       target,
       'material',
