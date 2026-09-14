@@ -162,6 +162,8 @@ const DIFF_FIELDS: DiffFieldSpec[] = [
   { key: 'red_team_verdict', label: 'red team verdict', material: true, read: (r) => r.outputs.red_team.verdict },
   { key: 'sentinel_status', label: 'SENTINEL status', material: false, read: (r) => r.sentinel.status },
   { key: 'pulse_status', label: 'PULSE status', material: false, read: (r) => r.pulse.status },
+  { key: 'deliberation_event_count', label: 'deliberation events', material: false, read: (r) => String(r.deliberation.events.length) },
+  { key: 'deliberation_outcome', label: 'deliberation outcome', material: false, read: (r) => r.deliberation.outcome },
 ];
 
 function diff(baseline: RunResult, stressed: RunResult): { fields: OrbitFieldDiff[]; materially_changed: boolean } {

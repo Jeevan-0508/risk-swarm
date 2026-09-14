@@ -97,9 +97,9 @@ plan for everything after it. Cross-session anchor for the Council epic; read be
 
 | Phase | What | Where | Status |
 |---|---|---|---|
-| D1 | `DeliberationEvent` model + zod schema + append-only event log, coordinator skeleton, termination budgets | `core/domain/model.ts`, `core/deliberation/` | next |
-| D2 | Coordinator wired into a real run: agent-to-agent questions/challenges/defenses resolving to real challenger/red-team/position data; determinism test (same seed → identical sequence) | `core/deliberation/` | |
-| D3 | SENTINEL event-validation check, PULSE deliberation-health check, ORBIT diff fields | `core/sentinel/`, `core/pulse/`, `core/orbit/` | |
+| D1 | `DeliberationEvent` model + zod schema + append-only event log, coordinator skeleton, termination budgets | `core/domain/model.ts`, `core/deliberation/` | **done** (merged with D2/D3, see below) |
+| D2 | Coordinator wired into a real run: agent-to-agent questions/challenges/defenses resolving to real challenger/red-team/position data; determinism test (same seed → identical sequence) | `core/deliberation/` | **done** |
+| D3 | SENTINEL event-validation check, PULSE deliberation-health check, ORBIT diff fields | `core/sentinel/`, `core/pulse/`, `core/orbit/` | **done** |
 | L1 | Decision Lineage over `graph.evidenceChain()` (absorbs EVOLUTION-2.0 Phase E) | `core/lineage/` | |
 | G1 | `/council` route shell, Council Core (radial layout + state machine), minimal real Live Deliberation stream | `app/screens/Council.tsx` or `showcase/`-style detached route | |
 | G2 | Agent Inspector, Decision Core (links to `/brief`), Decision Lineage view, timeline | same | |
@@ -115,3 +115,54 @@ phases → commit → push, matching the EVOLUTION-2.0 discipline exactly.
 
 `bun test` 262/262 pass · `bun x tsc --noEmit` clean · `bun run build` clean (`index-*.js` 446.55 kB,
 `Pantheon-*.js` 17.85 kB, 109 modules) at `8a1ef75`. No files modified this phase — read-only audit only.
+
+## Phase D (D1+D2+D3), closed out (2026-09-14)
+
+Shipped as one commit, the same way SENTINEL/PULSE/ORBIT each shipped as one commit in EVOLUTION-2.0.
+
+- `core/domain/model.ts`: `DeliberationEventType` (12 values), `DeliberationEventStatus`,
+  `DeliberationOutcome`, `DeliberationEvent` — additive only, deliberately **not** added to the
+  `GraphNode` union (see the doc comment on why: it is a conversation-tree log, not a
+  citation/cycle-checked node; it references real graph ids by string instead).
+- `core/deliberation/coordinator.ts` (new): `runDeliberation()` — a pure, deterministic, single-pass
+  synthesis over an already-completed `RunResult`'s own outputs, never a live loop and never a second
+  model call. 8 fixed rounds (opening clarifications → 6 agent positions → 7 questions from real
+  `recommended_next_step`s → challenges → objections → governance answers → revisions → conditional
+  escalation), then exactly one terminal `resolution` event. Every `evidence_ids`/`claim_ids` entry is
+  filtered through `graph.has()` at generation time, so a dangling reference can never enter the
+  transcript. Budgeted (`max_events`/`max_rounds`/`max_agent_responses`, defaults 80/12/20) as a hard
+  stop, never a silent truncation — the terminal event always states `LIMIT_REACHED` plainly instead of
+  implying consensus, and a slot for it is always reserved.
+- **Honesty finding, banked in code comments**: `Challenge.resolution`/`RedTeamFinding.resolution` are
+  always `'open'` in the current pipeline (grep-confirmed, nothing today sets them to
+  `'accepted'`/`'rebutted'`), so DEFENSE/REBUTTAL/resolution-driven-AGREEMENT event types are real,
+  wired code paths that never actually appear over a real run yet — dormant, not dropped, exercised
+  only by a hand-built fixture in `coordinator.test.ts`. Same posture ORBIT already documented for its
+  own scope decisions.
+- `core/orchestrator/run.ts`: wired `deliberation` onto `RunResult`, computed right after `assemble()`
+  and passed into both SENTINEL and PULSE.
+- `core/sentinel/sentinel.ts`: 11th check, `deliberation_integrity` — every event's
+  evidence/claim ids must resolve to a real node, reported `BLOCKED` with the literal phrase
+  `UNSUPPORTED CLAIM` on failure. Input field is optional so all 15 existing callers stay green.
+- `core/pulse/pulse.ts`: 10th check, `deliberation_health` — question/challenge/objection/revision
+  counts and whether a budget cut the transcript short, read from the report rather than recomputed.
+- `core/orbit/orbit.ts`: 2 new `DIFF_FIELDS` entries (`deliberation_event_count`,
+  `deliberation_outcome`), both informational (`material: false`), matching `disagreement_index`'s own
+  granularity.
+- `core/persistence/serialize.ts`: `STORE_VERSION` 3 → 4, `deliberation` stored verbatim like
+  `sentinel`/`pulse`; a pre-Council record is dropped, not backfilled, matching the v2/v3 precedent.
+- New `core/deliberation/coordinator.test.ts` (17 tests): determinism (byte-for-byte identical
+  transcript across two runs of the same seed), no-fabrication (every cited id resolves, asserted
+  independently of SENTINEL), real disagreement narrated honestly (challenge/objection counts match
+  the real challenger/red-team findings, all unresolved), exactly 6 recorded positions (not 7 —
+  `decision_engine` never votes on itself), exactly one terminal event, all three budget dimensions
+  exhausted individually (with the terminal event always surviving), and the dormant
+  DEFENSE/REBUTTAL/resolution-driven-AGREEMENT path via one hand-built fixture that also exercises
+  REVISION and ESCALATION.
+- `pulse.test.ts`/`orbit.test.ts`'s exact-key-list assertions and `serialize.test.ts` updated in
+  lockstep (a v3→v4 round-trip test and a drop-test added, matching the v1→v2 and v2→v3 precedent).
+
+Verified: `bun x tsc -b --noEmit` clean · `bun test` 281/281 pass (264 pre-existing + 17 new) · `bun run
+build` clean. Not yet done: L1 (Decision Lineage), G1-G4 (`/council` UI), H (adversarial tests beyond
+budget/fabrication, e.g. sealed-event mutation and UI-cannot-create-events — those need the UI to exist
+first), I (README update).

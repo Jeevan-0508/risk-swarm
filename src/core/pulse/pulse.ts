@@ -21,6 +21,7 @@ import type { Budget } from '../agents/harness';
 import type { ScoringPolicy } from '../scoring/policy';
 import type { SentinelReport } from '../sentinel/sentinel';
 import type { LiveFetchResult } from '../sources/types';
+import type { DeliberationReport } from '../deliberation/coordinator';
 import { overallStatus, type IntegrityStatus } from '../status';
 
 export type PulseStatus = IntegrityStatus;
@@ -54,6 +55,9 @@ export interface PulseInput {
   budget?: Budget;
   /** Only present in LIVE mode. Its absence in DEMO/SNAPSHOT reflects the mode, not a gap. */
   liveRetrieval?: LiveFetchResult;
+  /** Only present once the Council ran over this result. Its absence reflects a run from before that
+   *  feature existed, not a gap in this one. */
+  deliberation?: DeliberationReport;
 }
 
 /** Above this fraction of any budget dimension, a run that did fit is still worth a human's attention. */
@@ -197,6 +201,31 @@ export function runPulse(input: PulseInput): PulseReport {
     status: 'WARNING',
     detail: 'Not available from a single completed run: this metric needs outcomes recorded after the fact across prior runs, which this report was not given.',
   });
+
+  // 10. Deliberation health. The Council's own transcript, read for whether it closed on its own terms
+  //     or was cut off by its budget - not whether the recommendation is right (checks 1-9 above), but
+  //     whether the record of *how* the seven agents got there is itself complete.
+  if (input.deliberation === undefined) {
+    push({
+      key: 'deliberation_health',
+      label: 'Deliberation health',
+      status: 'VERIFIED',
+      detail: 'No deliberation transcript is in scope for this run.',
+    });
+  } else {
+    const d = input.deliberation;
+    const questions = d.events.filter((e) => e.type === 'question').length;
+    const stillOpen = d.events.filter((e) => (e.type === 'challenge' || e.type === 'objection') && e.status === 'unresolved').length;
+    const revisions = d.events.filter((e) => e.type === 'revision').length;
+    push({
+      key: 'deliberation_health',
+      label: 'Deliberation health',
+      status: d.limited_by !== null ? 'WARNING' : 'VERIFIED',
+      detail: d.limited_by !== null
+        ? `Deliberation stopped early: ${d.limited_by} exhausted after ${d.events.length} event(s) over ${d.rounds_used} round(s). Outcome reported as ${d.outcome.replace(/_/g, ' ').toLowerCase()}, not assumed.`
+        : `${d.events.length} event(s) over ${d.rounds_used} round(s): ${questions} question(s), ${stillOpen} challenge/objection still open, ${revisions} revision(s). Outcome ${d.outcome.replace(/_/g, ' ').toLowerCase()}.`,
+    });
+  }
 
   return { status: overallStatus(checks.map((c) => c.status)), checks };
 }

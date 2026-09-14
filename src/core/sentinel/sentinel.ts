@@ -11,7 +11,7 @@
  * being wrong does not make the record unsound.
  */
 import { RiskGraph } from '../domain/graph';
-import { GraphNode, type Evidence } from '../domain/model';
+import { GraphNode, type Evidence, type DeliberationEvent } from '../domain/model';
 import { sourceIdentity } from '../ingest/sanitize';
 import type { SnapshotFileProvenance } from '../integrations/loader';
 import { overallStatus, type IntegrityStatus } from '../status';
@@ -74,6 +74,9 @@ export interface SentinelInput {
   graph: RiskGraph;
   /** The pinned-snapshot hash record as synced (from `ScoutOutput.snapshot.files`), not re-fetched here. */
   snapshotFiles: SnapshotFileProvenance[];
+  /** The Council's transcript, if this run generated one. Optional so every existing caller (all 15 of
+   *  them, none built for a Council) still compiles unchanged; defaults to no events, not a missing report. */
+  deliberationEvents?: DeliberationEvent[];
 }
 
 const HEX64 = /^[0-9a-f]{64}$/;
@@ -227,6 +230,31 @@ export function runSentinel(input: SentinelInput): SentinelReport {
         ? `${input.snapshotFiles.length} pinned snapshot file(s) carry a well-formed hash record.`
         : `${malformedFiles.length} pinned snapshot file(s) carry a malformed hash record.`,
     node_ids: [],
+  });
+
+  // 11. Deliberation integrity: every evidence/claim id the Council's own transcript cites must
+  //     resolve to a real node in this run's graph, exactly like check 4 for the seven agents themselves.
+  //     The coordinator already filters every reference at generation time, so this should stay VERIFIED
+  //     on every real run - it exists to catch a future regression in that filter, not today's behavior.
+  const deliberationEvents = input.deliberationEvents ?? [];
+  const unsupportedBy: string[] = [];
+  const unsupportedDetail: string[] = [];
+  for (const ev of deliberationEvents) {
+    for (const ref of [...ev.evidence_ids, ...ev.claim_ids]) {
+      if (!known.has(ref)) {
+        unsupportedBy.push(ev.id);
+        unsupportedDetail.push(`${ev.id} -> ${ref}`);
+      }
+    }
+  }
+  push({
+    key: 'deliberation_integrity',
+    label: 'Deliberation integrity',
+    status: unsupportedDetail.length === 0 ? 'VERIFIED' : 'BLOCKED',
+    detail: unsupportedDetail.length === 0
+      ? `${deliberationEvents.length} deliberation event(s) cite only ids that resolve to a real node.`
+      : `UNSUPPORTED CLAIM: ${unsupportedDetail.length} deliberation event(s) cite an id that was never minted: ${unsupportedDetail.slice(0, 3).join(', ')}${unsupportedDetail.length > 3 ? ', …' : ''}.`,
+    node_ids: [...new Set(unsupportedBy)],
   });
 
   const status = overallStatus(checks.map((c) => c.status));

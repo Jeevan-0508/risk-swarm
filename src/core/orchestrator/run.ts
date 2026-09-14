@@ -26,6 +26,7 @@ import type { SignalSource } from '../integrations/fomo';
 import type { Reasoner } from '../reasoner/types';
 import { runSentinel, type SentinelReport } from '../sentinel/sentinel';
 import { runPulse, type PulseReport } from '../pulse/pulse';
+import { runDeliberation, type DeliberationReport } from '../deliberation/coordinator';
 
 /** Defects in how the investigation was built. Re-running the chain can actually fix these. */
 const REWORKABLE: ReadonlySet<RedTeamClass> = new Set<RedTeamClass>(['hallucination', 'unsupported_claim', 'circular_reasoning', 'duplicate_evidence']);
@@ -90,6 +91,8 @@ export interface RunResult {
   sentinel: SentinelReport;
   /** System-health report over this run's own process - budget, coverage, source diversity. Never affects the recommendation. */
   pulse: PulseReport;
+  /** The Council's deliberation transcript over this run's own graph and outputs. Never affects the recommendation - it narrates the disagreement `score.ts` already computed, never recomputes it. */
+  deliberation: DeliberationReport;
 }
 
 /** Exported so ORBIT's false-positive-wave scenario can inject signals in the same category this run treats as benign, rather than guessing a string. */
@@ -262,11 +265,13 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
     decision,
   });
 
-  const sentinel = runSentinel({ graph, snapshotFiles: scout.snapshot.files });
+  const deliberation = runDeliberation({ run_id: options.run_id, graph, scout, intelligence, analyst, governance, challenger, red_team, decision });
+  const sentinel = runSentinel({ graph, snapshotFiles: scout.snapshot.files, deliberationEvents: deliberation.events });
   const pulse = runPulse({
     intelligence, governance, challenger, red_team, decision, policy, sentinel,
     spent: harness.spent,
     budget: harness.budget,
+    deliberation,
     // Live retrieval is captured by a UI-only side channel (see `liveSignalSource` in
     // `app/lib/engine.ts`), not returned through any agent output, so it is not yet in scope for
     // this engine-side report - a real gap noted in `docs/EVOLUTION-2.0.md`, not a fabricated VERIFIED.
@@ -285,6 +290,7 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
     benign_category_share,
     sentinel,
     pulse,
+    deliberation,
   };
 }
 

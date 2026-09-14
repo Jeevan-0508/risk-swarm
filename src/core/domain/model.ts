@@ -366,3 +366,74 @@ export const NODE_KIND_OF: Record<NodeKind, true> = {
   outcome: true,
   lesson: true,
 };
+
+// ---------------------------------------------------------------------------- deliberation (Council)
+
+/**
+ * The Council's event vocabulary. A `DeliberationEvent` is deliberately never a `GraphNode`: it does
+ * not revise or supersede anything the seven agents produced, and the append-only graph's
+ * citation/cycle guards are the wrong shape for a conversation tree of who asked whom. It is its own
+ * append-only log, generated once, in one deterministic pass, over an already-completed `RunResult`
+ * (see `core/deliberation/coordinator.ts`). It may *reference* a real graph node id (evidence,
+ * hypothesis, challenge, finding, decision) by string - exactly what SENTINEL's existing citation
+ * check already knows how to validate - but it is never itself a citable id.
+ */
+export const DeliberationEventType = z.enum([
+  'question',
+  'answer',
+  'challenge',
+  'defense',
+  'rebuttal',
+  'revision',
+  'agreement',
+  'disagreement',
+  'objection',
+  'clarification',
+  'escalation',
+  'resolution',
+]);
+export type DeliberationEventType = z.infer<typeof DeliberationEventType>;
+
+/** The status of this event itself, fixed at the moment it was generated. Never mutated afterward - a
+ *  later development in the deliberation is always a new event with a `parent_event_id`, not an edit
+ *  to this one. Council's deliberation is a synthesis over a completed run, not a live interactive
+ *  loop, so the final resolution of everything this event is about is already known when it is minted. */
+export const DeliberationEventStatus = z.enum(['open', 'resolved', 'unresolved']);
+export type DeliberationEventStatus = z.infer<typeof DeliberationEventStatus>;
+
+/**
+ * The council's final position. Never `CONSENSUS` by default: it is derived from
+ * `ScoreResult.disagreement_index` and `Decision.unresolved_objections`, which are already
+ * authoritative, never recomputed or asserted independently of them. `LIMIT_REACHED` is published
+ * when a termination budget stopped the deliberation before it could resolve - this is never silently
+ * read as agreement.
+ */
+export const DeliberationOutcome = z.enum(['CONSENSUS', 'QUALIFIED_CONSENSUS', 'MATERIAL_DISAGREEMENT', 'UNRESOLVED', 'LIMIT_REACHED']);
+export type DeliberationOutcome = z.infer<typeof DeliberationOutcome>;
+
+export const DeliberationEvent = z.object({
+  id: z.string().min(2),
+  run_id: z.string().min(1),
+  sequence: z.number().int().min(0),
+  /** The run's own completion instant (the decision node's `created_at`), not a distinct per-event
+   *  wall-clock moment - this system has no live per-event clock, and inventing one would fabricate a
+   *  precision it does not have. `sequence`, not `timestamp`, is the event's true ordering. */
+  timestamp: isoDate,
+  from_agent: AgentId,
+  /** `null` means addressed to the council as a whole, not to one named agent. */
+  to_agent: AgentId.nullable(),
+  type: DeliberationEventType,
+  /** Deterministic content only: every substring is copied from a real field on a real agent output
+   *  (an argument, a rationale line, a `recommended_next_step`), never phrased freely. */
+  content: z.string().min(1),
+  /** Real evidence node ids this event rests on. Filtered against the graph at generation time, so a
+   *  dangling id can never enter this array in the first place - see `keepKnown` in the coordinator. */
+  evidence_ids: z.array(z.string()).default([]),
+  /** Ids of the real graph nodes (hypothesis, challenge, finding, decision) this event is about. */
+  claim_ids: z.array(z.string()).default([]),
+  parent_event_id: z.string().nullable().default(null),
+  status: DeliberationEventStatus,
+  requires_response: z.boolean().default(false),
+});
+export type DeliberationEvent = z.infer<typeof DeliberationEvent>;
+

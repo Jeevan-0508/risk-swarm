@@ -129,6 +129,7 @@ describe('PULSE', () => {
     expect(r.pulse.checks.map((c) => c.key)).toEqual([
       'record_integrity', 'source_diversity', 'evidence_volume', 'governance_coverage',
       'red_team_outcome', 'unresolved_blockers', 'budget_utilization', 'retrieval_health', 'outcome_history',
+      'deliberation_health',
     ]);
   });
 });

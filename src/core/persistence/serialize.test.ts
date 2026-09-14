@@ -95,6 +95,21 @@ describe('run persistence', () => {
     expect(deserializeRun(stale)).toBeNull();
   });
 
+  it('round-trips the Council\'s own transcript rather than dropping it silently', async () => {
+    const r = await run();
+    const back = deserializeRun(serializeRun(r, ENVELOPE))!;
+    expect(back.result.deliberation.outcome).toBe(r.deliberation.outcome);
+    expect(back.result.deliberation.events.length).toBe(r.deliberation.events.length);
+  });
+
+  it('drops a pre-Council record instead of rendering it with a missing field', async () => {
+    const r = await run();
+    const record = serializeRun(r, ENVELOPE) as Record<string, unknown>;
+    delete record.deliberation;
+    const stale = { ...record, store_version: 3 };
+    expect(deserializeRun(stale)).toBeNull();
+  });
+
   it('drops a corrupt row from web storage without taking the good ones with it', async () => {
     const r = await run();
     const storage = new FakeStorage();
