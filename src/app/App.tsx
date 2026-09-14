@@ -17,6 +17,7 @@ import { Provenance } from '@app/screens/Provenance';
 import { EvidenceGraph } from '@app/screens/EvidenceGraph';
 import { RedTeam } from '@app/screens/RedTeam';
 import { ScenarioRoom } from '@app/screens/ScenarioRoom';
+import { InternalKnowledge } from '@app/screens/InternalKnowledge';
 
 /**
  * The showcase page is lazy so it never enters the console's bundle, and it lives outside `Frame` so it
@@ -45,6 +46,7 @@ const NAV: Array<{ to: string; n: string; label: string }> = [
   { to: '/agents', n: '09', label: 'Agent Performance' },
   { to: '/provenance', n: '10', label: 'Knowledge & Provenance' },
   { to: '/orbit', n: '11', label: 'Scenario Room' },
+  { to: '/knowledge', n: '12', label: 'Internal Knowledge' },
 ];
 
 const MODES: Mode[] = ['DEMO', 'SNAPSHOT', 'LIVE'];
@@ -171,6 +173,7 @@ export function App() {
           <Route path="/agents" element={<AgentPerformance />} />
           <Route path="/provenance" element={<Provenance />} />
           <Route path="/orbit" element={<ScenarioRoom />} />
+          <Route path="/knowledge" element={<InternalKnowledge />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

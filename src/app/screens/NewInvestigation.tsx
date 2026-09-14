@@ -13,10 +13,12 @@
  * for who will be in the room. None of it is a preview of a guess - it is the decision itself, shown
  * early enough to disagree with.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@app/store/session';
-import { DEMO_INPUT, MODE_NOTE, type StartInput } from '@app/lib/engine';
+import { DEMO_INPUT, MODE_NOTE, snapshotLoader, type StartInput } from '@app/lib/engine';
+import { Link } from 'react-router-dom';
+import { createInternalKnowledge, type InternalOutcome } from '@core/knowledge/internal';
 import { Button, Field, Panel, Row, Tag, inputClass } from '@app/ui/kit';
 import { routeQuestion } from '@core/question/model';
 import { recommendPack } from '@core/packs/recommend';
@@ -54,6 +56,73 @@ const iso = (d: string) => new Date(`${d}T00:00:00.000Z`).toISOString();
 /** One entry per line. Empty lines are dropped rather than sent as a blank query. */
 const lines = (text: string) => text.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
 const asText = (values: string[]) => values.join('\n');
+
+/**
+ * EVOLUTION 5.0 Phase G. What the system already holds on this question, before a run is spent on it.
+ * The same `search()` the engine's planner uses, over the same pinned index, at a limit of three - this is
+ * a pointer to screen 12, not a replacement for it.
+ *
+ * A miss is shown, not hidden. "The repository holds nothing on this" is a useful thing to learn before
+ * starting, and an unreadable index must never look like an empty one.
+ */
+function PriorKnowledge({ question, needed }: { question: string; needed: boolean }) {
+  const [knowledge] = useState(() => createInternalKnowledge(snapshotLoader()));
+  const [outcome, setOutcome] = useState<InternalOutcome | null>(null);
+
+  useEffect(() => {
+    if (question.length <= 12) {
+      setOutcome(null);
+      return;
+    }
+    let live = true;
+    // Debounced, so typing a question does not run a search per keystroke.
+    const timer = setTimeout(() => {
+      void knowledge.search([question], { limit: 3 }).then((r) => {
+        if (live) setOutcome(r);
+      });
+    }, 400);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [knowledge, question]);
+
+  return (
+    <Panel
+      title="what we already hold"
+      aside={
+        <Link to="/knowledge" className="text-2xs text-fg-mute underline decoration-line-bright underline-offset-2 hover:text-fg">
+          search the whole index
+        </Link>
+      }
+    >
+      <p className="text-2xs leading-relaxed text-fg-mute">
+        {needed
+          ? 'This question was read as needing internal knowledge, so the pinned index was searched first.'
+          : 'This question was not read as needing internal knowledge. The index was searched anyway, because a prior answer is worth knowing about either way.'}
+      </p>
+      {outcome === null ? (
+        <p className="mt-2 text-xs text-fg-mute">Nothing searched yet.</p>
+      ) : outcome.status === 'unavailable' ? (
+        <p className="mt-2 text-xs leading-relaxed text-caution">{outcome.reason}</p>
+      ) : outcome.status === 'empty' ? (
+        <p className="mt-2 text-xs leading-relaxed text-fg-dim">{outcome.reason}</p>
+      ) : (
+        <ul className="mt-3 space-y-2">
+          {outcome.hits.map((h) => (
+            <li key={h.record.id} className="border-l-2 border-line-bright pl-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-xs text-fg-dim">{h.record.title}</span>
+                <span className="num shrink-0 text-2xs text-fg-mute">{h.score.toFixed(2)}</span>
+              </div>
+              <div className="num mt-0.5 text-2xs text-fg-mute">{h.record.path}#{h.record.ref}</div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
+  );
+}
 
 export function NewInvestigation() {
   const { start, select, mode, control } = useSession();
@@ -154,6 +223,8 @@ export function NewInvestigation() {
           </>
         )}
       </Panel>
+
+      <PriorKnowledge question={question} needed={routed.requires_internal} />
 
       <Panel title="knowledge pack" aside={<span className="text-2xs text-fg-mute">{packOverride === null ? 'recommended' : 'your choice'}</span>}>
         <p className="text-xs leading-relaxed text-fg-dim">{advice.reason}</p>
