@@ -13,9 +13,11 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { AgentId, DeliberationEvent } from '../core/domain/model';
 import type { RunResult } from '../core/orchestrator/run';
-import { AGENT_CODENAME, AGENT_LABEL } from '../app/lib/agents';
 import { COUNCIL_ORDER, COUNCIL_SEATS, ringPoint } from './roster';
-import { EVENT_TONE, OUTCOME_NOTE, OUTCOME_TONE, TONE_COLOR, chamberState, seatActivity, visible } from './derive';
+import type { Pattern } from '../core/integrations/atlas';
+import { decisionLineage, evidenceNeeded, sourceConcentration } from '../core/lineage/lineage';
+import { AGENT_CODENAME, AGENT_LABEL, AGENT_REMIT, agentOutput } from '../app/lib/agents';
+import { EVENT_TONE, OUTCOME_NOTE, OUTCOME_TONE, TONE_COLOR, chamberState, seatActivity, typeTally, visible } from './derive';
 
 const CHAMBER_LABEL: Record<ReturnType<typeof chamberState>, string> = {
   empty: 'no transcript',
@@ -226,7 +228,258 @@ function DecisionCore({ result }: { result: RunResult }) {
   );
 }
 
-export function Chamber({ result }: { result: RunResult }) {
+/**
+ * ZONE 2b - TIMELINE. Every event as one tick, coloured by its type, in `sequence` order. Doubles as the
+ * scrubber: a tick is the event, so clicking one cannot land anywhere the transcript does not go.
+ */
+function Timeline({ events, cursor, onCursor }: { events: DeliberationEvent[]; cursor: number; onCursor: (n: number) => void }) {
+  const tally = useMemo(() => typeTally(events), [events]);
+  if (events.length === 0) return null;
+
+  return (
+    <div className="px-4 py-3">
+      <div className="flex items-end gap-px" role="group" aria-label="deliberation timeline">
+        {events.map((e) => {
+          const color = TONE_COLOR[EVENT_TONE[e.type]];
+          const reached = e.sequence <= cursor;
+          return (
+            <button
+              key={e.id}
+              type="button"
+              onClick={() => onCursor(e.sequence)}
+              title={`${String(e.sequence).padStart(2, '0')} · ${AGENT_CODENAME[e.from_agent]} · ${e.type}`}
+              className="min-w-0 flex-1"
+              style={{
+                height: e.sequence === cursor ? 22 : e.requires_response ? 16 : 11,
+                background: color,
+                opacity: reached ? 0.9 : 0.22,
+              }}
+            />
+          );
+        })}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+        {tally.map((t) => (
+          <span key={t.type} className="font-mono text-2xs tracking-[0.1em]" style={{ color: TONE_COLOR[EVENT_TONE[t.type]] }}>
+            {t.count} {t.type}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * ZONE 3 - AGENT INSPECTOR. What one seat actually is: its remit, what it structurally cannot do, the
+ * position it recorded in the score's own `agent_positions`, and everything it said. Every number is
+ * read off the agent's own published output - the inspector computes nothing.
+ */
+function AgentInspector({ result, seat, events, cursor }: {
+  result: RunResult;
+  seat: AgentId;
+  events: DeliberationEvent[];
+  cursor: number;
+}) {
+  const s = COUNCIL_SEATS[seat];
+  const out = agentOutput(result, seat);
+  const position = result.outputs.decision.scoring_input.agent_positions.find((p) => p.agent === seat) ?? null;
+  const said = visible(events, cursor).filter((e) => e.from_agent === seat);
+  const asked = visible(events, cursor).filter((e) => e.to_agent === seat);
+
+  return (
+    <div className="cn-hair p-5" style={{ ['--cn-accent' as string]: s.accent }}>
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="font-mono text-lg tracking-[0.18em]" style={{ color: s.accent }}>{AGENT_CODENAME[seat]}</span>
+        <span className="font-mono text-2xs uppercase tracking-[0.16em] text-fg-mute">{AGENT_LABEL[seat]}</span>
+      </div>
+      <p className="mt-3 text-sm leading-relaxed text-fg-dim">{AGENT_REMIT[seat]}</p>
+      <p className="mt-2 text-xs leading-relaxed text-fg-mute">{s.trait}</p>
+      <p className="mt-3 border-l-2 pl-3 text-xs leading-relaxed text-fg-dim" style={{ borderColor: s.accent }}>
+        <span className="font-mono text-2xs uppercase tracking-[0.14em] text-fg-mute">cannot</span>
+        <br />
+        {s.cannot}
+      </p>
+
+      <div className="mt-5 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+        <div>
+          <Label>recorded position</Label>
+          {position === null ? (
+            <p className="mt-1.5 text-xs leading-relaxed text-fg-mute">
+              This seat casts no position. The decision engine assembles the score; it does not vote in it.
+            </p>
+          ) : (
+            <div className="num mt-1.5 text-sm text-fg">
+              {position.reasoning_status.replace(/_/g, ' ')} · {position.confidence.toFixed(2)}
+            </div>
+          )}
+        </div>
+        <div>
+          <Label>in the chamber</Label>
+          <div className="num mt-1.5 text-sm text-fg">{said.length} said · {asked.length} addressed to it</div>
+        </div>
+        <div>
+          <Label>own output</Label>
+          <div className="num mt-1.5 text-sm text-fg">
+            {out.findings.length} findings · {out.evidence_cited.length} evidence cited
+          </div>
+        </div>
+        <div>
+          <Label>self-reported status</Label>
+          <div className="num mt-1.5 text-sm text-fg">
+            {out.reasoning_status.replace(/_/g, ' ')} · {out.confidence.toFixed(2)}
+          </div>
+        </div>
+      </div>
+
+      {out.degraded_reason !== undefined && out.degraded_reason !== null && (
+        <p className="mt-4 text-xs leading-relaxed text-caution">degraded: {out.degraded_reason}</p>
+      )}
+
+      {out.uncertainties.length > 0 && (
+        <div className="mt-5">
+          <Label>what it says it does not know</Label>
+          <ul className="mt-2 space-y-1.5">
+            {out.uncertainties.map((u) => (
+              <li key={u} className="text-xs leading-relaxed text-fg-dim">{u}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {out.recommended_next_step !== null && (
+        <div className="mt-5">
+          <Label>what it asked for next</Label>
+          <p className="mt-2 text-xs leading-relaxed text-fg-dim">{out.recommended_next_step}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * ZONE 4b - DECISION LINEAGE. The chain behind the recommendation - decision -> hypothesis ->
+ * observation -> evidence - plus the two questions the chain raises: which single source is carrying
+ * this run, and what nobody has looked at yet. All three come from `core/lineage/`, which recomputes
+ * them from the stored graph rather than storing a second copy that could drift.
+ *
+ * `patterns` is optional on purpose: the indicator text lives in the pinned taxonomy, not in the run,
+ * so the "what would change this" list appears once the shell has loaded it and honestly says so until
+ * then. It is never filled in with a guess.
+ */
+function Lineage({ result, patterns }: { result: RunResult; patterns: Map<string, Pattern> | null }) {
+  const decision = result.outputs.decision.decision;
+  const lineage = useMemo(() => decisionLineage(result.graph, decision), [result.graph, decision]);
+  const concentration = useMemo(
+    () => sourceConcentration(lineage.hypotheses.flatMap((h) => h.evidence).concat(lineage.decision_evidence)),
+    [lineage],
+  );
+  // Ranked across the whole run, not per finding: the six highest-leverage unassessed indicators are
+  // the six that would move the band furthest, whichever hypothesis they happen to hang off. Concatenating
+  // per-finding lists would bury a heavy indicator behind a lighter one just because its pattern matched
+  // second. Ties break on the indicator id so the list is stable between renders.
+  const gaps = useMemo(() => {
+    if (patterns === null) return null;
+    return result.outputs.analyst.findings
+      .flatMap((f) => {
+        const pattern = patterns.get(f.coverage.pattern_id);
+        return pattern === undefined ? [] : evidenceNeeded(f.coverage, pattern).map((item) => ({ ...item, pattern: pattern.name }));
+      })
+      .sort((a, b) => b.weight - a.weight || a.indicator_id.localeCompare(b.indicator_id));
+  }, [patterns, result.outputs.analyst.findings]);
+
+  return (
+    <div className="cn-hair">
+      <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(120,140,180,0.18)' }}>
+        <Label>decision lineage</Label>
+      </div>
+
+      <div className="grid gap-6 p-5 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <Label>decision &#8592; hypothesis &#8592; observation &#8592; evidence</Label>
+          {lineage.hypotheses.length === 0 ? (
+            <p className="mt-3 text-xs leading-relaxed text-fg-mute">
+              This decision rests on no hypothesis in the graph. Nothing is inferred to fill the gap.
+            </p>
+          ) : (
+            <div className="mt-3 space-y-4">
+              {lineage.hypotheses.map((h) => (
+                <div key={h.hypothesis.id} className="border-l-2 border-line-bright pl-3">
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <span className="num text-2xs text-fg-mute">{h.hypothesis.id}</span>
+                    <span className="font-mono text-2xs uppercase tracking-[0.12em] text-hypo">{h.hypothesis.status.replace(/_/g, ' ')}</span>
+                  </div>
+                  <p className="mt-1.5 text-sm leading-relaxed text-fg-dim">{h.hypothesis.statement}</p>
+                  <p className="mt-1.5 text-2xs leading-relaxed text-fg-mute">
+                    falsified by: {h.hypothesis.falsification_test}
+                  </p>
+                  <div className="num mt-2 text-2xs text-fg-mute">
+                    {h.observations.length} observations · {h.evidence.length} evidence in the chain
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="mt-4 text-2xs leading-relaxed text-fg-mute">
+            The evidence count is the full transitive chain behind the hypothesis, not only what the analyst
+            cited directly - a hypothesis is linked to every observation the run produced, so this is a
+            superset by construction. It is labelled that way rather than reported as direct support.
+          </p>
+        </div>
+
+        <div className="space-y-6">
+          <div>
+            <Label>source concentration</Label>
+            <div className="num mt-2 text-2xl font-light leading-none">
+              {(concentration.top_source_share * 100).toFixed(0)}%
+            </div>
+            <p className="mt-1.5 text-2xs leading-relaxed text-fg-mute">
+              held by the largest single source, across {concentration.total_evidence} evidence nodes
+            </p>
+            <ul className="mt-3 space-y-1">
+              {concentration.by_source.slice(0, 5).map((e) => (
+                <li key={e.source_identity} className="flex items-baseline justify-between gap-3 text-2xs">
+                  <span className="min-w-0 truncate text-fg-dim">{e.source_identity}</span>
+                  <span className="num shrink-0 text-fg-mute">{e.count}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <Label>what would change this</Label>
+            {gaps === null ? (
+              <p className="mt-2 text-2xs leading-relaxed text-fg-mute">
+                The indicator text lives in the pinned taxonomy, not in this run. Loading it.
+              </p>
+            ) : gaps.length === 0 ? (
+              <p className="mt-2 text-2xs leading-relaxed text-fg-mute">
+                Every indicator on the matched patterns has been assessed one way or the other.
+              </p>
+            ) : (
+              <ul className="mt-2 space-y-2">
+                {gaps.slice(0, 6).map((g) => (
+                  <li key={`${g.pattern}-${g.indicator_id}`}>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="num text-2xs text-fg-mute">{g.indicator_id}</span>
+                      <span className="num shrink-0 text-2xs text-caution">w {g.weight}</span>
+                    </div>
+                    <p className="mt-0.5 text-2xs leading-relaxed text-fg-dim">{g.signal}</p>
+                    <p className="text-2xs leading-relaxed text-fg-mute">observable in: {g.observable_in}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {gaps !== null && gaps.length > 6 && (
+              <p className="num mt-2 text-2xs text-fg-mute">{gaps.length - 6} more unassessed indicators</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function Chamber({ result, patterns = null }: { result: RunResult; patterns?: Map<string, Pattern> | null }) {
   const events = result.deliberation.events;
   const [cursor, setCursor] = useState(events.length - 1);
   const [seat, setSeat] = useState<AgentId | null>(null);
@@ -240,7 +493,7 @@ export function Chamber({ result }: { result: RunResult }) {
         <DecisionCore result={result} />
       </div>
 
-      <div className="cn-hair">
+      <div className="cn-hair self-start">
         <div className="flex items-baseline justify-between gap-4 px-4 py-3" style={{ borderBottom: '1px solid rgba(120,140,180,0.18)' }}>
           <Label>live deliberation</Label>
           <div className="flex items-center gap-3">
@@ -249,7 +502,7 @@ export function Chamber({ result }: { result: RunResult }) {
                 clear filter
               </button>
             )}
-            <span className="num text-2xs text-fg-mute">{cursor + 1}/{events.length}</span>
+            <span className="num text-2xs text-fg-mute">{Math.max(0, cursor + 1)}/{events.length}</span>
           </div>
         </div>
         <div className="flex items-center gap-2 px-4 py-2" style={{ borderBottom: '1px solid rgba(120,140,180,0.12)' }}>
@@ -258,7 +511,28 @@ export function Chamber({ result }: { result: RunResult }) {
           <button type="button" onClick={() => setCursor((c) => Math.min(events.length - 1, c + 1))} className="font-mono text-2xs uppercase tracking-[0.12em] text-fg-mute hover:text-fg">next</button>
           <button type="button" onClick={() => setCursor(events.length - 1)} className="ml-auto font-mono text-2xs uppercase tracking-[0.12em] text-fg-mute hover:text-fg">whole transcript</button>
         </div>
+        <div style={{ borderBottom: '1px solid rgba(120,140,180,0.12)' }}>
+          <Timeline events={events} cursor={cursor} onCursor={setCursor} />
+        </div>
         <Deliberation events={events} cursor={cursor} onCursor={setCursor} filter={seat} />
+      </div>
+
+      <div className="lg:col-span-2">
+        {seat === null ? (
+          <div className="cn-hair p-5">
+            <Label>agent inspector</Label>
+            <p className="mt-3 text-sm leading-relaxed text-fg-mute">
+              Select a seat on the ring to read its remit, the position it recorded in the score, and what it
+              said. Seven seats, and the interesting half of each one is what it cannot do.
+            </p>
+          </div>
+        ) : (
+          <AgentInspector result={result} seat={seat} events={events} cursor={cursor} />
+        )}
+      </div>
+
+      <div className="lg:col-span-2">
+        <Lineage result={result} patterns={patterns} />
       </div>
     </div>
   );

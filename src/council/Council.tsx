@@ -8,15 +8,48 @@
  *
  * If there is no run, the chamber says so. It never seats a demo.
  */
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { createAtlasMatcher, type Pattern } from '../core/integrations/atlas';
+import { snapshotLoader } from '../app/lib/engine';
 import { useSession } from '../app/store/session';
 import { Chamber, Label } from './Chamber';
 import './council.css';
+
+/**
+ * The pinned taxonomy, fetched once so the lineage zone can name the indicators nobody has looked at.
+ * It is loaded here rather than inside `Chamber` for two reasons: `Chamber` stays synchronous and
+ * testable, and a failed fetch must degrade to "not loaded" instead of an empty list that would read as
+ * "nothing left to check". `patterns` is `null` until it really arrives, and stays `null` if it never
+ * does - the zone says so in words either way.
+ */
+function usePatterns(active: boolean): Map<string, Pattern> | null {
+  const [patterns, setPatterns] = useState<Map<string, Pattern> | null>(null);
+
+  useEffect(() => {
+    if (!active || patterns !== null) return;
+    let cancelled = false;
+    void createAtlasMatcher(snapshotLoader())
+      .patterns()
+      .then((all) => {
+        if (!cancelled) setPatterns(new Map(all.map((p) => [p.id, p])));
+      })
+      .catch(() => {
+        // Deliberately swallowed: the zone's own copy already reads as "not loaded", which is true.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [active, patterns]);
+
+  return patterns;
+}
 
 export default function Council() {
   const { active } = useSession();
   const run = active();
   const result = run?.result ?? null;
+  const patterns = usePatterns(result !== null);
 
   return (
     <div className="cn-page h-full overflow-y-auto">
@@ -54,7 +87,7 @@ export default function Council() {
           </div>
         </div>
       ) : (
-        <Chamber key={result.run_id} result={result} />
+        <Chamber key={result.run_id} result={result} patterns={patterns} />
       )}
 
       <footer className="mx-auto max-w-7xl px-6 pb-20 pt-4">

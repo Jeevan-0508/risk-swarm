@@ -102,7 +102,7 @@ plan for everything after it. Cross-session anchor for the Council epic; read be
 | D3 | SENTINEL event-validation check, PULSE deliberation-health check, ORBIT diff fields | `core/sentinel/`, `core/pulse/`, `core/orbit/` | **done** |
 | L1 | Decision Lineage over `graph.evidenceChain()` (absorbs EVOLUTION-2.0 Phase E) | `core/lineage/` | **done** |
 | G1 | `/council` route shell, Council Core (radial layout + state machine), minimal real Live Deliberation stream | `src/council/` (detached lazy route) | **done** |
-| G2 | Agent Inspector, Decision Core (links to `/brief`), Decision Lineage view, timeline | same | |
+| G2 | Agent Inspector, Decision Core (links to `/brief`), Decision Lineage view, timeline | `src/council/` | **done** |
 | G3 | Replay (deterministic, no re-run), command bar | same | |
 | G4 | Audio (original, on/off), reduced-motion, mobile vertical layout | same | |
 | H | Adversarial tests: fabrication attempts, sealed-event mutation, UI-cannot-create-events, determinism, budget exhaustion | `core/deliberation/*.test.ts` | |
@@ -246,3 +246,34 @@ Two conventions learned this phase, both worth keeping:
 Verified: `bun run typecheck` clean · `bun test` 313/313 pass (292 prior + 15 `derive` + 6 `render`) ·
 `bun run build` clean, `Council-*.js` 12.69 kB in its own chunk (`index-*.js` unchanged at 455.81 kB,
 so nothing leaked into the console bundle).
+
+## Phase G2 (Agent Inspector, Timeline, Decision Lineage zone), closed out (2026-09-14)
+
+Three zones added to `Chamber.tsx`, and L1's three core functions finally get a screen.
+
+- **Timeline**: one tick per event, coloured by type, height marking the cursor and any event that
+  `requires_response`, plus a legend from `typeTally()`. It is the scrubber as well as the overview -
+  a tick *is* an event, so clicking one cannot land anywhere the transcript does not go.
+- **Agent Inspector**: on selecting a seat, its remit (`AGENT_REMIT`), its disposition, what it
+  structurally **cannot** do, the position it recorded in `decision.scoring_input.agent_positions`,
+  its own published `reasoning_status`/`confidence`/`findings`/`evidence_cited`, its `uncertainties`
+  verbatim, its `recommended_next_step`, and its `degraded_reason` if the model path degraded. Every
+  number is read off the agent's own output - the inspector computes nothing. `decision_engine` is
+  shown as casting no position rather than as a missing row, because it does not vote on itself.
+  Nothing is pre-selected: the zone invites a click instead of implying one seat matters more.
+- **Decision Lineage**: `decisionLineage()` rendered as the real chain (hypothesis id, status,
+  statement, falsification test, observation and evidence counts), with the superset caveat printed
+  on screen rather than buried in a doc comment. Alongside it, `sourceConcentration()` (top-source
+  share plus the five largest sources) and `evidenceNeeded()` as "what would change this".
+- The indicator text lives in the pinned taxonomy, not in the run, so `Council.tsx` (the shell) fetches
+  it once via `createAtlasMatcher(snapshotLoader()).patterns()` and passes a `Map<string, Pattern>`
+  down. `Chamber` stays synchronous and store-free. **A failed fetch degrades to `null`, not to an
+  empty array**: an empty list would read as "nothing left to check", which is the opposite of the
+  truth, so the zone says the taxonomy is not loaded until it really is.
+- `evidenceNeeded()` results are ranked **globally by weight across the run**, not concatenated per
+  finding - otherwise a heavy indicator could be pushed off the list of six by a lighter one whose
+  pattern merely matched first. Found by the render test, which asserts the single heaviest unassessed
+  indicator in the whole run is on screen with its `signal` verbatim.
+
+Verified: `bun run typecheck` clean · `bun test` 320/320 pass (313 prior + 7 new render assertions
+groups) · `bun run build` clean, `Council-*.js` 22.60 kB (`index-*.js` 455.85 kB, still flat).
