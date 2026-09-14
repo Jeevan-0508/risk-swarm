@@ -76,14 +76,14 @@ describe('the research planner', () => {
   });
 
   it('respects the query budget and records the trim rather than truncating silently', () => {
-    const p = plan('What are the major emerging risks in European freight?', { budget: { max_queries: 2 } });
-    expect(p.external.query_count <= 2).toBe(true);
+    const p = plan('What are the major emerging risks in European freight?', { budget: { max_provider_calls: 2 } });
+    expect(p.external.call_count <= 2).toBe(true);
     expect(p.notes.some((n) => n.includes('Plan trimmed'))).toBe(true);
   });
 
   it('scales the budget with the depth the router read from the question', () => {
-    expect(plan('What is the capital of Germany?').budget.max_queries).toBe(3);
-    expect(plan('What are the major emerging risks in European freight?').budget.max_queries).toBe(10);
+    expect(plan('What is the capital of Germany?').budget.max_provider_calls).toBe(6);
+    expect(plan('What are the major emerging risks in European freight?').budget.max_provider_calls).toBe(24);
   });
 
   it('always searches internal knowledge first and says why', () => {

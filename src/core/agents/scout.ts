@@ -8,7 +8,7 @@
 import { canonicalHost, sanitiseText } from '../ingest/sanitize';
 import type { Evidence, Signal } from '../domain/model';
 import { classifySource, emptyCost, type AgentContext, type AgentOutput } from './types';
-import type { SignalQueryStats } from '../integrations/fomo';
+import type { RetrievalReport, SignalQueryStats } from '../integrations/fomo';
 import type { SnapshotFileProvenance } from '../integrations/loader';
 
 export interface ScoutInput {
@@ -25,6 +25,12 @@ export interface ScoutFinding {
 
 export interface ScoutOutput extends AgentOutput<ScoutFinding> {
   stats: SignalQueryStats;
+  /**
+   * How retrieval itself went, when the source can report it. Null for a pinned snapshot. This is kept
+   * separate from `stats` because filtering counts cannot say "nothing was retrieved", and a run where
+   * every feed was blocked must not read like a run where the world was quiet.
+   */
+  retrieval: RetrievalReport | null;
   /** `files` is the pinned-snapshot hash record as synced, so SENTINEL can check it without re-fetching. */
   snapshot: { upstream_repo: string; commit: string | null; synced_files: number; files: SnapshotFileProvenance[] };
 }
@@ -94,6 +100,18 @@ export async function runScout(ctx: AgentContext, input: ScoutInput): Promise<Sc
   if (result.stats.category_disagreements > 0) uncertainties.push(`${result.stats.category_disagreements} signal(s) disagree with their upstream category label.`);
   if (findings.length === 0) uncertainties.push('No signal survived filtering, so absence of evidence must not be read as evidence of absence.');
 
+  // R14. A total retrieval failure used to be invisible here: the loop simply had nothing to iterate,
+  // and the run continued as though the sources had been read and found nothing.
+  const retrieval = result.retrieval ?? null;
+  if (retrieval !== null && retrieval.sources_failed > 0) {
+    const reasons = retrieval.failures.map((f) => `${f.source_key} (${f.kind}: ${f.reason})`).join('; ');
+    uncertainties.push(
+      retrieval.sources_read === 0
+        ? `SEARCH_FAILED: all ${retrieval.sources_attempted} source(s) failed, so no external signal was retrieved at all - ${reasons}. This run says nothing about the world; it says retrieval did not happen.`
+        : `${retrieval.sources_failed} of ${retrieval.sources_attempted} source(s) failed, so coverage is partial - ${reasons}.`,
+    );
+  }
+
   const injections = findings.filter((f) => f.evidence.injection_suspected).length;
   if (injections > 0) uncertainties.push(`${injections} retrieved item(s) contained instruction-shaped text and were downgraded.`);
 
@@ -107,9 +125,15 @@ export async function runScout(ctx: AgentContext, input: ScoutInput): Promise<Sc
     confidence: findings.length === 0 ? 0 : Math.min(1, findings.length / 10),
     uncertainties,
     reasoning_status: findings.length === 0 ? 'insufficient_evidence' : 'supported',
-    recommended_next_step: findings.length === 0 ? 'Widen the window or the geography before drawing any conclusion.' : 'Cluster and deduplicate before interpretation.',
+    recommended_next_step:
+      retrieval !== null && retrieval.sources_read === 0
+        ? 'Restore source access before reading this run at all: retrieval failed, so there is nothing to widen.'
+        : findings.length === 0
+          ? 'Widen the window or the geography before drawing any conclusion.'
+          : 'Cluster and deduplicate before interpretation.',
     cost: { ...emptyCost(), calls: 1, ms: Date.now() - started },
     stats: result.stats,
+    retrieval,
     snapshot: { upstream_repo: result.provenance.upstream_repo, commit: result.provenance.commit, synced_files: result.provenance.files.length, files: result.provenance.files },
   };
 }

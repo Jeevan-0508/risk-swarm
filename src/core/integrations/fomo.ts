@@ -13,6 +13,7 @@
  */
 import { sanitiseText, sourceIdentity } from '../ingest/sanitize';
 import type { SnapshotLoader, SnapshotSourceProvenance } from './loader';
+import type { FeedFailure } from '../sources/types';
 
 export interface UpstreamSignal {
   category: string;
@@ -66,10 +67,30 @@ export interface SignalQueryStats {
   truncated_by_limit: boolean;
 }
 
+/**
+ * What retrieval itself did, as distinct from what filtering did to the result. A pinned snapshot has no
+ * retrieval report because there is nothing that can fail; a live source always has one, and a total
+ * failure has to reach the agent, because "no signal" and "no retrieval" are different statements.
+ */
+export interface RetrievalFailureReport {
+  source_key: string;
+  kind: FeedFailure['kind'];
+  reason: string;
+}
+
+export interface RetrievalReport {
+  sources_attempted: number;
+  sources_read: number;
+  sources_failed: number;
+  failures: RetrievalFailureReport[];
+}
+
 export interface SignalQueryResult {
   signals: RawSignal[];
   stats: SignalQueryStats;
   provenance: SnapshotSourceProvenance;
+  /** Absent for a snapshot source, where retrieval cannot fail. */
+  retrieval?: RetrievalReport;
 }
 
 const SNAPSHOT_PATH = 'fomo/signals.json';

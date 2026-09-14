@@ -155,6 +155,11 @@ export interface ResearchDocument {
   url: string | null;
   /** ISO date the source states, or null. Never defaulted to the clock: an undated source is undated. */
   published_at: string | null;
+  /**
+   * What that date actually is. A wiki revision timestamp is not a publication date and an index date
+   * is neither, so the distinction is carried rather than flattened into one hopeful field.
+   */
+  date_kind: 'published' | 'revised' | 'indexed' | 'observed' | 'unknown';
   retrieved_at: string;
   /** Host or dataset name, used for source-concentration counting. */
   source_identity: string;
@@ -176,6 +181,8 @@ export interface ProviderRequest {
   query: string;
   now: string;
   limit: number;
+  /** Geographies the question named, for providers whose API is addressed by country. May be empty. */
+  geo: string[];
   /** Set only when the operator enabled the reader proxy. A provider must not reach for it otherwise. */
   proxy: ((url: string) => string) | null;
   fetchImpl: typeof fetch;

@@ -30,8 +30,12 @@ export interface ResearchDimension {
 }
 
 export interface ResearchBudget {
-  /** Hard cap on external queries for the whole plan. */
-  max_queries: number;
+  /**
+   * Hard cap on provider calls for the whole plan. A call, not a query string, is the unit that costs
+   * time and hits somebody's API: one query fanned out to three providers is three calls. The planner
+   * and the executor count the same thing, which they did not in the first cut of this file.
+   */
+  max_provider_calls: number;
   /** Hard cap on documents retained per query. */
   max_results_per_query: number;
   /** Hard cap on documents retained for the whole plan. */
@@ -52,7 +56,10 @@ export interface ResearchPlan {
     required: boolean;
     /** False when every provider a dimension needs is proxy-only and the proxy is off. */
     reachable: boolean;
+    /** Distinct query strings the plan will issue. */
     query_count: number;
+    /** Provider calls the plan will make, which is what the budget is measured in. */
+    call_count: number;
     providers: ProviderId[];
   };
   budget: ResearchBudget;
@@ -69,10 +76,16 @@ export interface PlanOptions {
 }
 
 const BUDGET_BY_DEPTH: Record<QuestionModel['depth'], ResearchBudget> = {
-  shallow: { max_queries: 3, max_results_per_query: 5, max_documents: 12, max_ms: 15_000 },
-  standard: { max_queries: 6, max_results_per_query: 6, max_documents: 30, max_ms: 30_000 },
-  deep: { max_queries: 10, max_results_per_query: 8, max_documents: 60, max_ms: 60_000 },
+  shallow: { max_provider_calls: 6, max_results_per_query: 5, max_documents: 12, max_ms: 15_000 },
+  standard: { max_provider_calls: 14, max_results_per_query: 6, max_documents: 30, max_ms: 30_000 },
+  deep: { max_provider_calls: 24, max_results_per_query: 8, max_documents: 60, max_ms: 60_000 },
 };
+
+/**
+ * Fan-out ceiling per dimension. Without it a dimension asking for two capabilities can reach five
+ * providers, which is how a research system quietly turns one question into forty network calls.
+ */
+const MAX_PROVIDERS_PER_DIMENSION = 3;
 
 /**
  * Dimension shapes. Each is a generic research move - define it, explain it, date it, argue with it -
@@ -152,7 +165,7 @@ function selectProviders(capabilities: Capability[], proxyEnabled: boolean): Pro
       if (!out.includes(p.id)) out.push(p.id);
     }
   }
-  return out;
+  return out.slice(0, MAX_PROVIDERS_PER_DIMENSION);
 }
 
 export function planResearch(question: QuestionModel, options: PlanOptions = {}): ResearchPlan {
@@ -196,13 +209,16 @@ export function planResearch(question: QuestionModel, options: PlanOptions = {})
   // Trim to budget from the tail, so the highest-value dimensions survive. Reported, never silent.
   const dimensions: ResearchDimension[] = [];
   let queries = 0;
+  let calls = 0;
   for (const d of built) {
-    if (queries + d.queries.length > budget.max_queries) {
-      notes.push(`Plan trimmed at the ${budget.max_queries}-query budget: "${d.label}" and any dimension after it were not planned.`);
+    const cost = d.queries.length * d.providers.length;
+    if (calls + cost > budget.max_provider_calls) {
+      notes.push(`Plan trimmed at the ${budget.max_provider_calls}-call budget: "${d.label}" and any dimension after it were not planned.`);
       break;
     }
     dimensions.push(d);
     queries += d.queries.length;
+    calls += cost;
   }
 
   const providers = [...new Set(dimensions.flatMap((d) => d.providers))].sort((a, b) => PROVIDERS.findIndex((p) => p.id === a) - PROVIDERS.findIndex((p) => p.id === b));
@@ -223,7 +239,7 @@ export function planResearch(question: QuestionModel, options: PlanOptions = {})
       queries: [subject, ...question.keywords.slice(0, 6)].filter((q) => q.length > 1),
       rationale: 'Pinned knowledge is searched first so the run can tell the operator what it already held before it went outside.',
     },
-    external: { required: question.requires_external, reachable, query_count: queries, providers },
+    external: { required: question.requires_external, reachable, query_count: queries, call_count: calls, providers },
     budget,
     knowledge_update_expected: question.requires_external && reachable && question.freshness !== 'timeless',
     notes,

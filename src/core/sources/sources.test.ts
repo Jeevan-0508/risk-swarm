@@ -112,6 +112,42 @@ describe('live retrieval', () => {
     expect(prov.files[0]!.sha256.length).toBeGreaterThan(8);
   });
 
+  it('reports what retrieval did, so a blocked feed is not read as a quiet world', async () => {
+    const blocked: typeof fetch = (async () => {
+      throw new TypeError('Failed to fetch');
+    }) as unknown as typeof fetch;
+    const source = createLiveSource({
+      sources: [newsSource()],
+      query: { terms: ['freight fraud'], geo: ['DE'] },
+      deps: deps(blocked),
+      now: NOW,
+    });
+    const out = await source.querySignals({ geo: ['DE'], from: '2026-01-01T00:00:00.000Z', to: '2026-12-31T00:00:00.000Z' });
+    expect(out.signals.length).toBe(0);
+    expect(out.stats.scanned).toBe(0);
+    expect(out.retrieval!.sources_read).toBe(0);
+    expect(out.retrieval!.sources_failed).toBeGreaterThan(0);
+    expect(out.retrieval!.failures[0]!.kind).toBe('blocked');
+  });
+
+  it('reports partial retrieval when one source answers and another does not', async () => {
+    let call = 0;
+    const flaky: typeof fetch = (async () => {
+      call += 1;
+      if (call === 1) return okResponse(RSS);
+      throw new TypeError('Failed to fetch');
+    }) as unknown as typeof fetch;
+    const source = createLiveSource({
+      sources: [newsSource(), regulatorySource(['https://example.org/reg.xml'])],
+      query: { terms: ['freight fraud'], geo: ['DE'] },
+      deps: deps(flaky),
+      now: NOW,
+    });
+    const out = await source.querySignals({ geo: ['DE'], from: '2026-01-01T00:00:00.000Z', to: '2026-12-31T00:00:00.000Z' });
+    expect(out.retrieval!.sources_read).toBe(1);
+    expect(out.retrieval!.sources_failed).toBe(1);
+  });
+
   it('keeps an item out of the window rather than widening the window', async () => {
     const source = createLiveSource({
       sources: [newsSource()],

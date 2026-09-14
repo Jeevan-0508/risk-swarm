@@ -11,6 +11,7 @@ import { runDecision } from './decision';
 import { computeScore, type EvidenceRef } from '../scoring/score';
 import { DEFAULT_POLICY } from '../scoring/policy';
 import { RedTeamClass } from '../domain/model';
+import type { SignalSource } from '../integrations/fomo';
 
 const NOW = '2026-09-13T00:00:00.000Z';
 const SCOPE = { geo: ['DE', 'AT', 'CH'], mode: ['road'], from: '2024-09-01T00:00:00.000Z', to: '2026-09-01T00:00:00.000Z' };
@@ -406,6 +407,52 @@ describe('decision engine', () => {
     const text = dec.decision.rationale.join(' ');
     expect(text).toContain(analyst.findings[0].match.pattern_id);
     expect(text).toContain('not its occurrence here');
+  });
+});
+
+describe('SCOUT reports retrieval failure rather than absorbing it', () => {
+  // R14. Before this, a run in which every feed was blocked produced the same SCOUT output as a run in
+  // which the feeds were read and the world was quiet: findings were empty either way.
+  const failingSource = (readable: number, failed: number): SignalSource => ({
+    provenance: async () => ({ key: 'live', upstream_repo: 'live retrieval', upstream_url: 'https://example.org', commit: null, note: 'test', files: [] }),
+    querySignals: async () => ({
+      signals: [],
+      stats: {
+        scanned: 0, excluded_no_url: 0, excluded_undated: 0, excluded_out_of_window: 0, excluded_low_relevance: 0,
+        excluded_geo: 0, excluded_category: 0, category_disagreements: 0, returned: 0, truncated_by_limit: false,
+      },
+      provenance: { key: 'live', upstream_repo: 'live retrieval', upstream_url: 'https://example.org', commit: null, note: 'test', files: [] },
+      retrieval: {
+        sources_attempted: readable + failed,
+        sources_read: readable,
+        sources_failed: failed,
+        failures: Array.from({ length: failed }, (_, i) => ({ source_key: `s${i}`, kind: 'blocked' as const, reason: 'The browser blocked this request.' })),
+      },
+    }),
+  });
+
+  it('names SEARCH_FAILED when every source failed, and does not advise widening the window', async () => {
+    const h = createHarness({ loader: loader(), run_id: 'RUN-T', now: NOW, signals: failingSource(0, 2) });
+    const out = await runScout(h.ctx, { question: 'Q', scope: SCOPE });
+    expect(out.findings.length).toBe(0);
+    expect(out.retrieval!.sources_read).toBe(0);
+    expect(out.uncertainties.some((u) => u.includes('SEARCH_FAILED'))).toBe(true);
+    expect(out.uncertainties.some((u) => u.includes('retrieval did not happen'))).toBe(true);
+    expect(out.recommended_next_step).toContain('Restore source access');
+    expect(out.reasoning_status).toBe('insufficient_evidence');
+  });
+
+  it('calls partial coverage partial instead of reporting a clean read', async () => {
+    const h = createHarness({ loader: loader(), run_id: 'RUN-T', now: NOW, signals: failingSource(1, 1) });
+    const out = await runScout(h.ctx, { question: 'Q', scope: SCOPE });
+    expect(out.uncertainties.some((u) => u.includes('1 of 2 source(s) failed'))).toBe(true);
+    expect(out.uncertainties.some((u) => u.includes('SEARCH_FAILED'))).toBe(false);
+  });
+
+  it('has no retrieval report at all when the source is a pinned snapshot, which cannot fail', async () => {
+    const out = await runScout(harness().ctx, { question: 'Q', scope: SCOPE });
+    expect(out.retrieval).toBeNull();
+    expect(out.uncertainties.some((u) => u.includes('SEARCH_FAILED'))).toBe(false);
   });
 });
 

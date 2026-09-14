@@ -95,7 +95,7 @@ export function createLiveSource(options: LiveSourceOptions): SignalSource {
   return {
     provenance,
     async querySignals(query: SignalQuery): Promise<SignalQueryResult> {
-      const { feeds } = await load();
+      const { feeds, failures } = await load();
       const stats: SignalQueryStats = {
         scanned: 0, excluded_no_url: 0, excluded_undated: 0, excluded_out_of_window: 0,
         excluded_low_relevance: 0, excluded_geo: 0, excluded_category: 0, category_disagreements: 0, returned: 0, truncated_by_limit: false,
@@ -163,7 +163,19 @@ export function createLiveSource(options: LiveSourceOptions): SignalSource {
       const limited = query.limit === undefined ? signals : signals.slice(0, query.limit);
       stats.truncated_by_limit = limited.length < signals.length;
       stats.returned = limited.length;
-      return { signals: limited, stats, provenance: await provenance() };
+      return {
+        signals: limited,
+        stats,
+        provenance: await provenance(),
+        // Reported whatever happened, including when everything failed. Filtering statistics cannot
+        // express "nothing was retrieved", and SCOUT has to be able to tell the two apart.
+        retrieval: {
+          sources_attempted: feeds.length + failures.length,
+          sources_read: feeds.length,
+          sources_failed: failures.length,
+          failures: failures.map((f) => ({ source_key: f.source_key, kind: f.kind, reason: f.reason })),
+        },
+      };
     },
   };
 }
