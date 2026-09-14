@@ -68,6 +68,23 @@ describe('a full investigation over the pinned snapshots', () => {
     expect(b.outputs.decision.decision.severity_score).toBe(a.outputs.decision.decision.severity_score);
   });
 
+  it('is byte-for-byte reproducible under an open pack too - parameterizing the engine cost no determinism', async () => {
+    const open = () => investigate({ ...OPTIONS, run_id: 'RUN-T-OPEN', pack: openPack() });
+    const a = await open();
+    const b = await open();
+    expect(JSON.stringify(b.graph.toJSON())).toBe(JSON.stringify(a.graph.toJSON()));
+    expect(JSON.stringify(b.participation)).toBe(JSON.stringify(a.participation));
+    expect(JSON.stringify(b.pack)).toBe(JSON.stringify(a.pack));
+    expect(JSON.stringify(b.deliberation.events)).toBe(JSON.stringify(a.deliberation.events));
+  });
+
+  it('does not let one run\'s pack leak into the next, which is what a shared registry object would do', async () => {
+    await investigate({ ...OPTIONS, run_id: 'RUN-T-OPEN-2', pack: openPack() });
+    const back = await run();
+    expect(back.pack.id).toBe(freightPack().id);
+    expect(back.participation.every((d) => d.participating)).toBe(true);
+  });
+
   it('stops rather than overspending when the budget is too small for the work', async () => {
     await expect(investigate({ ...OPTIONS, budget: { retrieval: 5 } })).rejects.toBeInstanceOf(BudgetExceededError);
   });

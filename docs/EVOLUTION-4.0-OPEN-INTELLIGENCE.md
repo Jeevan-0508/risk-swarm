@@ -265,7 +265,7 @@ replays the *stored record*, and the record says so.
 | 8 | taxonomy proposal → validation → approval workflow | low - **done** |
 | 9 | SENTINEL/PULSE/ORBIT extensions; close the `run.ts:275` gap | medium - **done** |
 | 10 | Council Core visual layer, state-driven | low, isolated in `src/council` - **done** |
-| 11 | replay, performance, responsive, docs | low |
+| 11 | replay, performance, responsive, docs | low - **done** |
 
 **Phase 7 note, said plainly:** `core/knowledge/delta.ts` builds a `KnowledgeDelta` from a
 `QuestionModel` + `ResearchPlan` + `NormalizedEvidence[]` and appends it to an in-memory
@@ -279,3 +279,60 @@ open-ended question box. Recorded here so it isn't mistaken for done when it is 
 
 Every phase ends `bun run typecheck` → `bun test` → `bun run build` → commit. No phase may leave a
 red test or a fabricated capability behind.
+
+---
+
+## CLOSING REPORT — what eleven phases actually produced
+
+Measured at the Phase 11 commit, not estimated: **523 tests across 37 files, 0 failing**,
+`bun run typecheck` clean, `bun run build` clean. Every number below was read out of the code or the
+build rather than remembered.
+
+### Shipped
+
+| area | module | state |
+|---|---|---|
+| question model | `core/question/model.ts` | `routeQuestion()` — deterministic, no model call |
+| research planning | `core/research/plan.ts` | dimensions, budget, expected knowledge update |
+| retrieval | `core/research/providers/registry.ts` | 8 providers, each verified against its live endpoint once |
+| execution | `core/research/execute.ts` | budgeted; a per-provider failure is recorded, not swallowed |
+| normalization | `core/research/normalize.ts` | provider result → `Evidence` + `EvidenceProvenance` naming the hop |
+| internal knowledge | `core/knowledge/internal.ts` | index over `public/snapshots` and `docs` |
+| knowledge packs | `core/packs/` | `freightPack()`, `openPack()`, `packSummary()` |
+| participation | `core/orchestrator/participation.ts` | five seats always sit; two are gated by the pack |
+| research ledger | `core/knowledge/delta.ts` | proposals appended, never applied |
+| approval | `core/knowledge/approval.ts` | 7 validation gates, `MIN_DISTINCT_SOURCES = 2`, returns a new pack |
+| integrity | `sentinel.ts` (12 checks), `pulse.ts` (10), `orbit.ts` (14 diff fields) | pack, participation and retrieval are now watched |
+| chamber | `council/derive.ts` + `Chamber.tsx` | pack banner; a stood-down seat is visibly not a silent one |
+
+### Determinism, performance, responsiveness
+
+- **Determinism** holds under the new parameterization: `run.test.ts` runs the open pack twice and
+  compares graph JSON, participation, pack and the full event list byte-for-byte, and a second test
+  proves one run's pack does not leak into the next.
+- **Replay** was untouched by this evolution and still cannot re-run anything: `council/replay.test.ts`
+  asserts the orchestrator and the coordinator are absent from its import graph, not merely unused.
+- **Performance**: `index-*.js` 470.01 kB / 142.77 kB gzip; the Council is a separate chunk at
+  35.44 kB / 10.80 kB gzip, so the chamber's cost is not paid on first paint.
+- **Responsive**: the ring and the seat column are both in the markup and swapped by a media query.
+  `render.test.tsx` counts the stood-down mark twice — once per layout — so the new state cannot go
+  missing on a phone.
+
+### What is still not true, stated plainly
+
+1. **Pack vocabulary is declared but not yet consumed.** A `KnowledgePack` carries `relevance_terms`,
+   `category_rules`, `geo_rules`, `mode_rules` and `lexicon`, and only `category_rules` has a reader
+   (the approval workflow). `toRawSignal()` in `integrations/fomo.ts` still classifies with the
+   module-level constants, so **an open pack classifies retrieved signals with the freight lexicon.**
+   R2 (`min_relevance`), R9 (benign category) and R11 (participation) are genuinely closed; R1, R5, R6
+   and R7 are half-closed, and this is the top remaining work item.
+2. **The research pipeline still has no live caller.** `investigate()` does not run plan → execute →
+   normalize, and `app/lib/engine.ts` still runs the pre-Phase-4 demo path. Everything in
+   `core/research/` and `core/knowledge/{delta,approval}.ts` is tested and buildable, not reached.
+3. **R3/R4 were answered by abstention, not by substitution.** Under a pack without
+   `supports.taxonomy_matching` the risk analyst stands down and says so; no research-derived taxonomy is
+   swapped in. That was the deliberate choice — an empty taxonomy that silently matches nothing is worse
+   than a seat that admits the question is outside its remit.
+4. **The DEFENSE resolver is real but unreachable by a live run**, and `REBUTTAL` plus
+   `Challenge.resolution` still have no resolver at all. Both were recorded when phase 6 closed, and
+   neither has changed since.
