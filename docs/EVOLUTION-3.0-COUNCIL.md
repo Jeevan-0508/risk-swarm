@@ -100,7 +100,7 @@ plan for everything after it. Cross-session anchor for the Council epic; read be
 | D1 | `DeliberationEvent` model + zod schema + append-only event log, coordinator skeleton, termination budgets | `core/domain/model.ts`, `core/deliberation/` | **done** (merged with D2/D3, see below) |
 | D2 | Coordinator wired into a real run: agent-to-agent questions/challenges/defenses resolving to real challenger/red-team/position data; determinism test (same seed → identical sequence) | `core/deliberation/` | **done** |
 | D3 | SENTINEL event-validation check, PULSE deliberation-health check, ORBIT diff fields | `core/sentinel/`, `core/pulse/`, `core/orbit/` | **done** |
-| L1 | Decision Lineage over `graph.evidenceChain()` (absorbs EVOLUTION-2.0 Phase E) | `core/lineage/` | |
+| L1 | Decision Lineage over `graph.evidenceChain()` (absorbs EVOLUTION-2.0 Phase E) | `core/lineage/` | **done** |
 | G1 | `/council` route shell, Council Core (radial layout + state machine), minimal real Live Deliberation stream | `app/screens/Council.tsx` or `showcase/`-style detached route | |
 | G2 | Agent Inspector, Decision Core (links to `/brief`), Decision Lineage view, timeline | same | |
 | G3 | Replay (deterministic, no re-run), command bar | same | |
@@ -166,3 +166,38 @@ Verified: `bun x tsc -b --noEmit` clean · `bun test` 281/281 pass (264 pre-exis
 build` clean. Not yet done: L1 (Decision Lineage), G1-G4 (`/council` UI), H (adversarial tests beyond
 budget/fabrication, e.g. sealed-event mutation and UI-cannot-create-events — those need the UI to exist
 first), I (README update).
+
+## Phase L1 (Decision Lineage, Evidence Needed, Source Concentration), closed out (2026-09-14)
+
+All three shipped together in `core/lineage/lineage.ts`, per EVOLUTION-2.0.md's already-resolved
+design — none needed a new agent, a new engine computation, or a new graph API. Deliberately **not**
+wired onto `RunResult` or persisted: everything here is recomputable for free from the graph and
+outputs a stored run already keeps (unlike SENTINEL/PULSE/deliberation, which are records of a
+judgment made *at run time* and would drift if recomputed later).
+
+- `decisionLineage(graph, decision)`: decision → hypothesis → observation(s) → evidence, as an ordered
+  structure for display rather than a paragraph. Uses `graph.evidenceChain()` exactly as designed, with
+  one correction found while testing it: `evidenceChain(hypothesis.id)` is the **full transitive**
+  evidence base (hypothesis <- observation <- evidence, per that method's own doc comment), not just
+  the analyst's direct `supporting_evidence_ids` — it is a superset, because a hypothesis is
+  `based_on` every observation this run produced, not only the one it was matched from. Field named
+  `evidence`, not `direct_evidence`, to say so honestly; observations are still broken out
+  separately for structure.
+- `evidenceNeeded(coverage, pattern)`: ranked, weight-first list of indicators nobody has looked at
+  yet, every field copied verbatim from the taxonomy. Takes an already-resolved `Pattern` rather than
+  an `(matcher, patternId)` pair, so the function itself stays synchronous and pure — the caller (a
+  Phase G screen) awaits `atlas.pattern()` once, the same call the analyst already made.
+- `sourceConcentration(evidence)`: the permanent, every-run version of ORBIT's `source_concentration`
+  scenario. Groups `Evidence[]` by `sourceIdentity()` (the same host/publisher normalization
+  SENTINEL's `source_identity` check already uses) rather than reimplementing ORBIT's raw-publisher
+  grouping, which operates on a different, pre-graph input type (`RawSignal[]`) anyway.
+- 11 new tests in `core/lineage/lineage.test.ts`: real-run integrity (every returned node actually
+  exists in the graph, decision_evidence matches `evidence_cited` exactly, every hypothesis's evidence
+  is a superset of what the analyst directly cited), a decision with nothing to rest on returns empty
+  rather than throwing, concentration's three shapes (empty, fully concentrated, evenly split, and the
+  real run), and evidence-needed's ranking and no-fabrication guarantee via both the real atlas and a
+  hand-built fixture.
+
+Verified: `bun x tsc -b --noEmit` clean · `bun test` 292/292 pass (281 prior + 11 new) · `bun run
+build` clean. Not yet done: G1-G4 (`/council` UI - this is where lineage/evidence-needed/
+concentration actually get a screen), H, I.
