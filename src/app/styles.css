@@ -32,6 +32,19 @@
   .sweep { animation: sweep 1.1s linear infinite; }
 }
 
+/*
+ * The hard reduced-motion gate for CSS. `visual/motion.ts` gates every animation driven from
+ * TypeScript, but a class that animates purely in the stylesheet never passes through it, so the two
+ * decorative keyframes and Tailwind's pulse are switched off here as well. A reader who asked for no
+ * motion must not have to ask twice.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .sweep, .animate-pulse, .animate-spin {
+    animation: none !important;
+  }
+  html { scroll-behavior: auto !important; }
+}
+
 @keyframes reveal {
   from { opacity: 0; transform: translateY(3px); }
   to { opacity: 1; transform: none; }

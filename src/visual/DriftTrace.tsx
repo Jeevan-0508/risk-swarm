@@ -32,7 +32,7 @@ export function DriftTrace({ fields, materialKeys }: Props) {
 
       <div className="mt-3 space-y-1.5">
         {model.lanes.map((lane) => (
-          <div key={lane.key} className="grid grid-cols-[9rem_1fr_9rem] items-center gap-2">
+          <div key={lane.key} className="grid grid-cols-1 items-center gap-1 sm:grid-cols-[8rem_1fr_6rem] sm:gap-2">
             <div className={`truncate text-2xs ${lane.material ? 'text-fg' : 'text-fg-mute'}`} title={lane.label}>
               {lane.label}
             </div>

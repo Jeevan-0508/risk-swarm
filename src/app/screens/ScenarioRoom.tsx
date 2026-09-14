@@ -78,7 +78,7 @@ export function ScenarioRoom() {
           <Panel title="what changed" aside={<Tag tone={report.materially_changed ? 'objection' : 'support'}>{report.materially_changed ? 'materially changed' : 'held steady'}</Tag>} flush>
             <ul className="divide-y divide-line">
               {report.fields.map((f) => (
-                <li key={f.key} className="grid grid-cols-[10rem_1fr_1fr_3rem] items-baseline gap-3 px-4 py-2">
+                <li key={f.key} className="grid grid-cols-2 items-baseline gap-x-3 gap-y-1 px-4 py-2 sm:grid-cols-[10rem_1fr_1fr_3rem]">
                   <span className="text-xs text-fg-mute">{f.label}</span>
                   <span className="num text-sm text-fg">{f.baseline}</span>
                   <span className={`num text-sm ${f.changed ? 'text-signal' : 'text-fg-dim'}`}>{f.stressed}</span>
