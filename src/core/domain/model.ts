@@ -23,16 +23,34 @@ export type Author = z.infer<typeof Author>;
 export const Tier = z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]);
 export type Tier = z.infer<typeof Tier>;
 
-export const SourceType = z.enum(['regulator', 'industry_body', 'news', 'portfolio_kb', 'llm_reasoning']);
+/**
+ * Source kinds. The first five are the original set and their tiers are unchanged. `academic`,
+ * `statistical_body` and `reference_work` were added when research stopped being freight-only: an
+ * OpenAlex paper, a World Bank series and a Wikipedia article are none of the original five, and
+ * calling any of them `news` or `portfolio_kb` would have been a lie about where the claim came from.
+ */
+export const SourceType = z.enum([
+  'regulator', 'industry_body', 'news', 'portfolio_kb', 'llm_reasoning',
+  'academic', 'statistical_body', 'reference_work',
+]);
 export type SourceType = z.infer<typeof SourceType>;
 
-/** Fixed mapping. Agents never choose their own tier. */
+/**
+ * Fixed mapping. Agents never choose their own tier.
+ *
+ * `reference_work` sits at tier 3 rather than tier 4 on purpose: tier 4 carries a higher weight than
+ * news because it is our own reviewed knowledge base, and an encyclopedia is not that. It is a
+ * secondary summary of other sources and is weighted like one.
+ */
 export const TIER_OF_SOURCE_TYPE: Record<SourceType, Tier> = {
   regulator: 1,
   industry_body: 2,
   news: 3,
   portfolio_kb: 4,
   llm_reasoning: 5,
+  academic: 2,
+  statistical_body: 2,
+  reference_work: 3,
 };
 
 /** Reliability weight per tier. Tier 5 is deliberately 0: reasoning is not evidence. */
