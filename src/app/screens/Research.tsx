@@ -4,7 +4,6 @@ import { Button, Field, Panel, Row, Tag, inputClass } from '@app/ui/kit';
 import { routeQuestion } from '@core/question/model';
 import { planResearch } from '@core/research/plan';
 import type { ResearchEvent } from '@core/research/execute';
-import { PROVIDERS } from '@core/research/providers/types';
 import { READER_PROXY_HOST, runResearch, type ResearchOutcome } from '@app/lib/research';
 import { deliberateOpenResearch, type OpenAnswer } from '@core/research/open-deliberation';
 
@@ -121,7 +120,7 @@ export function Research() {
               ['HERMES', 'SCOUT', 'retrieving'],
               ['ATHENA', 'INTELLIGENCE', 'organizing'],
               ['APOLLO', 'ANALYST', 'reasoning'],
-              ['ARES', 'CHALLENGER', 'attacking'],
+              ['ARES', 'CHALLENGER + RED TEAM', 'challenging'],
               ['HEPHAESTUS', 'DECISION', 'assembling'],
             ].map(([name, role, state]) => <div key={name} className="border border-line p-3"><div className="text-xs text-fg">{name}</div><div className="mt-1 label">{role}</div><div className="mt-3 num text-2xs text-signal">{state}</div></div>)}
           </div>
@@ -169,10 +168,9 @@ export function Research() {
       )}
 
       <p className="text-2xs leading-relaxed text-fg-mute">
-        Open research currently uses the shipped keyless public providers (including Wikipedia/Wikidata and
-        academic/structured sources). A direct Google Search API is not available without Google's credentials,
-        so the system does not pretend that it is calling Google. Providers that need the reader proxy use
-        <span className="num"> {READER_PROXY_HOST}</span> and are marked in provenance.
+        Open research currently uses the shipped keyless public providers. A direct Google Search API is not
+        available without Google's credentials, so the system does not pretend that it is calling Google.
+        Providers that need the reader proxy use <span className="num">{READER_PROXY_HOST}</span> and are marked in provenance.
       </p>
     </div>
   );
