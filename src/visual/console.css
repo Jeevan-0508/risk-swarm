@@ -1,0 +1,186 @@
+/**
+ * RISK//SWARM INTELLIGENCE CONSOLE - the visual language.
+ *
+ * Two rules hold this file together.
+ *
+ * First: every animation is gated on `.rs-motion`, a class the root sets only when motion is both wanted
+ * (no `prefers-reduced-motion`) and worth spending (tab visible). A reduced-motion reader is not relying
+ * on a media query buried at the bottom of a stylesheet; the animated selectors simply never match.
+ *
+ * Second: state modifiers are all single-class selectors at equal specificity, ordered so the later rule
+ * is the more urgent one. Setting one state with an id and another with a class is how a state ends up
+ * invisible while still catching clicks, and that is not a bug this file is going to have.
+ */
+
+.rs-console {
+  --rs-void: #05070a;
+  --rs-graphite: #0a0d12;
+  --rs-glass: rgba(18, 24, 33, 0.62);
+  --rs-hair: rgba(120, 140, 180, 0.16);
+  --rs-hair-bright: rgba(140, 165, 210, 0.34);
+  --rs-accent: #4d8dff;
+
+  background:
+    radial-gradient(1100px 720px at 50% 8%, rgba(60, 96, 160, 0.10), transparent 62%),
+    radial-gradient(700px 700px at 50% 52%, rgba(40, 60, 110, 0.10), transparent 70%),
+    var(--rs-void);
+  color: #e7ebf1;
+  min-height: 100%;
+}
+
+/* --- surfaces --- */
+
+.rs-glass {
+  background: var(--rs-glass);
+  border: 1px solid var(--rs-hair);
+  backdrop-filter: blur(6px);
+}
+
+.rs-hair { border: 1px solid var(--rs-hair); }
+.rs-hair-t { border-top: 1px solid var(--rs-hair); }
+.rs-hair-b { border-bottom: 1px solid var(--rs-hair); }
+
+/* A corner-marked panel: four short strokes instead of a full frame. Reads as instrument, not as card. */
+.rs-bracket { position: relative; }
+.rs-bracket::before,
+.rs-bracket::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-color: var(--rs-hair-bright);
+  border-style: solid;
+  pointer-events: none;
+}
+.rs-bracket::before { top: 0; left: 0; border-width: 1px 0 0 1px; }
+.rs-bracket::after { right: 0; bottom: 0; border-width: 0 1px 1px 0; }
+
+/* --- the chamber --- */
+
+.rs-chamber { position: relative; aspect-ratio: 1 / 1; }
+
+.rs-band {
+  position: absolute;
+  border: 1px solid var(--rs-hair);
+  border-radius: 50%;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+/* The outermost band is dashed so the ring reads as a boundary rather than a solid dial. */
+.rs-band-outer { border-style: dashed; opacity: 0.7; }
+
+.rs-motion .rs-band-spin { animation: rs-spin 64s linear infinite; }
+.rs-motion .rs-band-spin-r { animation: rs-spin 96s linear infinite reverse; }
+
+@keyframes rs-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+/* --- the intelligence core --- */
+
+.rs-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  width: 46%;
+}
+
+.rs-core-disc {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid var(--rs-accent);
+  background: radial-gradient(circle, color-mix(in srgb, var(--rs-accent) 16%, transparent), transparent 68%);
+  opacity: 0.5;
+}
+.rs-motion .rs-core-disc { animation: rs-breath 4200ms ease-in-out infinite; }
+
+@keyframes rs-breath {
+  0%, 100% { opacity: 0.34; }
+  50% { opacity: 0.62; }
+}
+
+/* --- agent stations --- */
+
+.rs-station {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  transition: opacity 200ms linear;
+  text-align: left;
+}
+
+/* Order is the argument: quiet, then spoken, then stood down, then active. The most urgent rule is last. */
+.rs-station-quiet { opacity: 0.4; }
+.rs-station-spoken { opacity: 1; }
+.rs-station-down { opacity: 0.52; }
+.rs-station-active { opacity: 1; }
+
+.rs-node {
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--rs-accent);
+  background: color-mix(in srgb, var(--rs-accent) 20%, transparent);
+  flex: none;
+}
+.rs-station-down .rs-node { background: transparent; border-style: dashed; }
+.rs-station-active .rs-node { background: var(--rs-accent); }
+.rs-motion .rs-station-active .rs-node { animation: rs-pulse 1500ms ease-out infinite; }
+.rs-station-addressed .rs-node { border-width: 2px; }
+
+@keyframes rs-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--rs-accent) 60%, transparent); }
+  100% { box-shadow: 0 0 0 9px color-mix(in srgb, var(--rs-accent) 0%, transparent); }
+}
+
+/* --- beams and motes: only drawn while a real event is on the cursor --- */
+
+.rs-beam { opacity: 0.85; }
+.rs-motion .rs-beam {
+  stroke-dasharray: 2 4;
+  animation: rs-travel 620ms linear infinite;
+}
+@keyframes rs-travel { to { stroke-dashoffset: -12; } }
+
+.rs-mote { opacity: 0.9; }
+.rs-motion .rs-mote { animation: rs-arrive 900ms ease-in forwards; }
+@keyframes rs-arrive {
+  0% { opacity: 0; }
+  30% { opacity: 0.9; }
+  100% { opacity: 0.25; }
+}
+
+/* --- meters --- */
+
+.rs-meter { height: 2px; background: var(--rs-hair); overflow: hidden; }
+.rs-meter-fill { height: 100%; background: var(--rs-accent); }
+
+/* --- scroll --- */
+
+.rs-scroll { scrollbar-width: thin; scrollbar-color: var(--rs-hair-bright) transparent; }
+.rs-scroll::-webkit-scrollbar { width: 6px; }
+.rs-scroll::-webkit-scrollbar-thumb { background: var(--rs-hair-bright); }
+
+/* --- focus: visible on every interactive element, never removed --- */
+
+.rs-console :focus-visible {
+  outline: 1px solid var(--rs-hair-bright);
+  outline-offset: 2px;
+}
+
+/**
+ * The belt to the `.rs-motion` braces. If the class is ever set wrongly, this still stops the motion -
+ * a reader who asked for stillness gets it from two independent mechanisms.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .rs-console *,
+  .rs-console *::before,
+  .rs-console *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .rs-beam { stroke-dasharray: none; }
+  .rs-core-disc { opacity: 0.5; }
+}
