@@ -1,87 +1,57 @@
-/**
- * SCREEN 13 - RESEARCH. The only screen in this app that reaches the public internet.
- *
- * EVOLUTION 5.0 Phase H. It shows the plan before it runs it, the attempts while they run, and every
- * outcome afterwards including the ones that failed. The design rule: a reader must be able to tell the
- * difference between "the world is quiet", "the provider had nothing", "the provider broke" and "a browser
- * cannot reach this provider at all" - four facts a single empty result set would flatten into one lie.
- *
- * Nothing here re-ranks, re-scores or summarises. Every number is a counter the executor incremented and
- * every reason string is the provider's own.
- */
-import { useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { Button, Empty, Field, Panel, Row, Tag, inputClass } from '@app/ui/kit';
-import { append, loadLedger, saveLedger } from '@app/lib/ledger';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Button, Field, Panel, Row, Tag, inputClass } from '@app/ui/kit';
 import { routeQuestion } from '@core/question/model';
 import { planResearch } from '@core/research/plan';
 import type { ResearchEvent } from '@core/research/execute';
-import type { Attempt } from '@core/research/execute';
 import { PROVIDERS } from '@core/research/providers/types';
 import { READER_PROXY_HOST, runResearch, type ResearchOutcome } from '@app/lib/research';
+import { deliberateOpenResearch, type OpenAnswer } from '@core/research/open-deliberation';
 
-const ATTEMPT_TONE: Record<Attempt['status'], 'support' | 'caution' | 'objection' | 'neutral'> = {
-  ok: 'support',
-  empty: 'neutral',
-  search_failed: 'objection',
-  unavailable: 'caution',
-  skipped_budget: 'neutral',
-};
-
-const STATUS_NOTE: Record<ResearchOutcome['execution']['status'], string> = {
-  ok: 'Every attempt answered. Coverage is as planned.',
-  partial: 'Some providers failed or were unreachable. Coverage is incomplete, and the attempts below say where.',
-  search_failed: 'No provider answered. This result says nothing about the world; it says retrieval did not happen.',
-  limit_reached: 'A budget stopped the plan early. A short result set here is a budget, not a quiet world.',
-};
+const toneFor = (status: ResearchOutcome['execution']['status']): 'support' | 'caution' | 'objection' =>
+  status === 'ok' ? 'support' : status === 'search_failed' ? 'objection' : 'caution';
 
 function EventLine({ event }: { event: ResearchEvent }) {
   const text =
-    event.kind === 'plan_started' ? `plan started - ${event.queries} call(s) across ${event.providers.length} provider(s)`
-    : event.kind === 'query_issued' ? `${event.provider} \u2190 "${event.query}"`
-    : event.kind === 'provider_answered' ? `${event.provider} answered with ${event.returned}`
-    : event.kind === 'provider_empty' ? `${event.provider} empty - ${event.reason}`
-    : event.kind === 'provider_failed' ? `${event.provider} ${event.status} - ${event.reason}`
-    : event.kind === 'document_retained' ? `retained: ${event.title} (${event.source_identity})`
-    : event.kind === 'duplicate_dropped' ? `duplicate dropped: ${event.dropped} (${event.reason})`
+    event.kind === 'plan_started' ? `research started · ${event.queries} calls · ${event.providers.length} providers`
+    : event.kind === 'query_issued' ? `${event.provider} ← "${event.query}"`
+    : event.kind === 'provider_answered' ? `${event.provider} returned ${event.returned} document(s)`
+    : event.kind === 'provider_empty' ? `${event.provider} empty · ${event.reason}`
+    : event.kind === 'provider_failed' ? `${event.provider} ${event.status} · ${event.reason}`
+    : event.kind === 'document_retained' ? `evidence retained · ${event.title} · ${event.source_identity}`
+    : event.kind === 'duplicate_dropped' ? `duplicate removed · ${event.dropped}`
     : event.kind === 'limit_reached' ? event.limit
-    : `plan finished - ${event.retained} retained in ${event.ms}ms`;
-  const tone =
-    event.kind === 'provider_failed' ? 'text-objection'
-    : event.kind === 'limit_reached' ? 'text-caution'
-    : event.kind === 'provider_answered' || event.kind === 'plan_finished' ? 'text-support'
-    : 'text-fg-mute';
-  return <div className={`num text-2xs leading-relaxed ${tone}`}>{text}</div>;
+    : `research finished · ${event.retained} retained · ${event.ms}ms`;
+  return <div className="num text-2xs leading-relaxed text-fg-mute">{text}</div>;
 }
 
 export function Research() {
-  // A question can arrive via ?q=, from a screen that decided this run belongs here instead of an
-  // investigation - e.g. New Investigation, when the pinned taxonomy does not cover the question. It
-  // is a starting value only: the operator can still edit or replace it before running anything.
-  const [searchParams] = useSearchParams();
-  const [question, setQuestion] = useState(() => searchParams.get('q') ?? 'How does a quantum error-correcting code actually work?');
-  const [proxyEnabled, setProxyEnabled] = useState(false);
+  const [params] = useSearchParams();
+  const initial = params.get('q') ?? '';
+  const [question, setQuestion] = useState(initial);
+  const [proxyEnabled, setProxyEnabled] = useState(true);
   const [running, setRunning] = useState(false);
   const [events, setEvents] = useState<ResearchEvent[]>([]);
   const [outcome, setOutcome] = useState<ResearchOutcome | null>(null);
+  const [answer, setAnswer] = useState<OpenAnswer | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [ledgerNote, setLedgerNote] = useState<string | null>(null);
+  const autoStarted = useRef(false);
 
   const text = question.trim();
-  const preview = useMemo(
-    () => (text.length <= 12 ? null : planResearch(routeQuestion(text), { proxyEnabled })),
-    [text, proxyEnabled],
-  );
+  const routed = useMemo(() => text.length > 12 ? routeQuestion(text) : null, [text]);
+  const preview = useMemo(() => routed === null ? null : planResearch(routed, { proxyEnabled }), [routed, proxyEnabled]);
 
   const run = async () => {
+    if (text.length <= 12 || running) return;
     setRunning(true);
     setError(null);
     setEvents([]);
     setOutcome(null);
-    setLedgerNote(null);
+    setAnswer(null);
     try {
-      const result = await runResearch({ question: text, proxyEnabled }, (e) => setEvents((all) => [...all, e]));
+      const result = await runResearch({ question: text, proxyEnabled }, (event) => setEvents((all) => [...all, event]));
       setOutcome(result);
+      setAnswer(deliberateOpenResearch(text, result));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -89,290 +59,121 @@ export function Research() {
     }
   };
 
-  const proxyOnly = PROVIDERS.filter((p) => p.requires_proxy);
+  useEffect(() => {
+    if (initial.trim().length > 12 && !autoStarted.current) {
+      autoStarted.current = true;
+      void run();
+    }
+    // The URL is the explicit hand-off from New Investigation; it should run exactly once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial]);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <div>
-        <h1 className="text-3xl font-light tracking-tight">Research</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-fg-dim">
-          Live retrieval from eight keyless public providers. This is the only screen that reaches the
-          internet, and it is a separate act from an investigation on purpose: a run whose inputs came off
-          the live web cannot be byte-for-byte reproducible, and the engine's reproducibility is not
-          negotiable.
+        <div className="kicker">OPEN INVESTIGATION · LIVE RESEARCH</div>
+        <h1 className="mt-2 text-3xl font-light tracking-tight">Ask the Swarm</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-fg-dim">
+          One question enters a real research pass. HERMES retrieves public evidence, ATHENA organizes it,
+          APOLLO analyzes it, ARES challenges it and HEPHAESTUS delivers the answer. No freight taxonomy is
+          required for an open-domain question.
         </p>
       </div>
 
-      <Panel title="the question">
-        <Field label="question" hint="Routed by the same rules the engine uses. The plan below is the real plan, not a preview of one.">
-          <textarea value={question} rows={2} onChange={(e) => setQuestion(e.target.value)} className={`${inputClass} resize-none text-base leading-snug`} />
+      <Panel title="question">
+        <Field label="ask anything" hint="The exact question is preserved and used as the research seed.">
+          <textarea value={question} rows={3} onChange={(e) => setQuestion(e.target.value)} className={`${inputClass} resize-none text-base leading-snug`} placeholder="Which is better, tiger or lion?" />
         </Field>
-        <div className="mt-4 hair-t pt-3">
-          <label className="flex cursor-pointer items-start gap-3">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 hair-t pt-3">
+          <label className="flex items-start gap-2 text-2xs text-fg-mute">
             <input type="checkbox" checked={proxyEnabled} onChange={(e) => setProxyEnabled(e.target.checked)} className="mt-0.5" />
-            <span>
-              <span className="label">enable the reader proxy</span>
-              <span className="mt-1 block text-xs leading-relaxed text-fg-mute">
-                {proxyOnly.length} of {PROVIDERS.length} providers cannot be reached from a browser at all,
-                because they send no CORS header. A proxy fixes that by putting a third party
-                (<span className="num">{READER_PROXY_HOST}</span>) between this system and the source, which
-                can in principle alter what is read. Off by default. Every document that comes through it is
-                flagged <span className="num">via_proxy</span> on its own provenance, permanently.
-              </span>
-            </span>
+            allow the reader proxy for providers that cannot be reached directly
           </label>
-        </div>
-        <div className="mt-4 flex items-center justify-between gap-4 hair-t pt-3">
-          <p className="text-2xs leading-relaxed text-fg-mute">
-            Nothing is written anywhere. Requests are GETs to public endpoints, no key, no account.
-          </p>
-          <Button onClick={() => void run()} disabled={text.length <= 12 || running}>
-            {running ? 'retrieving' : 'run research'}
-          </Button>
+          <Button onClick={() => void run()} disabled={text.length <= 12 || running}>{running ? 'swarm researching…' : 'run the swarm'}</Button>
         </div>
       </Panel>
 
       {preview !== null && (
-        <Panel title="the plan" aside={<span className="num text-2xs text-fg-mute">{preview.external.call_count} calls · {preview.budget.max_ms}ms ceiling</span>}>
-          {!preview.external.required ? (
-            <p className="text-xs leading-relaxed text-fg-dim">
-              This question was not read as needing external retrieval. Nothing will be fetched.
-            </p>
-          ) : !preview.external.reachable ? (
-            <p className="text-xs leading-relaxed text-caution">
-              Every provider this plan needs is proxy-only, and the proxy is off. Nothing will be fetched,
-              and nothing will be substituted for it.
-            </p>
-          ) : null}
-          <div className="mt-3 space-y-3">
+        <Panel title="research plan" aside={<span className="num text-2xs text-fg-mute">{preview.external.call_count} calls · {preview.external.providers.length} providers</span>}>
+          <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+            <Row k="intent" v={<span className="num text-xs">{routed?.intent.replace(/_/g, ' ')}</span>} />
+            <Row k="domain" v={<span className="num text-xs">{routed?.domain}</span>} />
+            <Row k="freshness" v={<span className="num text-xs">{routed?.freshness}</span>} />
+            <Row k="internal knowledge" v={<span className="num text-xs">{preview.internal.search ? 'searched' : 'not required'}</span>} />
+            <Row k="external evidence" v={<span className="num text-xs">{preview.external.required ? 'required' : 'not required'}</span>} />
+            <Row k="providers" v={<span className="num text-xs">{preview.external.providers.join(', ')}</span>} />
+          </div>
+          <div className="mt-4 space-y-2 hair-t pt-3">
             {preview.dimensions.map((d) => (
               <div key={d.key} className="border-l-2 border-line-bright pl-3">
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="text-sm text-fg-dim">{d.label}</span>
-                  <span className="num text-2xs text-fg-mute">{d.providers.join(', ')}</span>
-                </div>
-                <p className="mt-1 text-2xs leading-relaxed text-fg-mute">{d.rationale}</p>
-                <ul className="mt-1.5 space-y-0.5">
-                  {d.queries.map((q) => (
-                    <li key={q} className="num text-2xs text-fg-mute">&ldquo;{q}&rdquo;</li>
-                  ))}
-                </ul>
+                <div className="text-xs text-fg-dim">{d.label}</div>
+                {d.queries.map((q) => <div key={q} className="num mt-1 text-2xs text-fg-mute">“{q}”</div>)}
               </div>
             ))}
           </div>
-          <div className="mt-4 hair-t pt-3">
-            <Row k="internal search" v={<span className="text-xs">{preview.internal.search ? 'yes' : 'no'}</span>} />
-            <p className="mt-1 text-2xs leading-relaxed text-fg-mute">{preview.internal.rationale}</p>
+        </Panel>
+      )}
+
+      {running && (
+        <Panel title="the swarm is working" aside={<Tag tone="signal">LIVE</Tag>}>
+          <div className="grid gap-2 sm:grid-cols-5">
+            {[
+              ['HERMES', 'SCOUT', 'retrieving'],
+              ['ATHENA', 'INTELLIGENCE', 'organizing'],
+              ['APOLLO', 'ANALYST', 'reasoning'],
+              ['ARES', 'CHALLENGER', 'attacking'],
+              ['HEPHAESTUS', 'DECISION', 'assembling'],
+            ].map(([name, role, state]) => <div key={name} className="border border-line p-3"><div className="text-xs text-fg">{name}</div><div className="mt-1 label">{role}</div><div className="mt-3 num text-2xs text-signal">{state}</div></div>)}
           </div>
-          {preview.notes.length > 0 && (
-            <ul className="mt-3 space-y-1 hair-t pt-3">
-              {preview.notes.map((n) => (
-                <li key={n} className="text-2xs leading-relaxed text-fg-mute">{n}</li>
-              ))}
-            </ul>
-          )}
         </Panel>
       )}
 
       {events.length > 0 && (
-        <Panel title="retrieval log" aside={<span className="num text-2xs text-fg-mute">{events.length} events</span>}>
-          <div className="max-h-64 space-y-0.5 overflow-y-auto">
-            {events.map((e, i) => (
-              <EventLine key={i} event={e} />
-            ))}
-          </div>
+        <Panel title="live research trace" aside={<span className="num text-2xs text-fg-mute">{events.length} events</span>}>
+          <div className="max-h-56 space-y-0.5 overflow-y-auto">{events.map((e, i) => <EventLine key={i} event={e} />)}</div>
         </Panel>
       )}
 
-      {error !== null && (
-        <Panel title="the call itself failed">
-          <p className="text-xs leading-relaxed text-objection">{error}</p>
-          <p className="mt-2 text-2xs leading-relaxed text-fg-mute">
-            This is the caller failing, not a provider reporting a failure. No partial result is shown,
-            because there is no honest partial result to show.
-          </p>
-        </Panel>
-      )}
+      {error !== null && <Panel title="research failed"><p className="text-sm leading-relaxed text-objection">{error}</p></Panel>}
 
-      {outcome !== null && (
+      {answer !== null && outcome !== null && (
         <>
-          <Panel title="what retrieval actually did" aside={<Tag tone={outcome.execution.status === 'ok' ? 'support' : outcome.execution.status === 'search_failed' ? 'objection' : 'caution'}>{outcome.execution.status}</Tag>}>
-            <p className="text-xs leading-relaxed text-fg-dim">{STATUS_NOTE[outcome.execution.status]}</p>
-            <div className="mt-4 grid gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
-              {Object.entries(outcome.execution.counters).map(([k, v]) => (
-                <Row key={k} k={k.replace(/_/g, ' ')} v={<span className="num text-sm">{v}</span>} />
+          <Panel title="SWARM DECISION" aside={<Tag tone={toneFor(outcome.execution.status)}>{outcome.execution.status}</Tag>}>
+            <div className="text-2xl font-light tracking-tight text-fg">{answer.headline}</div>
+            <p className="mt-4 max-w-4xl text-base leading-relaxed text-fg-dim">{answer.answer}</p>
+            <p className="mt-4 border-l-2 border-signal pl-3 text-xs leading-relaxed text-fg-mute">{answer.caveat}</p>
+          </Panel>
+
+          <Panel title="agent deliberation" aside={<span className="num text-2xs text-fg-mute">{answer.agents.length} active agents</span>}>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              {answer.agents.map((agent) => (
+                <div key={agent.id} className="border border-line bg-ink-800 p-4">
+                  <div className="flex items-baseline justify-between gap-2"><span className="text-sm text-fg">{agent.codename}</span><Tag tone={agent.status === 'complete' ? 'support' : 'objection'}>{agent.status}</Tag></div>
+                  <div className="mt-1 label">{agent.role}</div>
+                  <ul className="mt-3 space-y-2">{agent.findings.map((finding, i) => <li key={i} className="text-2xs leading-relaxed text-fg-dim">{finding}</li>)}</ul>
+                </div>
               ))}
             </div>
-            {outcome.execution.limit_reached !== null && (
-              <p className="mt-3 text-xs leading-relaxed text-caution">{outcome.execution.limit_reached}</p>
-            )}
-            {outcome.execution.notes.length > 0 && (
-              <ul className="mt-3 space-y-1 hair-t pt-3">
-                {outcome.execution.notes.map((n) => (
-                  <li key={n} className="text-2xs leading-relaxed text-fg-mute">{n}</li>
-                ))}
-              </ul>
-            )}
           </Panel>
 
-          <Panel title="every attempt, including the ones that failed" flush>
-            <ul>
-              {outcome.execution.attempts.map((a, i) => (
-                <li key={`${a.provider}-${a.query}-${i}`} className="hair-b px-4 py-2.5 last:border-b-0">
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <Tag tone={ATTEMPT_TONE[a.status]}>{a.status}</Tag>
-                    <span className="num text-2xs text-fg-dim">{a.provider}</span>
-                    <span className="num text-2xs text-fg-mute">&ldquo;{a.query}&rdquo;</span>
-                    <span className="num ml-auto text-2xs text-fg-mute">{a.returned} returned · {a.retained} retained · {a.ms}ms</span>
-                  </div>
-                  {a.reason !== null && <p className="mt-1 text-2xs leading-relaxed text-fg-mute">{a.reason}</p>}
-                </li>
-              ))}
-            </ul>
-          </Panel>
-
-          {outcome.execution.source_concentration.length > 0 && (
-            <Panel title="source concentration" aside={<span className="text-2xs text-fg-mute">repetition is not corroboration</span>}>
-              <ul className="space-y-1">
-                {outcome.execution.source_concentration.map((s) => (
-                  <li key={s.source_identity} className="flex items-baseline justify-between gap-3 text-xs">
-                    <span className="min-w-0 truncate text-fg-dim">{s.source_identity}</span>
-                    <span className="num shrink-0 text-fg-mute">{s.count} · {(s.share * 100).toFixed(0)}%</span>
-                  </li>
-                ))}
-              </ul>
+          {answer.dimensions.length > 0 && (
+            <Panel title="comparison / answer dimensions">
+              <div className="grid gap-3 md:grid-cols-2">{answer.dimensions.map((d) => <div key={d.label} className="border-l-2 border-line-bright pl-4"><div className="label">{d.label}</div><div className="mt-1 text-lg text-fg">{d.winner}</div><p className="mt-1 text-xs leading-relaxed text-fg-dim">{d.reason}</p></div>)}</div>
             </Panel>
           )}
 
-          <Panel title="internal knowledge">
-            {outcome.internal_outcome === null ? (
-              <p className="text-xs leading-relaxed text-fg-mute">
-                The plan did not ask for an internal search, so none was run. That is not the same as
-                searching and finding nothing, and it is not reported as such.
-              </p>
-            ) : outcome.internal_outcome.status === 'unavailable' ? (
-              <p className="text-xs leading-relaxed text-caution">{outcome.internal_outcome.reason}</p>
-            ) : outcome.internal_outcome.status === 'empty' ? (
-              <p className="text-xs leading-relaxed text-fg-dim">{outcome.internal_outcome.reason}</p>
-            ) : (
-              <>
-                <p className="num text-xs text-fg-dim">{outcome.internal_outcome.hits.length} record(s) matched</p>
-                <ul className="mt-2 space-y-1.5">
-                  {outcome.internal_outcome.hits.map((h) => (
-                    <li key={h.record.id} className="text-2xs leading-relaxed">
-                      <span className="text-fg-dim">{h.record.title}</span>{' '}
-                      <span className="num text-fg-mute">{h.record.path}#{h.record.ref} · {h.score.toFixed(2)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
+          <Panel title="evidence actually used" aside={<span className="num text-2xs text-fg-mute">{answer.evidence_count} retained · {answer.source_count} source identities</span>} flush>
+            <ul>{outcome.merged.items.map((item) => <li key={item.evidence.id} className="hair-b px-4 py-3 last:border-b-0"><div className="flex flex-wrap items-baseline gap-3"><Tag tone="signal">{item.provenance.provider}</Tag><span className="text-sm text-fg-dim">{item.evidence.title}</span><span className="num text-2xs text-fg-mute">{item.provenance.source_identity}</span></div><p className="mt-1 text-2xs leading-relaxed text-fg-mute">{item.evidence.excerpt}</p>{item.provenance.url && <a className="mt-1 block text-2xs text-signal underline" href={item.provenance.url} target="_blank" rel="noreferrer">source</a>}</li>)}</ul>
           </Panel>
-
-          <Panel
-            title="evidence, with provenance"
-            aside={<span className="num text-2xs text-fg-mute">{outcome.merged.counters.external} external · {outcome.merged.counters.internal} internal</span>}
-            flush
-          >
-            {outcome.merged.items.length === 0 ? (
-              <Empty>Nothing was retained, so there is no evidence to show. The attempts above say why.</Empty>
-            ) : (
-              <ul>
-                {outcome.merged.items.map((item) => (
-                  <li key={item.evidence.id} className="hair-b px-4 py-3 last:border-b-0">
-                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                      <Tag tone={item.provenance.origin === 'internal' ? 'support' : 'signal'}>{item.provenance.provider}</Tag>
-                      <span className="text-sm text-fg">{item.evidence.title}</span>
-                      <span className="num ml-auto text-2xs text-fg-mute">tier {item.quality.tier} · rel {item.relevance.toFixed(2)} · {item.freshness}</span>
-                    </div>
-                    <p className="mt-1.5 text-xs leading-relaxed text-fg-dim">{item.evidence.excerpt_or_summary}</p>
-                    <div className="num mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-2xs text-fg-mute">
-                      <span title={item.provenance.location}>{item.provenance.source_identity}</span>
-                      <span title={item.provenance.content_hash}>sha256 {item.provenance.content_hash.slice(0, 12)}</span>
-                      <span>{item.provenance.stated_date ?? 'undated'} ({item.provenance.date_kind})</span>
-                      {item.provenance.via_proxy && <span className="text-caution">via proxy</span>}
-                      {item.evidence.injection_suspected && <span className="text-block">injection suspected</span>}
-                    </div>
-                    {item.quality.caveats.length > 0 && (
-                      <ul className="mt-1.5 space-y-0.5">
-                        {item.quality.caveats.map((c) => (
-                          <li key={c} className="text-2xs leading-relaxed text-fg-mute">{c}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Panel>
-
-          {outcome.merged.corroboration.length > 0 && (
-            <Panel title="corroboration">
-              <ul className="space-y-2">
-                {outcome.merged.corroboration.map((c) => (
-                  <li key={c.claim}>
-                    <div className="flex flex-wrap items-baseline gap-x-3">
-                      <span className="text-xs text-fg-dim">{c.claim}</span>
-                      <span className="num ml-auto text-2xs text-fg-mute">
-                        {c.documents} docs · {c.distinct_sources} sources · {c.distinct_providers} providers
-                      </span>
-                    </div>
-                    <p className={`mt-0.5 text-2xs leading-relaxed ${c.repetition_only ? 'text-caution' : 'text-fg-mute'}`}>{c.note}</p>
-                  </li>
-                ))}
-              </ul>
-            </Panel>
-          )}
-
-          <Panel title="propose this to the knowledge base">
-            {outcome.delta === null ? (
-              <p className="text-xs leading-relaxed text-fg-dim">
-                This plan expected no knowledge update, so there is nothing to propose. A delta is only built
-                when the plan itself said the taxonomy might need to change; one manufactured anyway would be a
-                taxonomy claim resting on nothing.
-              </p>
-            ) : (
-              <>
-                <Row k="delta" v={outcome.delta.id} />
-                <Row k="domain" v={outcome.delta.domain} />
-                <Row k="distinct sources" v={String(outcome.delta.distinct_source_count)} />
-                <p className="mt-2 text-2xs leading-relaxed text-fg-dim">{outcome.delta.rationale}</p>
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <Button
-                    onClick={() => {
-                      const result = append(loadLedger(), outcome.delta);
-                      if (result.appended) saveLedger(result.state);
-                      setLedgerNote(
-                        result.appended
-                          ? 'Added to the ledger as proposed. It changes nothing until a named person approves it.'
-                          : 'Already on the ledger. The ledger is append-only, so this was not replaced.',
-                      );
-                    }}
-                  >
-                    add to the ledger
-                  </Button>
-                  <Link className="text-xs text-signal" to="/knowledge-delta">
-                    review deltas &rarr;
-                  </Link>
-                </div>
-                {ledgerNote !== null && <p className="mt-3 text-2xs leading-relaxed text-caution">{ledgerNote}</p>}
-              </>
-            )}
-          </Panel>
-
-          {outcome.merged.dropped.length > 0 && (
-            <Panel title="dropped before it became evidence">
-              <ul className="space-y-1">
-                {outcome.merged.dropped.map((d, i) => (
-                  <li key={`${d.title}-${i}`} className="text-2xs leading-relaxed text-fg-mute">
-                    <span className="num">{d.reason}</span> &mdash; {d.title}: {d.detail}
-                  </li>
-                ))}
-              </ul>
-            </Panel>
-          )}
         </>
       )}
+
+      <p className="text-2xs leading-relaxed text-fg-mute">
+        Open research currently uses the shipped keyless public providers (including Wikipedia/Wikidata and
+        academic/structured sources). A direct Google Search API is not available without Google's credentials,
+        so the system does not pretend that it is calling Google. Providers that need the reader proxy use
+        <span className="num"> {READER_PROXY_HOST}</span> and are marked in provenance.
+      </p>
     </div>
   );
 }
