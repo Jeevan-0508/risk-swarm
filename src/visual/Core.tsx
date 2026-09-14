@@ -2,17 +2,21 @@
  * THE INTELLIGENCE CORE. Original geometry: three concentric bands, a dashed outer boundary carrying
  * tick marks for the seven seats, and a centre disc whose colour is the system state's accent.
  *
+ * Behind the disc sits a point-cloud globe (`CoreSphere`), deterministic and drawn on a canvas.
+ *
  * Not an arc reactor and not a copy of anything - the shape is a dial over a ring of seats, which is what
- * the thing actually is. The only motion is the outer band's rotation and the disc's breath, both gated
- * on `.rs-motion`, and neither encodes information: if the console is still, nothing has been lost.
+ * the thing actually is. The only motion is the outer band's rotation, the disc's breath and the globe's
+ * rotation, all gated on reduced motion and a hidden tab, and none of the three encodes information: if
+ * the console is still, nothing has been lost.
  *
  * The core displays one state and one count, and both are arguments passed in from a real derivation. It
  * has no state of its own and cannot compute one.
  */
 import { STATE_ACCENT } from './tokens';
 import { SYSTEM_STATE_NOTE, type SystemState } from './state';
+import { CoreSphere } from './CoreSphere';
 
-export function Core({ state, read, total, label }: {
+export function Core({ state, read, total, label, sphere = true }: {
   state: SystemState;
   /** Exchanges read at the cursor. */
   read: number;
@@ -20,11 +24,17 @@ export function Core({ state, read, total, label }: {
   total: number;
   /** What the count is counting. Passed in so the core never assumes it is looking at a transcript. */
   label: string;
+  /**
+   * The point-cloud globe behind the disc. On by default and switchable off because it is decoration:
+   * anywhere the core has to sit in a small or dense space, the reading is the text, not the sphere.
+   */
+  sphere?: boolean;
 }) {
   const accent = STATE_ACCENT[state];
 
   return (
     <div className="rs-core" style={{ ['--rs-accent' as string]: accent }}>
+      {sphere && <CoreSphere accent={accent} />}
       <div className="rs-core-disc" style={{ width: '132px', height: '132px' }} aria-hidden="true" />
       <div className="relative">
         <div className="font-mono text-2xs uppercase tracking-[0.22em]" style={{ color: accent }}>
