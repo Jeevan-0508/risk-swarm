@@ -28,7 +28,7 @@ export function Research() {
   const [params] = useSearchParams();
   const initial = params.get('q') ?? '';
   const [question, setQuestion] = useState(initial);
-  const [proxyEnabled, setProxyEnabled] = useState(true);
+  const [proxyEnabled, setProxyEnabled] = useState(false);
   const [running, setRunning] = useState(false);
   const [events, setEvents] = useState<ResearchEvent[]>([]);
   const [outcome, setOutcome] = useState<ResearchOutcome | null>(null);
