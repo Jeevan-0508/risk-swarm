@@ -96,7 +96,7 @@ export interface SignalQueryResult {
 const SNAPSHOT_PATH = 'fomo/signals.json';
 
 /** Category keyword rules. Deliberately readable: this is a lexical check, not a classifier. */
-const CATEGORY_RULES: Array<[string, string[]]> = [
+export const CATEGORY_RULES: Array<[string, string[]]> = [
   ['Missing Trailer / Phantom Carrier', ['missing trailer', 'trailer missing', 'phantom carrier', 'ghost carrier', 'vanished with', 'disappeared with the load', 'never delivered']],
   ['Cargo Theft', ['cargo theft', 'freight theft', 'stolen', 'theft', 'robbery', 'robbed', 'hijack', 'pilferage', 'burglary', 'looted', 'diebstahl', 'raub', 'gestohlen', 'ladungsdiebstahl']],
   ['Carrier / Freight Fraud', ['fraud', 'fraudulent', 'scam', 'scammer', 'fake carrier', 'fictitious', 'double broker', 'double-broker', 'identity theft', 'forged', 'counterfeit', 'betrug', 'gefälscht', 'embezzl', 'fake-frachtführer', 'fake frachtführer', 'scheinfirma', 'frachtbetrug', 'fake carrier', 'fake-carrier', 'falsche frachtführer']],
@@ -105,12 +105,12 @@ const CATEGORY_RULES: Array<[string, string[]]> = [
   ['Operational Disruption', ['strike', 'blockade', 'congestion', 'closure', 'closed', 'delay', 'flood', 'storm', 'outage', 'shortage', 'protest', 'streik', 'sperrung', 'staus']],
 ];
 
-const FREIGHT_TERMS = [
+export const FREIGHT_TERMS = [
   'freight', 'haulage', 'haulier', 'carrier', 'trucking', 'truck', 'lorry', 'trailer', 'logistics', 'transport', 'shipper', 'shipping', 'cargo', 'consignment', 'warehouse', 'supply chain', 'fleet', 'driver', 'broker', 'intermodal', 'container', 'depot', 'forwarder', 'forwarding',
   'spedition', 'frachtführer', 'lkw', 'fracht', 'ladung', 'transportunternehmen', 'logistik',
 ];
 
-const GEO_RULES: Array<[string, string[]]> = [
+export const GEO_RULES: Array<[string, string[]]> = [
   ['DE', ['germany', 'german', 'deutschland', 'deutsche', 'berlin', 'hamburg', 'munich', 'münchen', 'bavaria', 'bayern', 'frankfurt', 'cologne', 'köln', 'duisburg', 'leipzig', 'stuttgart', 'düsseldorf', 'nrw', 'saxony']],
   ['AT', ['austria', 'austrian', 'österreich', 'vienna', 'wien', 'graz', 'linz', 'salzburg']],
   ['CH', ['switzerland', 'swiss', 'schweiz', 'zurich', 'zürich', 'basel', 'geneva', 'bern']],
@@ -122,7 +122,7 @@ const GEO_RULES: Array<[string, string[]]> = [
   ['EU', ['european union', 'eu-wide', 'brussels', 'europe', 'european']],
 ];
 
-const MODE_RULES: Array<[string, string[]]> = [
+export const MODE_RULES: Array<[string, string[]]> = [
   ['road', ['truck', 'lorry', 'trailer', 'haulage', 'haulier', 'road transport', 'driver', 'lkw', 'spedition', 'van']],
   ['rail', ['rail', 'railway', 'freight train', 'wagon', 'bahn', 'intermodal terminal']],
   ['sea', ['vessel', 'container ship', 'port of', 'seaport', 'maritime', 'shipping line', 'hafen']],
