@@ -9,7 +9,8 @@ import { investigate } from '../core/orchestrator/run';
 import type { DeliberationEvent } from '../core/domain/model';
 import { AGENT_ORDER } from '../app/lib/agents';
 import { COUNCIL_ORDER, COUNCIL_SEATS, ringPoint } from './roster';
-import { EVENT_TONE, OUTCOME_NOTE, OUTCOME_TONE, TONE_COLOR, chamberState, seatActivity, threads, typeTally, visible } from './derive';
+import { DEFAULT_STANDING, EVENT_TONE, OUTCOME_NOTE, OUTCOME_TONE, TONE_COLOR, chamberState, seatActivity, seatStanding, threads, typeTally, visible } from './derive';
+import { openPack } from '../core/packs/registry';
 
 const OPTIONS = {
   loader: createFileLoader('public/snapshots'),
@@ -160,5 +161,32 @@ describe('the presentation maps stay total', () => {
       if (outcome === 'CONSENSUS' || outcome === 'QUALIFIED_CONSENSUS') continue;
       expect(/\bconsensus\b/i.test(note)).toBe(false);
     }
+  });
+});
+
+describe('seat standing, over real participation records', () => {
+  it('reads the engine\'s own decision for every seat the freight pack seated', async () => {
+    const result = await reference();
+    const standing = seatStanding(result.participation);
+    expect(Object.keys(standing).length).toBe(result.participation.length);
+    for (const d of result.participation) {
+      expect(standing[d.agent].participating).toBe(d.participating);
+      expect(standing[d.agent].reason).toBe(d.reason);
+    }
+  });
+
+  it('marks the seats an open pack really stands down - not a fixture\'s idea of one', async () => {
+    const open = await investigate({ ...OPTIONS, run_id: 'RUN-COUNCIL-UI-OPEN', pack: openPack() });
+    const standing = seatStanding(open.participation);
+    const down = COUNCIL_ORDER.filter((id) => standing[id] !== undefined && !standing[id].participating);
+    expect(down.length > 0).toBe(true);
+    for (const id of down) expect(standing[id].reason.length > 10).toBe(true);
+  });
+
+  it('treats an unrecorded seat as participating, and says so rather than inventing a rationale', () => {
+    const standing = seatStanding([]);
+    for (const id of COUNCIL_ORDER) expect(standing[id] === undefined).toBe(true);
+    expect(DEFAULT_STANDING.participating).toBe(true);
+    expect(DEFAULT_STANDING.reason.includes('No participation decision')).toBe(true);
   });
 });

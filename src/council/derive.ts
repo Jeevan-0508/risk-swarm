@@ -8,6 +8,7 @@
  * `sequence` is authoritative and is read, never recomputed.
  */
 import type { AgentId, DeliberationEvent, DeliberationEventType, DeliberationOutcome } from '../core/domain/model';
+import type { ParticipationDecision } from '../core/orchestrator/participation';
 
 /** Which visual register an event type reads in. Presentation only; carries no evidential meaning. */
 export type EventTone = 'ask' | 'state' | 'attack' | 'defend' | 'agree' | 'revise' | 'escalate' | 'close';
@@ -81,6 +82,32 @@ export function seatActivity(events: DeliberationEvent[], cursor: number): Recor
   for (const [id, set] of cited) at(id).evidence_cited = set.size;
   return out;
 }
+
+export interface SeatStanding {
+  /** Whether the run's pack asked this agent for anything at all. */
+  participating: boolean;
+  /** The engine's own words for the decision. Never composed here. */
+  reason: string;
+}
+
+/**
+ * Why this exists: a seat that stood down and a seat that participated but had nothing to say both
+ * render as an unlit dot, and those are not the same fact. The engine now records the difference on
+ * `RunResult.participation`, so the ring can show it instead of flattening both into silence.
+ *
+ * An agent with no recorded decision is treated as participating, because that is what every run before
+ * packs existed actually did - and the reason says exactly that rather than inventing a rationale.
+ */
+export function seatStanding(decisions: ParticipationDecision[]): Record<AgentId, SeatStanding> {
+  const out = {} as Record<AgentId, SeatStanding>;
+  for (const d of decisions) out[d.agent] = { participating: d.participating, reason: d.reason };
+  return out;
+}
+
+export const DEFAULT_STANDING: SeatStanding = {
+  participating: true,
+  reason: 'No participation decision was recorded for this run.',
+};
 
 /** The prefix of the transcript that has been reached. Never a copy of anything outside `events`. */
 export function visible(events: DeliberationEvent[], cursor: number): DeliberationEvent[] {

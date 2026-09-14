@@ -44,6 +44,15 @@
 .cn-seat-quiet { opacity: 0.42; }
 .cn-seat-spoken { opacity: 1; }
 
+/* Standing down is a different fact from having nothing to say, so it gets its own mark: the dot goes
+   hollow and dashed. Single-class specificity, matching its siblings, so ordering here is the only thing
+   that decides the outcome. */
+.cn-seat-stood-down { opacity: 0.5; }
+.cn-seat-stood-down .cn-dot {
+  background: transparent;
+  border-style: dashed;
+}
+
 .cn-dot {
   width: 9px;
   height: 9px;

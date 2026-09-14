@@ -16,6 +16,7 @@ import { decisionLineage, evidenceNeeded, sourceConcentration } from '../core/li
 import { AGENT_CODENAME } from '../app/lib/agents';
 import { Chamber } from './Chamber';
 import { COUNCIL_ORDER, COUNCIL_SEATS } from './roster';
+import { openPack } from '../core/packs/registry';
 import { typeTally } from './derive';
 
 let cached: RunResult | null = null;
@@ -196,5 +197,48 @@ describe('the narrow-screen layout and the sound toggle', () => {
     const html = draw(await reference());
     expect(html.includes('command bar')).toBe(true);
     expect(html.includes('Capability unavailable.')).toBe(true);
+  });
+});
+
+const escapeHtml = (t: string) =>
+  t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+
+describe('the knowledge pack and the seats it stands down', () => {
+  it('names the pack this run convened over, in the engine\'s own words', async () => {
+    const result = await reference();
+    const html = draw(result);
+    expect(html.includes('knowledge pack')).toBe(true);
+    expect(html.includes(result.pack.label)).toBe(true);
+    expect(html.includes(escapeHtml(result.pack.summary))).toBe(true);
+  });
+
+  it('leaves the ring unmarked when every seat participated, instead of implying an absence', async () => {
+    const result = await reference();
+    expect(result.participation.every((d) => d.participating)).toBe(true);
+    const html = draw(result);
+    expect(html.includes('cn-seat-stood-down')).toBe(false);
+    expect(html.includes('stood down')).toBe(false);
+  });
+
+  it('marks a real open-pack abstention on both layouts, and keeps the seat on the roster', async () => {
+    const open = await investigate({
+      loader: createFileLoader('public/snapshots'),
+      run_id: 'RUN-COUNCIL-RENDER-OPEN',
+      now: '2026-09-13T00:00:00.000Z',
+      question: 'What is the current state of quantum error correction?',
+      scope: { geo: ['DE'], mode: ['road'], from: '2024-09-01T00:00:00.000Z', to: '2026-09-01T00:00:00.000Z' },
+      pack: openPack(),
+    });
+    const down = open.participation.filter((d) => !d.participating);
+    expect(down.length > 0).toBe(true);
+
+    const html = draw(open);
+    // Once per layout: the column and the ring both have to say it, or the mark disappears on a phone.
+    expect(html.split('cn-seat-stood-down').length - 1).toBe(down.length * 2);
+    expect(html.includes(`${down.length} of ${open.participation.length} seats stood down`)).toBe(true);
+    for (const d of down) {
+      expect(html.includes(AGENT_CODENAME[d.agent])).toBe(true);
+      expect(html.includes(escapeHtml(d.reason))).toBe(true);
+    }
   });
 });

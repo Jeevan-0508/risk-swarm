@@ -255,16 +255,16 @@ replays the *stored record*, and the record says so.
 
 | phase | deliverable | risk |
 |---|---|---|
-| 1 | this audit + restriction register | none |
-| 2 | `core/question/` model + router; `core/research/plan.ts` | none, additive |
-| 3 | `core/knowledge/internal.ts` + generated index over `public/snapshots` and `docs` | none, additive |
-| 4 | `core/research/providers/` — 8 verified providers + opt-in proxy; fix R13, R14 | medium: real network |
-| 5 | `core/research/normalize.ts` — provider result → `Evidence`/`Signal`, source quality, duplication | medium: touches evidence |
-| 6 | knowledge packages; dynamic participation; DEFENSE/REBUTTAL from real output | **high: touches run.ts and agents** |
+| 1 | this audit + restriction register | none - **done** |
+| 2 | `core/question/` model + router; `core/research/plan.ts` | none, additive - **done** |
+| 3 | `core/knowledge/internal.ts` + generated index over `public/snapshots` and `docs` | none, additive - **done** |
+| 4 | `core/research/providers/` — 8 verified providers + opt-in proxy; fix R13, R14 | medium: real network - **done** |
+| 5 | `core/research/normalize.ts` — provider result → `Evidence`/`Signal`, source quality, duplication | medium: touches evidence - **done** |
+| 6 | knowledge packages; dynamic participation; DEFENSE/REBUTTAL from real output | **high: touches run.ts and agents** - **done, scoped** |
 | 7 | `core/knowledge/delta.ts` + research ledger | low - **done** |
 | 8 | taxonomy proposal → validation → approval workflow | low - **done** |
 | 9 | SENTINEL/PULSE/ORBIT extensions; close the `run.ts:275` gap | medium - **done** |
-| 10 | Council Core visual layer, state-driven | low, isolated in `src/council` |
+| 10 | Council Core visual layer, state-driven | low, isolated in `src/council` - **done** |
 | 11 | replay, performance, responsive, docs | low |
 
 **Phase 7 note, said plainly:** `core/knowledge/delta.ts` builds a `KnowledgeDelta` from a

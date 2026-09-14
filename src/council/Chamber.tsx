@@ -20,7 +20,7 @@ import { AGENT_CODENAME, AGENT_LABEL, AGENT_REMIT, agentOutput } from '../app/li
 import { createCouncilAudio, type CouncilAudio } from './audio';
 import { routeCommand, type CommandResult } from './capability';
 import { REPLAY_SPEEDS, advance, frameIntervalMs, rewind, transcriptDigest, type ReplaySpeed } from './replay';
-import { EVENT_TONE, OUTCOME_NOTE, OUTCOME_TONE, TONE_COLOR, chamberState, seatActivity, typeTally, visible } from './derive';
+import { DEFAULT_STANDING, EVENT_TONE, OUTCOME_NOTE, OUTCOME_TONE, TONE_COLOR, chamberState, seatActivity, seatStanding, typeTally, visible, type SeatStanding } from './derive';
 
 const CHAMBER_LABEL: Record<ReturnType<typeof chamberState>, string> = {
   empty: 'no transcript',
@@ -39,7 +39,7 @@ export function Label({ children }: { children: ReactNode }) {
  * a re-layout, not a reduction: nothing shown on the ring is dropped here.
  */
 function SeatColumn({ seats, speaker, addressee, selected, onSelect }: {
-  seats: Array<{ id: AgentId; spoke: number; unresolved: number }>;
+  seats: Array<{ id: AgentId; spoke: number; unresolved: number; standing: SeatStanding }>;
   speaker: AgentId | null;
   addressee: AgentId | null;
   selected: AgentId | null;
@@ -47,11 +47,12 @@ function SeatColumn({ seats, speaker, addressee, selected, onSelect }: {
 }) {
   return (
     <div className="sm:hidden">
-      {seats.map(({ id, spoke, unresolved }) => {
+      {seats.map(({ id, spoke, unresolved, standing }) => {
         const seat = COUNCIL_SEATS[id];
         const classes = [
           'flex w-full items-center gap-3 py-2 text-left',
           spoke > 0 ? 'cn-seat-spoken' : 'cn-seat-quiet',
+          standing.participating ? '' : 'cn-seat-stood-down',
           id === speaker ? 'cn-speaking' : '',
           id === addressee ? 'cn-addressed' : '',
         ].join(' ');
@@ -63,6 +64,7 @@ function SeatColumn({ seats, speaker, addressee, selected, onSelect }: {
             style={{ ['--cn-accent' as string]: seat.accent }}
             className={classes}
             aria-pressed={selected === id}
+            title={standing.reason}
           >
             <span className="cn-dot" />
             <span className="min-w-0 flex-1">
@@ -72,7 +74,7 @@ function SeatColumn({ seats, speaker, addressee, selected, onSelect }: {
               <span className="block text-2xs text-fg-mute">{AGENT_LABEL[id]}</span>
             </span>
             <span className="num shrink-0 text-2xs text-fg-mute">
-              {spoke} said{unresolved > 0 ? ` · ${unresolved} open` : ''}
+              {standing.participating ? `${spoke} said${unresolved > 0 ? ` · ${unresolved} open` : ''}` : 'stood down'}
             </span>
           </button>
         );
@@ -82,11 +84,12 @@ function SeatColumn({ seats, speaker, addressee, selected, onSelect }: {
 }
 
 /** ZONE 1 - COUNCIL CORE. Seven seats on a ring, lit by whoever is speaking at the cursor. */
-function CouncilCore({ events, cursor, onSelect, selected }: {
+function CouncilCore({ events, cursor, onSelect, selected, participation }: {
   events: DeliberationEvent[];
   cursor: number;
   selected: AgentId | null;
   onSelect: (id: AgentId | null) => void;
+  participation: RunResult['participation'];
 }) {
   const state = chamberState(events, cursor);
   const activity = useMemo(() => seatActivity(events, cursor), [events, cursor]);
@@ -102,10 +105,12 @@ function CouncilCore({ events, cursor, onSelect, selected }: {
   const to = addressee === null ? null : points[COUNCIL_ORDER.indexOf(addressee)];
   const tone = current === undefined ? TONE_COLOR.state : TONE_COLOR[EVENT_TONE[current.type]];
 
+  const standing = useMemo(() => seatStanding(participation), [participation]);
   const seats = COUNCIL_ORDER.map((id) => ({
     id,
     spoke: activity[id]?.spoke ?? 0,
     unresolved: activity[id]?.unresolved ?? 0,
+    standing: standing[id] ?? DEFAULT_STANDING,
   }));
 
   return (
@@ -136,10 +141,12 @@ function CouncilCore({ events, cursor, onSelect, selected }: {
         const seat = COUNCIL_SEATS[id];
         const act = activity[id];
         const spoke = (act?.spoke ?? 0) > 0;
+        const stand = standing[id] ?? DEFAULT_STANDING;
         const right = p.x > 52;
         const classes = [
           'cn-seat',
           spoke ? 'cn-seat-spoken' : 'cn-seat-quiet',
+          stand.participating ? '' : 'cn-seat-stood-down',
           id === speaker ? 'cn-speaking' : '',
           id === addressee ? 'cn-addressed' : '',
         ].join(' ');
@@ -151,7 +158,7 @@ function CouncilCore({ events, cursor, onSelect, selected }: {
             style={{ left: `${p.x}%`, top: `${p.y}%`, ['--cn-accent' as string]: seat.accent }}
             className={classes}
             aria-pressed={selected === id}
-            title={`${AGENT_CODENAME[id]} - ${AGENT_LABEL[id]}`}
+            title={`${AGENT_CODENAME[id]} - ${AGENT_LABEL[id]} - ${stand.reason}`}
           >
             <span className="flex items-center gap-2" style={{ flexDirection: right ? 'row' : 'row-reverse' }}>
               <span className="cn-dot" />
@@ -163,7 +170,9 @@ function CouncilCore({ events, cursor, onSelect, selected }: {
                   {AGENT_CODENAME[id]}
                 </span>
                 <span className="num block text-2xs text-fg-mute">
-                  {act?.spoke ?? 0} said{(act?.unresolved ?? 0) > 0 ? ` · ${act.unresolved} open` : ''}
+                  {stand.participating
+                    ? `${act?.spoke ?? 0} said${(act?.unresolved ?? 0) > 0 ? ` · ${act.unresolved} open` : ''}`
+                    : 'stood down'}
                 </span>
               </span>
             </span>
@@ -709,6 +718,28 @@ function CommandBar({ result, patterns, onCursor }: {
   );
 }
 
+/**
+ * What knowledge this session convened over. On screen because the same seven seats reach different
+ * conclusions under different packs, and a reader who cannot see which pack was loaded cannot tell a
+ * narrow answer from a wrong one.
+ */
+function PackBanner({ result }: { result: RunResult }) {
+  const stood = result.participation.filter((d) => !d.participating);
+  return (
+    <div className="mb-5">
+      <Label>knowledge pack</Label>
+      <div className="mt-2 text-sm">{result.pack.label}</div>
+      <p className="mt-1 text-2xs leading-relaxed text-fg-mute">{result.pack.summary}</p>
+      {stood.length > 0 && (
+        <p className="mt-2 text-2xs leading-relaxed text-caution">
+          {stood.length} of {result.participation.length} seats stood down under this pack. Their remit is
+          printed on the ring, unlit, rather than removed.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function Chamber({ result, patterns = null }: { result: RunResult; patterns?: Map<string, Pattern> | null }) {
   const events = result.deliberation.events;
   const [cursor, setCursor] = useState(events.length - 1);
@@ -718,7 +749,8 @@ export function Chamber({ result, patterns = null }: { result: RunResult; patter
     <div className="mx-auto grid max-w-7xl gap-8 px-6 pb-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <div className="space-y-8">
         <div className="cn-hair p-6">
-          <CouncilCore events={events} cursor={cursor} selected={seat} onSelect={setSeat} />
+          <PackBanner result={result} />
+          <CouncilCore events={events} cursor={cursor} selected={seat} onSelect={setSeat} participation={result.participation} />
         </div>
         <DecisionCore result={result} />
       </div>
