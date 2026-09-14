@@ -56,27 +56,59 @@ export default function Council() {
   // stop matching the animated selectors. `console.css` keeps the media query as a second mechanism.
   const motion = useMotionAllowed();
 
+  // MODE is read off the run itself, never chosen here: a `RUN-DEMO` id is the demo pack, anything else is
+  // a real investigation this browser ran. The bar states which one is on screen because the two are not
+  // interchangeable evidence.
+  const live = result !== null && !result.run_id.toUpperCase().startsWith('RUN-DEMO');
+
   return (
     <div className={`cn-page rs-console h-full overflow-y-auto${motion ? ' rs-motion' : ''}`}>
-      <header className="mx-auto max-w-7xl px-6 pt-14 pb-8">
-        <div className="flex flex-wrap items-baseline justify-between gap-4">
-          <div>
-            <Label>Risk//Swarm · the council</Label>
-            <h1 className="mt-4 text-4xl font-light leading-tight tracking-tight md:text-5xl">
-              Seven seats.<br />
-              <span className="text-fg-dim">One transcript, on the record.</span>
-            </h1>
-          </div>
-          <Link to="/" className="font-mono text-2xs uppercase tracking-[0.14em] text-fg-mute transition-colors hover:text-fg">
-            &#8592; back to the console
-          </Link>
+      <header className="rs-topbar">
+        <div className="flex items-baseline gap-3">
+          <span className="font-mono text-xs tracking-[0.3em] text-fg">RISK//SWARM</span>
+          <span className="font-mono text-2xs uppercase tracking-[0.22em] text-fg-dim">council</span>
         </div>
-        {result !== null && (
-          <p className="mt-6 max-w-2xl text-sm leading-relaxed text-fg-dim">
-            <span className="num text-fg-mute">{result.run_id}</span> — {result.question}
-          </p>
-        )}
+
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+          <span className="rs-stat">
+            <span className="rs-stat-k">system</span>
+            <span className="rs-stat-v" style={{ color: '#3fb98a' }}>online</span>
+          </span>
+          <span className="rs-stat">
+            <span className="rs-stat-k">mode</span>
+            <span className="rs-stat-v">{live ? 'live' : 'demo'}</span>
+          </span>
+          <span className="rs-stat">
+            <span className="rs-stat-k">sentinel</span>
+            <span className="rs-stat-v">{result === null ? '—' : `${result.sentinel.status} · ${result.sentinel.checks.length}`}</span>
+          </span>
+          <span className="rs-stat">
+            <span className="rs-stat-k">pulse</span>
+            <span className="rs-stat-v">{result === null ? '—' : `${result.pulse.status} · ${result.pulse.checks.length}`}</span>
+          </span>
+          <span className="rs-stat">
+            <span className="rs-stat-k">orbit</span>
+            <span className="rs-stat-v">{result === null ? '—' : `${result.participation.filter((d) => d.participating).length}/${result.participation.length} seats`}</span>
+          </span>
+          <span className="rs-stat">
+            <span className="rs-stat-k">exchanges</span>
+            <span className="rs-stat-v">{result === null ? '—' : result.deliberation.events.length}</span>
+          </span>
+        </div>
+
+        <Link to="/" className="ml-auto font-mono text-2xs uppercase tracking-[0.14em] text-fg-mute transition-colors hover:text-fg">
+          &#8592; console
+        </Link>
       </header>
+
+      {result !== null && (
+        <div className="flex flex-wrap items-baseline justify-between gap-3 px-4 pt-4 sm:px-6">
+          <h1 className="max-w-3xl text-base font-light leading-snug text-fg-dim">
+            <span className="num text-fg-mute">{result.run_id}</span> — {result.question}
+          </h1>
+          <Label>seven seats · one transcript, on the record</Label>
+        </div>
+      )}
 
       {result === null ? (
         <div className="mx-auto max-w-2xl px-6 pb-24">

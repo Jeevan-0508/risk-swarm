@@ -62,7 +62,12 @@
  * `sm` up. Between `sm` and `lg` the circle is the widest thing on the page, so it is capped rather than
  * allowed to push the transcript off screen.
  */
-.rs-chamber { position: relative; aspect-ratio: 1 / 1; max-width: 34rem; margin-inline: auto; }
+.rs-chamber {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  width: min(100%, 78vh, 52rem);
+  margin-inline: auto;
+}
 
 .rs-band {
   position: absolute;
@@ -82,19 +87,43 @@
 
 /* --- the intelligence core --- */
 
+/*
+ * The core is sized as a share of the chamber, not in pixels: it has to dominate the chamber at every
+ * width, and a fixed size stops dominating the moment the chamber grows. The rig's own perimeter sits at
+ * 96% of this box, so the core reads as roughly a third of the chamber - which is the point.
+ */
 .rs-core {
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
   text-align: center;
-  width: 46%;
+  width: 42%;
+  aspect-ratio: 1 / 1;
+}
+
+.rs-rig { position: absolute; inset: -6%; width: 112%; height: 112%; overflow: visible; }
+.rs-sphere { width: 100%; height: 100%; }
+
+/* The perimeter's breath, the dial's slow turn and the three arcs are the core's only motion. */
+.rs-motion .rs-perimeter { animation: rs-perimeter 5200ms ease-in-out infinite; }
+.rs-motion .rs-dial { animation: rs-spin-c 240s linear infinite; transform-origin: 50% 50%; }
+.rs-motion .rs-orbit-a { animation: rs-spin-c 54s linear infinite; transform-origin: 50% 50%; }
+.rs-motion .rs-orbit-b { animation: rs-spin-c 84s linear infinite reverse; transform-origin: 50% 50%; }
+.rs-motion .rs-orbit-c { animation: rs-spin-c 32s linear infinite; transform-origin: 50% 50%; }
+
+@keyframes rs-spin-c { to { transform: rotate(360deg); } }
+@keyframes rs-perimeter {
+  0%, 100% { opacity: 0.32; stroke-width: 0.3; }
+  50% { opacity: 0.85; stroke-width: 0.5; }
 }
 
 .rs-core-disc {
   position: absolute;
   left: 50%;
   top: 50%;
+  width: 62%;
+  height: 62%;
   transform: translate(-50%, -50%);
   border-radius: 50%;
   border: 1px solid var(--rs-accent);
@@ -108,24 +137,105 @@
   50% { opacity: 0.62; }
 }
 
+/*
+ * The readout sits over the sphere, so it carries its own vignette: unreadable white-on-confetti is the
+ * one failure a centre readout is not allowed to have.
+ */
+.rs-core-readout {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 6%;
+  background: radial-gradient(closest-side, rgba(5, 7, 10, 0.82), rgba(5, 7, 10, 0.42) 62%, transparent 78%);
+}
+
+.rs-core-state { font-family: var(--font-mono, ui-monospace), monospace; font-size: 0.625rem; letter-spacing: 0.22em; text-transform: uppercase; }
+.rs-core-count { margin-top: 0.5rem; font-size: clamp(1.8rem, 5.4cqw, 3.4rem); font-weight: 300; line-height: 1; letter-spacing: -0.01em; }
+.rs-core-label { margin-top: 0.35rem; font-family: var(--font-mono, ui-monospace), monospace; font-size: 0.5625rem; letter-spacing: 0.16em; text-transform: uppercase; color: #66707e; }
+.rs-core-event {
+  margin-top: 0.9rem;
+  max-width: 12rem;
+  font-family: var(--font-mono, ui-monospace), monospace;
+  font-size: 0.5625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+.rs-core-note { margin: 0.9rem auto 0; max-width: 15rem; font-size: 0.625rem; line-height: 1.6; color: #66707e; }
+
 /* --- agent stations --- */
 
 .rs-station {
   position: absolute;
-  transform: translate(-50%, -50%);
   transition: opacity 200ms linear;
   text-align: left;
 }
 
 /* Order is the argument: quiet, then spoken, then stood down, then active. The most urgent rule is last. */
-.rs-station-quiet { opacity: 0.4; }
+.rs-station-quiet { opacity: 0.52; }
 .rs-station-spoken { opacity: 1; }
 .rs-station-down { opacity: 0.52; }
 .rs-station-active { opacity: 1; }
 
+/*
+ * An intelligence node: a hub on the ring, a hairline to its plate, and the plate itself placed outward
+ * from the ring. Outward is the whole trick - a card that is centred on its seat will eventually collide
+ * with the core, and this one structurally cannot.
+ */
+.rs-card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 10.5rem;
+  padding: 0.4rem 0.6rem;
+  white-space: nowrap;
+  border: 1px solid var(--rs-hair);
+  background: linear-gradient(160deg, rgba(14, 19, 27, 0.9), rgba(8, 11, 16, 0.78));
+  box-shadow: inset 0 1px 0 rgba(160, 185, 225, 0.05);
+}
+.rs-card-right { transform: translate(0.9rem, -50%); }
+.rs-card-left { transform: translate(calc(-100% - 0.9rem), -50%); flex-direction: row-reverse; text-align: right; }
+.rs-card-top { transform: translate(-50%, calc(-100% - 0.9rem)); }
+.rs-card-bottom { transform: translate(-50%, 0.9rem); }
+
+.rs-card-hub {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 1.35rem;
+  height: 1.35rem;
+  border: 1px solid color-mix(in srgb, var(--rs-accent) 38%, transparent);
+  border-radius: 50%;
+}
+.rs-card-body { min-width: 0; }
+.rs-card-name { display: block; font-family: var(--font-mono, ui-monospace), monospace; font-size: 0.625rem; letter-spacing: 0.16em; }
+.rs-card-role { display: block; font-family: var(--font-mono, ui-monospace), monospace; font-size: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase; color: #66707e; }
+.rs-card-state { display: flex; align-items: center; gap: 0.3rem; margin-top: 0.2rem; font-family: var(--font-mono, ui-monospace), monospace; font-size: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase; color: #9aa4b2; }
+.rs-card-left .rs-card-state { flex-direction: row-reverse; }
+.rs-card-count { display: block; margin-top: 0.1rem; font-size: 0.5rem; letter-spacing: 0.02em; color: #66707e; }
+
+.rs-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--rs-accent); flex: none; }
+.rs-motion .rs-station-active .rs-dot { animation: rs-blink 1100ms ease-in-out infinite; }
+@keyframes rs-blink { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+
+.rs-card:hover, .rs-card[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--rs-accent) 55%, transparent);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--rs-accent) 10%, rgba(14, 19, 27, 0.92)), rgba(8, 11, 16, 0.8));
+}
+.rs-station-active .rs-card-hub,
+.rs-station-active.rs-card {
+  border-color: color-mix(in srgb, var(--rs-accent) 70%, transparent);
+  box-shadow: 0 0 22px -6px color-mix(in srgb, var(--rs-accent) 60%, transparent);
+}
+.rs-station-addressed .rs-card-hub { border-width: 2px; }
+
 .rs-node {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border: 1px solid var(--rs-accent);
   background: color-mix(in srgb, var(--rs-accent) 20%, transparent);
   flex: none;
@@ -142,12 +252,56 @@
 
 /* --- beams and motes: only drawn while a real event is on the cursor --- */
 
-.rs-beam { opacity: 0.85; }
+.rs-beam { opacity: 0.85; filter: drop-shadow(0 0 2px currentColor); }
 .rs-motion .rs-beam {
   stroke-dasharray: 2 4;
   animation: rs-travel 620ms linear infinite;
 }
 @keyframes rs-travel { to { stroke-dashoffset: -12; } }
+
+/* The head of the signal: one mark travelling the beam, so a reader can see the direction of the send. */
+.rs-signal { opacity: 0; }
+.rs-motion .rs-signal { animation: rs-send 1200ms ease-in-out infinite; }
+@keyframes rs-send {
+  0% { opacity: 0; offset-distance: 0%; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { opacity: 0; offset-distance: 100%; }
+}
+
+/* --- the command bar and the mode switch --- */
+
+.rs-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 1.25rem;
+  padding: 0.6rem 1.25rem;
+  border-bottom: 1px solid var(--rs-hair);
+  background: rgba(5, 7, 10, 0.88);
+  backdrop-filter: blur(8px);
+}
+
+.rs-stat { display: flex; align-items: baseline; gap: 0.4rem; font-family: var(--font-mono, ui-monospace), monospace; font-size: 0.5625rem; letter-spacing: 0.14em; text-transform: uppercase; }
+.rs-stat-k { color: #66707e; }
+.rs-stat-v { color: #e7ebf1; }
+
+.rs-tabs { display: flex; gap: 0.25rem; }
+.rs-tab {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid transparent;
+  font-family: var(--font-mono, ui-monospace), monospace;
+  font-size: 0.5625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #66707e;
+  transition: color 150ms linear, border-color 150ms linear;
+}
+.rs-tab:hover { color: #9aa4b2; }
+.rs-tab[aria-selected='true'] { color: #e7ebf1; border-color: var(--rs-hair-bright); background: rgba(120, 140, 180, 0.09); }
 
 .rs-mote { opacity: 0.9; }
 .rs-motion .rs-mote { animation: rs-arrive 900ms ease-in forwards; }

@@ -12,7 +12,11 @@ import type { AgentId } from '../core/domain/model';
 import { AGENT_ORDER } from '../app/lib/agents';
 
 export interface Seat {
-  /** One accent per seat, deliberately off the console's semantic palette. */
+  /**
+   * One accent per seat, deliberately off the console's semantic palette: seven hues a reader can tell
+   * apart at a glance and then keep, because selecting a seat re-tints the whole chamber to it. HERMES
+   * green, ATHENA blue, APOLLO cyan, ZEUS violet, ARES amber, HADES red, HEPHAESTUS gold.
+   */
   accent: string;
   /** The disposition the agent argues from. A description of its real remit, not a mood. */
   trait: string;
@@ -22,37 +26,37 @@ export interface Seat {
 
 export const COUNCIL_SEATS: Record<AgentId, Seat> = {
   scout: {
-    accent: '#7fd4e8',
+    accent: '#3fd39a',
     trait: 'Fast, incurious about meaning.',
     cannot: 'Cannot rank, interpret or conclude. Drops any signal with no verifiable url.',
   },
   intelligence: {
-    accent: '#9ec3ff',
+    accent: '#5b9dff',
     trait: 'Precise, sceptical of coincidence.',
     cannot: 'Cannot call a model. Publishes a doubtful pair as doubtful instead of merging it.',
   },
   risk_analyst: {
-    accent: '#ffc76b',
+    accent: '#7fd4e8',
     trait: 'Constructive, and pre-cracked.',
     cannot: 'Cannot state a hypothesis without a named falsification test.',
   },
   governance_officer: {
-    accent: '#c9b6ff',
+    accent: '#a68cff',
     trait: 'Procedural, loud only where cited.',
     cannot: 'Cannot evidence an incident, and cannot assert an obligation with no citation.',
   },
   challenger: {
-    accent: '#ff9f7a',
+    accent: '#ff8a5c',
     trait: 'Adversarial, obliged to be constructive.',
     cannot: 'Cannot merely doubt. Every objection must name an alternative explanation.',
   },
   red_team: {
-    accent: '#ff7d94',
+    accent: '#ff5c78',
     trait: 'Worst-case, one-directional.',
     cannot: 'Cannot raise a band. Can stop an escalation and can never create one.',
   },
   decision_engine: {
-    accent: '#e8d6a8',
+    accent: '#f3c44d',
     trait: 'Quiet, arithmetic only.',
     cannot: 'Cannot hold an opinion, and cannot decide. It recommends to a human.',
   },

@@ -21,10 +21,10 @@ import { createCouncilAudio, type CouncilAudio } from './audio';
 import { routeCommand, type CommandResult } from './capability';
 import { REPLAY_SPEEDS, advance, frameIntervalMs, rewind, transcriptDigest, type ReplaySpeed } from './replay';
 import { EVENT_TONE, OUTCOME_NOTE, OUTCOME_TONE, TONE_COLOR, seatStanding, typeTally, visible } from './derive';
-import { Core, CoreField } from '../visual/Core';
+import { Core } from '../visual/Core';
 import { RingStation, StackStation, type StationChrome } from '../visual/Station';
 import { stations } from '../visual/stations';
-import { systemState } from '../visual/state';
+import { SYSTEM_STATE_NOTE, systemState } from '../visual/state';
 import { ACCENT, STATE_ACCENT } from '../visual/tokens';
 import { visualEvents, visualFrame } from '../visual/events';
 import { EvidenceMotes } from '../visual/Motes';
@@ -32,6 +32,12 @@ import { prefersReducedMotion } from '../visual/motion';
 import { citedEvidenceIds, evidenceCard } from '../visual/evidence';
 import { EvidenceInspector } from '../visual/EvidenceInspector';
 
+
+/**
+ * The seats' radius in the chamber's 0-100 square. Pulled in from `ringPoint`'s default so the core can
+ * be a third of the chamber and the station plates can still sit outside the ring without collision.
+ */
+const RING_RADIUS = 28;
 
 export function Label({ children }: { children: ReactNode }) {
   return <div className="font-mono text-2xs uppercase tracking-[0.18em] text-fg-mute">{children}</div>;
@@ -60,13 +66,12 @@ function CouncilCore({ events, cursor, onSelect, selected, participation, log, h
     [events, cursor, standing, log],
   );
   const state = systemState({ running: false, phase: null }, { events, cursor, humanVerdict });
-  const accent = STATE_ACCENT[state];
 
   const current = cursor >= 0 && events.length > 0 ? events[Math.min(cursor, events.length - 1)] : undefined;
   const speaker = current?.from_agent ?? null;
   const addressee = current?.to_agent ?? null;
 
-  const points = useMemo(() => COUNCIL_ORDER.map((_, i) => ringPoint(i, COUNCIL_ORDER.length)), []);
+  const points = useMemo(() => COUNCIL_ORDER.map((_, i) => ringPoint(i, COUNCIL_ORDER.length, RING_RADIUS)), []);
   const from = speaker === null ? null : points[COUNCIL_ORDER.indexOf(speaker)];
   const to = addressee === null ? null : points[COUNCIL_ORDER.indexOf(addressee)];
   // What may be drawn at this reading position, projected from the transcript and nothing else. An empty
@@ -76,6 +81,12 @@ function CouncilCore({ events, cursor, onSelect, selected, participation, log, h
   const alert = frame.some((v) => v.type === 'RED_TEAM_ALERT');
   const cited = frame.find((v) => v.type === 'EVIDENCE_RECEIVED')?.evidence_ids.length ?? 0;
   const beam = current === undefined ? TONE_COLOR.state : alert ? ACCENT.block : TONE_COLOR[EVENT_TONE[current.type]];
+  // A held seat re-tints the whole chamber to its own colour: the core, the beam it is on, the lit spokes.
+  // The state's accent is what the chamber shows when no seat is held, which is most of the time.
+  const accent = selected !== null ? COUNCIL_SEATS[selected].accent : alert ? ACCENT.block : STATE_ACCENT[state];
+  const line = current === undefined
+    ? null
+    : `${current.type}${speaker === null ? '' : ` · ${AGENT_CODENAME[speaker]}`}${addressee === null ? '' : ` → ${AGENT_CODENAME[addressee]}`}`;
 
   const chrome = (id: AgentId): StationChrome => ({
     accent: COUNCIL_SEATS[id].accent,
@@ -99,22 +110,44 @@ function CouncilCore({ events, cursor, onSelect, selected, participation, log, h
         ))}
       </div>
 
-      <div className="rs-chamber hidden sm:block">
-        <CoreField
-          accent={accent}
-          ticks={points.map((p, i) => ({ x: p.x, y: p.y, lit: seats[i].spoke > 0 }))}
-        />
-
+      <div className="rs-chamber hidden sm:block" style={{ ['--rs-accent' as string]: accent }}>
         <svg viewBox="0 0 100 100" className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
+          {/* The living network: every pair of seats, faint, so the illuminated one reads as a choice. */}
+          {points.map((a, i) =>
+            points.slice(i + 1).map((b, j) => (
+              <line
+                key={`${i}-${j}`}
+                x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                stroke="rgba(120,140,180,0.07)"
+                strokeWidth={0.12}
+              />
+            )),
+          )}
           {from !== null && to !== null && (
-            <line className="rs-beam" x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={beam} strokeWidth={0.4} />
+            <>
+              <line className="rs-beam" x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={beam} strokeWidth={0.55} />
+              <circle
+                className="rs-signal"
+                r={0.9}
+                fill={beam}
+                style={{ offsetPath: `path("M ${from.x} ${from.y} L ${to.x} ${to.y}")` }}
+              />
+            </>
           )}
         </svg>
 
         {from !== null && <EvidenceMotes from={from} count={cited} accent={beam} />}
 
-        <Core state={state} read={Math.max(0, Math.min(cursor + 1, events.length))} total={events.length}
-              label={events.length === 0 ? 'no transcript' : 'exchanges read'} />
+        <Core
+          state={state}
+          accent={selected !== null ? accent : null}
+          lit={seats.map((seat) => seat.spoke > 0)}
+          event={line}
+          note={false}
+          read={Math.max(0, Math.min(cursor + 1, events.length))}
+          total={events.length}
+          label={events.length === 0 ? 'no transcript' : 'exchanges read'}
+        />
 
         {seats.map((station, i) => (
           <RingStation
@@ -129,6 +162,8 @@ function CouncilCore({ events, cursor, onSelect, selected, participation, log, h
           />
         ))}
       </div>
+
+      <p className="mt-4 text-center text-2xs leading-relaxed text-fg-mute">{SYSTEM_STATE_NOTE[state]}</p>
     </>
   );
 }
@@ -812,50 +847,165 @@ function PackBanner({ result }: { result: RunResult }) {
   );
 }
 
+/**
+ * THE NETWORK. Who addressed whom, over the whole run: one edge per ordered pair of seats that really
+ * exchanged something, its weight the number of exchanges. Edges that have been reached by the cursor are
+ * lit; the rest stay faint. The counts are a `reduce` over `events` - there is no layout force, no random
+ * jitter and nothing that could place an edge the transcript does not contain.
+ */
+function NetworkView({ events, cursor, selected, onSelect }: {
+  events: DeliberationEvent[];
+  cursor: number;
+  selected: AgentId | null;
+  onSelect: (id: AgentId | null) => void;
+}) {
+  const points = useMemo(() => COUNCIL_ORDER.map((_, i) => ringPoint(i, COUNCIL_ORDER.length, 36)), []);
+  const edges = useMemo(() => {
+    const map = new Map<string, { from: AgentId; to: AgentId; total: number; read: number }>();
+    for (const e of events) {
+      if (e.to_agent === null) continue;
+      const key = `${e.from_agent}>${e.to_agent}`;
+      const edge = map.get(key) ?? { from: e.from_agent, to: e.to_agent, total: 0, read: 0 };
+      edge.total += 1;
+      if (e.sequence <= cursor) edge.read += 1;
+      map.set(key, edge);
+    }
+    return [...map.values()].sort((a, b) => a.total - b.total);
+  }, [events, cursor]);
+  const heaviest = Math.max(1, ...edges.map((e) => e.total));
+
+  return (
+    <div className="rs-chamber">
+      <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" aria-hidden="true">
+        {edges.map((edge) => {
+          const a = points[COUNCIL_ORDER.indexOf(edge.from)];
+          const b = points[COUNCIL_ORDER.indexOf(edge.to)];
+          const held = selected === null || selected === edge.from || selected === edge.to;
+          return (
+            <line
+              key={`${edge.from}>${edge.to}`}
+              x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+              stroke={COUNCIL_SEATS[edge.from].accent}
+              strokeWidth={0.18 + (edge.total / heaviest) * 1.1}
+              opacity={(edge.read === 0 ? 0.14 : 0.34 + (edge.read / edge.total) * 0.4) * (held ? 1 : 0.25)}
+            />
+          );
+        })}
+        {points.map((p, i) => (
+          <circle key={i} cx={p.x} cy={p.y} r={2.1} fill="#05070a" stroke={COUNCIL_SEATS[COUNCIL_ORDER[i]].accent} strokeWidth={0.5} />
+        ))}
+      </svg>
+      {points.map((p, i) => {
+        const id = COUNCIL_ORDER[i];
+        const out = edges.filter((e) => e.from === id).reduce((n, e) => n + e.total, 0);
+        return (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onSelect(selected === id ? null : id)}
+            aria-pressed={selected === id}
+            style={{ left: `${p.x}%`, top: `${p.y}%`, ['--rs-accent' as string]: COUNCIL_SEATS[id].accent }}
+            className={`rs-station rs-card rs-card-${p.x > 56 ? 'right' : p.x < 44 ? 'left' : p.y < 50 ? 'top' : 'bottom'} ${selected === id ? 'rs-station-active' : 'rs-station-spoken'}`}
+          >
+            <span className="rs-card-hub" aria-hidden="true"><span className="rs-node" /></span>
+            <span className="rs-card-body">
+              <span className="rs-card-name" style={{ color: COUNCIL_SEATS[id].accent }}>{AGENT_CODENAME[id]}</span>
+              <span className="num rs-card-count">{out} sent · {edges.filter((e) => e.to === id).reduce((n, e) => n + e.total, 0)} received</span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+const MODES = ['COUNCIL', 'NETWORK', 'EVIDENCE', 'TIMELINE', 'DECISION'] as const;
+type Mode = (typeof MODES)[number];
+
+/** What each view is, in the fewest words that are still true. Printed under the switch. */
+const MODE_NOTE: Record<Mode, string> = {
+  COUNCIL: 'The radial chamber: seven seats around the core, lit by the exchange on the cursor.',
+  NETWORK: 'Who addressed whom across the whole run. Edge weight is the number of exchanges.',
+  EVIDENCE: 'Every evidence item this run cited, and which seat cited it.',
+  TIMELINE: 'The whole chronology, one tick per stored event, in sequence order.',
+  DECISION: 'What the recommendation was built from, back to the evidence.',
+};
+
 export function Chamber({ result, patterns = null, humanVerdict = null }: { result: RunResult; patterns?: Map<string, Pattern> | null; humanVerdict?: string | null }) {
   const events = result.deliberation.events;
   const [cursor, setCursor] = useState(events.length - 1);
   const [seat, setSeat] = useState<AgentId | null>(null);
   const [evidence, setEvidence] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>('COUNCIL');
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-8 px-6 pb-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-      <div className="space-y-8">
-        <div className="cn-hair p-6">
-          <PackBanner result={result} />
-          <CouncilCore
-            events={events}
-            cursor={cursor}
-            selected={seat}
-            onSelect={setSeat}
-            participation={result.participation}
-            log={result.log}
-            humanVerdict={humanVerdict}
-          />
+    <div className="px-4 pb-14 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 py-3">
+        <div className="rs-tabs" role="tablist" aria-label="council view">
+          {MODES.map((m) => (
+            <button key={m} type="button" role="tab" aria-selected={m === mode} className="rs-tab" onClick={() => setMode(m)}>
+              {m}
+            </button>
+          ))}
         </div>
-        <DecisionCore result={result} />
+        <p className="text-2xs text-fg-mute">{MODE_NOTE[mode]}</p>
       </div>
 
-      <div className="cn-hair self-start">
-        <div className="flex items-baseline justify-between gap-4 px-4 py-3" style={{ borderBottom: '1px solid rgba(120,140,180,0.18)' }}>
-          <Label>live deliberation</Label>
-          <div className="flex items-center gap-3">
-            {seat !== null && (
-              <button type="button" onClick={() => setSeat(null)} className="font-mono text-2xs uppercase tracking-[0.12em] text-fg-mute hover:text-fg">
-                clear filter
-              </button>
-            )}
-            <span className="num text-2xs text-fg-mute" title={transcriptDigest(events)}>{Math.max(0, cursor + 1)}/{events.length}</span>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_25rem]">
+        <section className="cn-hair flex min-h-[36rem] flex-col justify-center p-4">
+          {mode === 'COUNCIL' && (
+            <CouncilCore
+              events={events}
+              cursor={cursor}
+              selected={seat}
+              onSelect={setSeat}
+              participation={result.participation}
+              log={result.log}
+              humanVerdict={humanVerdict}
+            />
+          )}
+          {mode === 'NETWORK' && <NetworkView events={events} cursor={cursor} selected={seat} onSelect={setSeat} />}
+          {mode === 'EVIDENCE' && (
+            <EvidenceZone result={result} selected={evidence} onSelect={setEvidence} onCursor={setCursor} />
+          )}
+          {mode === 'TIMELINE' && (
+            <div className="w-full">
+              <Timeline events={events} cursor={cursor} onCursor={setCursor} />
+              <Deliberation events={events} cursor={cursor} onCursor={setCursor} filter={seat} onEvidence={setEvidence} />
+            </div>
+          )}
+          {mode === 'DECISION' && (
+            <div className="w-full space-y-4">
+              <DecisionCore result={result} />
+              <Lineage result={result} patterns={patterns} onEvidence={setEvidence} />
+            </div>
+          )}
+        </section>
+
+        <aside className="cn-hair flex max-h-[calc(100vh-9rem)] flex-col self-start overflow-hidden">
+          <div className="flex items-baseline justify-between gap-4 px-4 py-3" style={{ borderBottom: '1px solid rgba(120,140,180,0.18)' }}>
+            <Label>live deliberation</Label>
+            <div className="flex items-center gap-3">
+              {seat !== null && (
+                <button type="button" onClick={() => setSeat(null)} className="font-mono text-2xs uppercase tracking-[0.12em] text-fg-mute hover:text-fg">
+                  clear filter
+                </button>
+              )}
+              <span className="num text-2xs text-fg-mute" title={transcriptDigest(events)}>{Math.max(0, cursor + 1)}/{events.length}</span>
+            </div>
           </div>
-        </div>
-        <Transport events={events} cursor={cursor} setCursor={setCursor} />
-        <div style={{ borderBottom: '1px solid rgba(120,140,180,0.12)' }}>
-          <Timeline events={events} cursor={cursor} onCursor={setCursor} />
-        </div>
-        <Deliberation events={events} cursor={cursor} onCursor={setCursor} filter={seat} onEvidence={setEvidence} />
+          <Transport events={events} cursor={cursor} setCursor={setCursor} />
+          <div style={{ borderBottom: '1px solid rgba(120,140,180,0.12)' }}>
+            <Timeline events={events} cursor={cursor} onCursor={setCursor} />
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <Deliberation events={events} cursor={cursor} onCursor={setCursor} filter={seat} onEvidence={setEvidence} />
+          </div>
+        </aside>
       </div>
 
-      <div className="lg:col-span-2">
+      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+        <DecisionCore result={result} />
         {seat === null ? (
           <div className="cn-hair p-5">
             <Label>agent inspector</Label>
@@ -863,22 +1013,21 @@ export function Chamber({ result, patterns = null, humanVerdict = null }: { resu
               Select a seat on the ring to read its remit, the position it recorded in the score, and what it
               said. Seven seats, and the interesting half of each one is what it cannot do.
             </p>
+            <div className="mt-5">
+              <PackBanner result={result} />
+            </div>
           </div>
         ) : (
           <AgentInspector result={result} seat={seat} events={events} cursor={cursor} />
         )}
       </div>
 
-      <div className="lg:col-span-2">
-        <EvidenceZone result={result} selected={evidence} onSelect={setEvidence} onCursor={setCursor} />
-      </div>
-
-      <div className="lg:col-span-2">
-        <Lineage result={result} patterns={patterns} onEvidence={setEvidence} />
-      </div>
-
-      <div className="cn-hair lg:col-span-2">
-        <CommandBar result={result} patterns={patterns} onCursor={setCursor} />
+      <div className="mt-4 space-y-4">
+        {mode !== 'EVIDENCE' && <EvidenceZone result={result} selected={evidence} onSelect={setEvidence} onCursor={setCursor} />}
+        {mode !== 'DECISION' && <Lineage result={result} patterns={patterns} onEvidence={setEvidence} />}
+        <div className="cn-hair">
+          <CommandBar result={result} patterns={patterns} onCursor={setCursor} />
+        </div>
       </div>
     </div>
   );

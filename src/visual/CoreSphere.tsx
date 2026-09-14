@@ -160,8 +160,8 @@ export function CoreSphere({ accent, size = 320 }: { accent: string; size?: numb
       width={size}
       height={size}
       aria-hidden="true"
-      className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-      style={{ width: `${size}px`, height: `${size}px` }}
+      className="rs-sphere pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+
     />
   );
 }

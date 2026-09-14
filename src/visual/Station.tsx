@@ -41,33 +41,31 @@ export function RingStation({ station, chrome, point, active, addressed, selecte
   selected: boolean;
   onSelect: (id: AgentId | null) => void;
 }) {
-  const right = point.x > 52;
+  // Which way the card is laid out from its seat. A card is placed outward from the ring rather than
+  // centred on it, so no station can ever land on top of the core no matter how large the core is.
+  const side = point.x > 56 ? 'right' : point.x < 44 ? 'left' : point.y < 50 ? 'top' : 'bottom';
   return (
     <button
       type="button"
       onClick={() => onSelect(selected ? null : station.agent)}
       style={{ left: `${point.x}%`, top: `${point.y}%`, ['--rs-accent' as string]: chrome.accent }}
-      className={classes(station, active, addressed)}
+      className={`${classes(station, active, addressed)} rs-card rs-card-${side}`}
       aria-pressed={selected}
       aria-label={described(station, chrome)}
       title={station.reason}
     >
-      <span className="flex items-center gap-2" style={{ flexDirection: right ? 'row' : 'row-reverse' }}>
+      <span className="rs-card-hub" aria-hidden="true">
         <span className="rs-node" />
-        <span className={right ? 'text-left' : 'text-right'}>
-          <span
-            className="block font-mono text-2xs tracking-[0.16em]"
-            style={{ color: chrome.accent, textDecoration: selected ? 'underline' : 'none' }}
-          >
-            {chrome.codename}
-          </span>
-          <span className="block font-mono text-2xs uppercase tracking-[0.1em] text-fg-mute">
-            {STATION_LABEL[station.state]}
-          </span>
-          <span className="num block text-2xs text-fg-mute">
-            {station.spoke} said{station.unresolved > 0 ? ` · ${station.unresolved} open` : ''}
-          </span>
+      </span>
+      <span className="rs-card-body">
+        <span className="rs-card-name" style={{ color: chrome.accent }}>{chrome.codename}</span>
+        <span className="rs-card-role">{chrome.role}</span>
+        <span className="rs-card-state">
+          <span className="rs-dot" aria-hidden="true" />
+          {STATION_LABEL[station.state]}
         </span>
+        <span className="num rs-card-count">{station.evidence_cited} evidence · {station.spoke} said</span>
+        {station.unresolved > 0 && <span className="num rs-card-count">{station.unresolved} open</span>}
       </span>
     </button>
   );
