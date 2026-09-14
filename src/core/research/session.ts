@@ -16,6 +16,7 @@
  */
 import { Minter } from '../domain/build';
 import type { InternalKnowledge, InternalOutcome } from '../knowledge/internal';
+import { proposeDelta, type KnowledgeDelta } from '../knowledge/delta';
 import { routeQuestion, type QuestionModel } from '../question/model';
 import { executeResearch, type ResearchEvent, type ResearchExecution } from './execute';
 import { mergeNormalization, normalizeExternal, normalizeInternal, type NormalizationReport } from './normalize';
@@ -59,6 +60,13 @@ export interface ResearchOutcome {
   internal: NormalizationReport | null;
   /** External and internal together. This is what a reader should judge an answer on. */
   merged: NormalizationReport;
+  /**
+   * At most one knowledge proposal per pass, and null whenever the plan did not expect a knowledge
+   * update - a timeless question, or one external research could not reach. A delta proposed anyway
+   * would be a taxonomy claim manufactured from nothing, which is `proposeDelta()`'s own rule, not a
+   * decision taken here.
+   */
+  delta: KnowledgeDelta | null;
 }
 
 export const researchRunId = (now: string): string => `RES-${now.replace(/[^0-9]/g, '').slice(0, 14)}`;
@@ -99,5 +107,11 @@ export async function research(
       : null;
 
   const parts = [external, internal].filter((r): r is NormalizationReport => r !== null);
-  return { run_id, now, routed, plan, execution, external, internal_outcome, internal, merged: mergeNormalization(...parts) };
+  const merged = mergeNormalization(...parts);
+
+  // A proposal, not a fact. It is built here because this is the only place that holds all four inputs
+  // `proposeDelta()` needs at once, and it goes nowhere until a human approves it on screen 14.
+  const delta = await proposeDelta(routed, plan, merged.items, { run_id, now });
+
+  return { run_id, now, routed, plan, execution, external, internal_outcome, internal, merged, delta };
 }

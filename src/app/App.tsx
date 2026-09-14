@@ -19,6 +19,7 @@ import { RedTeam } from '@app/screens/RedTeam';
 import { ScenarioRoom } from '@app/screens/ScenarioRoom';
 import { InternalKnowledge } from '@app/screens/InternalKnowledge';
 import { Research } from '@app/screens/Research';
+import { KnowledgeDelta } from '@app/screens/KnowledgeDelta';
 
 /**
  * The showcase page is lazy so it never enters the console's bundle, and it lives outside `Frame` so it
@@ -49,6 +50,7 @@ const NAV: Array<{ to: string; n: string; label: string }> = [
   { to: '/orbit', n: '11', label: 'Scenario Room' },
   { to: '/knowledge', n: '12', label: 'Internal Knowledge' },
   { to: '/research', n: '13', label: 'Research' },
+  { to: '/knowledge-delta', n: '14', label: 'Knowledge Delta' },
 ];
 
 const MODES: Mode[] = ['DEMO', 'SNAPSHOT', 'LIVE'];
@@ -177,6 +179,7 @@ export function App() {
           <Route path="/orbit" element={<ScenarioRoom />} />
           <Route path="/knowledge" element={<InternalKnowledge />} />
           <Route path="/research" element={<Research />} />
+          <Route path="/knowledge-delta" element={<KnowledgeDelta />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

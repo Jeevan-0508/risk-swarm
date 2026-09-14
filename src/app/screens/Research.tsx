@@ -10,7 +10,9 @@
  * every reason string is the provider's own.
  */
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button, Empty, Field, Panel, Row, Tag, inputClass } from '@app/ui/kit';
+import { append, loadLedger, saveLedger } from '@app/lib/ledger';
 import { routeQuestion } from '@core/question/model';
 import { planResearch } from '@core/research/plan';
 import type { ResearchEvent } from '@core/research/execute';
@@ -59,6 +61,7 @@ export function Research() {
   const [events, setEvents] = useState<ResearchEvent[]>([]);
   const [outcome, setOutcome] = useState<ResearchOutcome | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [ledgerNote, setLedgerNote] = useState<string | null>(null);
 
   const text = question.trim();
   const preview = useMemo(
@@ -71,6 +74,7 @@ export function Research() {
     setError(null);
     setEvents([]);
     setOutcome(null);
+    setLedgerNote(null);
     try {
       const result = await runResearch({ question: text, proxyEnabled }, (e) => setEvents((all) => [...all, e]));
       setOutcome(result);
@@ -315,6 +319,42 @@ export function Research() {
               </ul>
             </Panel>
           )}
+
+          <Panel title="propose this to the knowledge base">
+            {outcome.delta === null ? (
+              <p className="text-xs leading-relaxed text-fg-dim">
+                This plan expected no knowledge update, so there is nothing to propose. A delta is only built
+                when the plan itself said the taxonomy might need to change; one manufactured anyway would be a
+                taxonomy claim resting on nothing.
+              </p>
+            ) : (
+              <>
+                <Row k="delta" v={outcome.delta.id} />
+                <Row k="domain" v={outcome.delta.domain} />
+                <Row k="distinct sources" v={String(outcome.delta.distinct_source_count)} />
+                <p className="mt-2 text-2xs leading-relaxed text-fg-dim">{outcome.delta.rationale}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <Button
+                    onClick={() => {
+                      const result = append(loadLedger(), outcome.delta);
+                      if (result.appended) saveLedger(result.state);
+                      setLedgerNote(
+                        result.appended
+                          ? 'Added to the ledger as proposed. It changes nothing until a named person approves it.'
+                          : 'Already on the ledger. The ledger is append-only, so this was not replaced.',
+                      );
+                    }}
+                  >
+                    add to the ledger
+                  </Button>
+                  <Link className="text-xs text-signal" to="/knowledge-delta">
+                    review deltas &rarr;
+                  </Link>
+                </div>
+                {ledgerNote !== null && <p className="mt-3 text-2xs leading-relaxed text-caution">{ledgerNote}</p>}
+              </>
+            )}
+          </Panel>
 
           {outcome.merged.dropped.length > 0 && (
             <Panel title="dropped before it became evidence">
