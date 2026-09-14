@@ -106,7 +106,7 @@ plan for everything after it. Cross-session anchor for the Council epic; read be
 | G3 | Replay (deterministic, no re-run), command bar | `src/council/` | **done** |
 | G4 | Audio (original, on/off), reduced-motion, mobile vertical layout | `src/council/` | **done** |
 | H | Adversarial tests: fabrication attempts, sealed-event mutation, UI-cannot-create-events, determinism, budget exhaustion | `core/deliberation/adversarial.test.ts` | **done** |
-| I | README update (verbatim copy from spec), final 10-second product-test self-check | `README.md` | |
+| I | README update, final 10-second product-test self-check | `README.md` | **done** |
 
 Each phase: implement → `tsc -b --noEmit` → `bun test` → `bun run build` → browser sanity check for UI
 phases → commit → push, matching the EVOLUTION-2.0 discipline exactly.
@@ -376,3 +376,31 @@ a local canonical form rather than borrowing the Council's own `transcriptDigest
 `council/replay.test.ts`, which is allowed to import the UI).
 
 Verified: `bun run typecheck` clean · `bun test` 372/372 pass (358 prior + 14) · `bun run build` clean.
+
+## Phase I (README, final self-check), closed out (2026-09-14)
+
+- New README section, **The Council: watching the disagreement happen**, plus screen 12 in the screens
+  table, the Council's 14 attacks in the adversarial-suite section, `src/core/deliberation/`,
+  `src/core/lineage/` and `src/council/` in the repo map, and the corrected test count.
+- Every number in the new prose was checked against a real run before it was written, per this repo's own
+  rule: 372 tests / 28 files, 29 adversarial attacks (15 + 14), 15 command-bar verbs (`COMMAND_HELP.length`),
+  and the demo transcript's own **41 exchanges over 8 rounds ending in `MATERIAL_DISAGREEMENT`**.
+- One honest limitation added and then sharpened after measuring: eight of the twelve event types appear on
+  the reference run. DEFENSE and REBUTTAL are **structurally** dormant (nothing in the pipeline moves an
+  objection off `open`); REVISION and ESCALATION are merely **run-dependent** (they fire when the analyst
+  really superseded a hypothesis, and when the band really is `ESCALATE`). Collapsing those two cases into
+  one word would have been the easy version and the wrong one.
+- Also stated plainly: the Council is a deterministic synthesis over a finished run, not a live argument.
+  The agents did not take turns in real time and the screen does not imply they did.
+
+## EVOLUTION 3.0 - COUNCIL: complete
+
+All phases closed: D1/D2/D3, L1, G1-G4, H, I. Final state at this commit:
+
+- `bun run typecheck` clean · `bun test` **372/372 pass, 0 fail** across 28 files · `bun run build` clean.
+- `index-*.js` 455.85 kB, unchanged in size class from the pre-Council baseline (446.55 kB before Phase D,
+  the growth being the coordinator, lineage and the model additions) - the whole `/council` screen sits in
+  its own lazy chunk (`Council-*.js` 34.38 kB, `Council-*.css` 1.91 kB) and nothing leaked into the console.
+- Nothing in the DO-NOT-TOUCH list of the Phase 1 audit was modified: `scoring/score.ts`,
+  `scoring/policy.ts`, the 7-agent order, the graph's append-only guarantees, the agents' decision logic
+  and the eleven existing screens are all untouched. Every extension was additive.

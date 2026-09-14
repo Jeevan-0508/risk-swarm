@@ -103,7 +103,7 @@ bun run scripts/demo-run.ts     # the whole investigation, printed
 | Why the band is not higher | `decision.gates_failed` and `decision.caps_applied`, both printed |
 | What it cost and whether it was stopped | `result.spent` (agent calls / retrievals / tokens) and `result.attempts` |
 | Whether an agent was allowed to phrase something with a model | `degraded_reason` on the agent output; absent means deterministic wording |
-| That the behaviour is enforced, not described | `bun test` — 262 tests across 20 files, 16 of them adversarial attacks |
+| That the behaviour is enforced, not described | `bun test` — 372 tests across 28 files, 29 of them adversarial attacks |
 
 The same record drives the UI. The browser build is a **pure renderer** over `RunResult`: no screen
 recomputes a number, because a figure computed twice is a figure that can disagree with itself.
@@ -122,6 +122,7 @@ recomputes a number, because a figure computed twice is a figure that can disagr
 | 10 Knowledge & Provenance | Snapshot hashes, the tier ladder, and what LIVE retrieval actually fetched |
 | 11 Scenario Room | Five stress scenarios run against the pinned baseline, and the diff between them |
 | 08a Case File | One run in full — asked and answered times, timeline, agent-by-agent, who disagreed, final result; downloadable as HTML, Word, markdown, JSON or a printed PDF |
+| 12 The Council | The deliberation transcript for the loaded run: seven seats on a ring, who asked whom what, replay, an agent inspector, the decision lineage, and a command bar that refuses rather than improvises |
 
 ---
 
@@ -202,6 +203,49 @@ These are enforced in code and covered by tests, not stated as intentions.
 
 ---
 
+## The Council: watching the disagreement happen
+
+Screen 12, `/council`, is the deliberation itself — not a summary of it. Seven seats on a ring, and the
+exchange between them read one at a time: who asked whom what, which objection was filed against which
+hypothesis, what was answered, what was revised, and what is still open at the end.
+
+**Every exchange is a real structured event.** `core/deliberation/coordinator.ts` synthesises the
+transcript from an already-completed run's own agent output — each event resolves to a real challenger
+finding, a real red-team finding, a real recorded agent position, a real `recommended_next_step` or a real
+evidence reference, and every id it cites is filtered against the graph before the event is written. There
+is no model call in it, no clock and no randomness, so the same run produces the identical transcript
+twice, byte for byte.
+
+**The UI cannot invent one.** Nothing under `src/council` imports the coordinator, and `DeliberationEvent`
+is imported there only as a type — so no council module can parse an object into an event, and no event
+literal exists in the folder. Replay is a pure function over the stored array whose entire dependency list
+is a single `import type`: watching a deliberation back is reading a record, not re-enacting it.
+
+**It never forces agreement.** The session ends in one of `CONSENSUS`, `QUALIFIED_CONSENSUS`,
+`MATERIAL_DISAGREEMENT`, `UNRESOLVED` or `LIMIT_REACHED`, narrating the disagreement index `scoring/score.ts`
+already computed rather than recomputing it. Three budgets (`max_events`/`max_rounds`/`max_agent_responses`)
+are hard stops, and a budget that cuts the session short says `LIMIT_REACHED` in a terminal event rather
+than falling silent in a way that would read as agreement.
+
+| On the screen | What it is |
+|---|---|
+| Council Core | The seven seats, lit by whoever speaks at the cursor. A beam is drawn only when a real event names both a speaker and an addressee. A seat that has not spoken is present but unlit — never hidden |
+| Live Deliberation | The transcript in `sequence` order, with the type, status, and evidence and claim counts of each exchange. Filterable by seat |
+| Replay | Play/pause at 1x/2x/4x over the stored events. Speed changes pacing only; it can never skip an exchange, and the cursor clamps at the end rather than looping |
+| Agent Inspector | One seat's remit, the position it recorded in the score, its own uncertainties verbatim — and what it structurally **cannot** do |
+| Decision Lineage | Decision → hypothesis → observation → evidence, plus source concentration and, ranked by weight, the indicators nobody has assessed yet |
+| Decision Core | The band, the outcome, and a link to screen 07. The recommendation is rendered once, by the brief, so the two can never disagree |
+| Command bar | 15 read commands over the run's own stored data. Anything else answers `Capability unavailable.` — there is no branch that improvises |
+
+On the pinned demo run the council produces **41 exchanges over 8 rounds** and ends in
+`MATERIAL_DISAGREEMENT` — eight of the twelve event types appear, because four of them have nothing to
+fire on in that particular run (see the limitation below).
+
+Sound is original, off by default, and carries nothing that is not also written on screen. Motion is
+decoration: with `prefers-reduced-motion` every animation stops and no information is lost. Below `sm` the
+ring becomes a column — the same seven seats and the same states, re-laid out rather than reduced.
+
+
 ## Three modes, and what changes between them
 
 | Mode | Knowledge | Clock | Reproducible |
@@ -240,6 +284,12 @@ trend, an aggregator posing as the publisher, a caller supplying its own tier, a
 gate, a success story used to argue for less scrutiny, an expired lesson, an edit to the graph after the
 fact, a tampered stored run, an escalation demanded without operational evidence, an empty world fished
 for a verdict, a red team that can never be satisfied, and a run pushed past its budget.
+
+`src/core/deliberation/adversarial.test.ts` adds 14 more, aimed at the Council: a fabricated citation
+inside the transcript (blocked by name), an evidence id no agent ever cited, a single altered character in
+a sealed event, a mutation laundered through a persistence round trip, every open exchange flipped to
+resolved with the outcome rewritten to `CONSENSUS`, a UI asked to author an event, each of the three
+deliberation budgets exhausted individually, and a narration asked to move the band.
 
 ---
 
@@ -293,8 +343,11 @@ src/core/sources/      LIVE retrieval: feed parsing, content hashing, an operato
 src/core/learning/     outcomes and tighten-only lessons
 src/core/persistence/  versioned run records; a record that fails validation is dropped
 src/core/brief/        the markdown decision brief
+src/core/deliberation/ the Council's deterministic coordinator: a synthesis over a completed run
+src/core/lineage/      decision lineage, evidence still needed, source concentration
 src/core/adversarial/  15 attacks on the guards
 src/app/               the eleven screens: a pure renderer over the run record
+src/council/           screen 12: the deliberation chamber, in its own lazy chunk and stylesheet
 docs/                  architecture, domain model, agent contracts, scoring, integrations, test strategy
 ```
 
@@ -311,6 +364,14 @@ docs/                  architecture, domain model, agent contracts, scoring, int
   unnoticed.
 - **History lives in browser storage.** It is per-browser and per-device, and it is cleared with the
   screen's own discard button. There is no server, so there is nowhere else for it to live.
+- **The Council is a synthesis, not a live argument.** The transcript is generated in one deterministic
+  pass over a run that has already finished — the agents did not take turns in real time, and the screen
+  does not pretend they did (every event carries the run's own completion instant, and `sequence`, not a
+  fabricated clock, is the ordering). Two event types, DEFENSE and REBUTTAL, are wired and tested but
+  **structurally dormant**: nothing in the pipeline today ever moves an objection off `open`, so nothing
+  today defends against one. Two more, REVISION and ESCALATION, are run-dependent rather than dormant —
+  they fire when the analyst really superseded a hypothesis and when the band really is `ESCALATE`, and
+  the demo run does neither.
 - **LIVE mode is limited by the browser.** Many feeds refuse cross-origin reads from a static host. The
   system reports each refusal instead of working around it.
 
