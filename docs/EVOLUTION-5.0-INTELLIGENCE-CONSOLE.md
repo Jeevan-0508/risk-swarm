@@ -108,3 +108,56 @@ vocabulary, driven by engine state** — which is Phase B, and it has to come be
 
 Every phase ends `typecheck` → `test` → `build` → commit. No phase may leave a red test, a fabricated
 capability, or a claim the code does not support.
+
+---
+
+## Close-out
+
+Every phase landed, one commit each, each ending typecheck → test → build. At close: **643 tests across
+49 files, 0 failing**, typecheck clean, build clean, entry chunk 477.77 kB / 145.49 kB gzip.
+
+| phase | commit | what actually shipped |
+|---|---|---|
+| A | `d3836d4` | this audit |
+| B | `b8b438c` | `src/visual/`: `SystemState`, event derivation, motion gates, tokens, `console.css` |
+| C | `c3ec2b4` | the command centre: one core, seven stations, one ring geometry |
+| D | `f063b8a` | the frame on the cursor drives every mark; visual replay proven deterministic |
+| E | `cf304be` | the evidence inspector |
+| F | `7c8e093` | the form stops being freight-shaped; packs are scored, not looked up |
+| G | `194a0a1` | internal knowledge gets a screen (12) |
+| H | `eae89c8` | the research pipeline gets a caller and reaches the real internet (13) |
+| I | `b5047c5` | the knowledge delta ledger and the approval gate get a human (14) |
+| J | `22daa9a` | SENTINEL, PULSE and ORBIT become marks as well as lists |
+| K | `a21d95c` | four screens route-lazy, phone layout, skip link, live region, CSS reduced-motion gate |
+| L | this commit | README and docs corrected against the code |
+
+### The honest list, revisited
+
+Section D listed six gaps. Four are closed, two are not, and both remaining ones are architectural
+rather than unfinished work:
+
+1. ~~The research pipeline has no live caller.~~ **Closed in H.** `core/research/session.ts` composes
+   plan → execute → normalize → delta, and `app/lib/research.ts` wires it to the browser. It is
+   deliberately *not* inside `investigate()`: that function's byte-for-byte reproducibility is asserted
+   for both packs, and a live network cannot live inside a reproducible run.
+2. ~~The question form is freight-shaped.~~ **Closed in F.** Geography and mode are optional, an empty
+   scope means no filter, and the open pack is reachable from the form.
+3. **Pack vocabulary is only partly consumed.** `relevance_terms` now drives pack recommendation
+   (`core/packs/recommend.ts`), and `min_relevance`, `category_rules`, `geo_rules` and `mode_rules` are
+   read through the pack. `toRawSignal()` in `integrations/fomo.ts` still classifies with the
+   module-level freight constants, which is why the freight pack references those constants rather than
+   restating them — one source, but read in two places. Still open.
+4. ~~No Knowledge Delta UI.~~ **Closed in I**, including the approval gate and the plain statement that
+   approval builds a session pack and cannot write the pinned snapshot.
+5. **DEFENSE is unreachable by a live run; REBUTTAL has no resolver.** Unchanged, and disclosed in the
+   README. Nothing in the pipeline moves an objection off `open`, so nothing defends against one.
+6. **No agent personality layer.** Unchanged. Codenames and accents exist; tone does not, and a tone
+   layer that paraphrased an agent's own words would be the first place a fabrication could hide.
+
+### The gap this evolution added
+
+**No screen in this evolution has been checked in a browser.** The browser tool available during the
+build timed out on every call, so the arcs, rings, lanes and the phone layout are verified only by
+typecheck, build, and tests that render or read the markup. That is enough to prove the wiring and the
+arithmetic and it is not enough to prove the layout. It is stated in the README under honest
+limitations rather than left for a reader to discover.

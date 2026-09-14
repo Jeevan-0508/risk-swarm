@@ -19,7 +19,7 @@
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![tests](https://img.shields.io/badge/tests-262_passing-22c55e?style=for-the-badge)
+![tests](https://img.shields.io/badge/tests-643_passing-22c55e?style=for-the-badge)
 ![attacks](https://img.shields.io/badge/adversarial_attacks-16-ef4444?style=for-the-badge)
 ![Pages](https://img.shields.io/badge/GitHub%20Pages-LIVE-22c55e?style=for-the-badge&logo=github)
 ![MIT](https://img.shields.io/badge/Licence-MIT-38bdf8?style=for-the-badge)
@@ -32,7 +32,7 @@
 <td align="center"><a href="#the-adversarial-suite"><b>ADVERSARIAL SUITE</b></a></td>
 <td align="center"><a href="#where-to-watch-the-agents-work"><b>WATCH THEM WORK</b></a></td>
 </tr>
-<tr><td align="center">Run an investigation</td><td align="center">Who does what</td><td align="center">15 attacks</td><td align="center">Screen by screen</td></tr>
+<tr><td align="center">Run an investigation</td><td align="center">Who does what</td><td align="center">30 attacks</td><td align="center">Screen by screen</td></tr>
 </table>
 
 </div>
@@ -49,7 +49,7 @@ which requirement it failed and why the recommendation was held back. A human de
 
 It runs with **no API key, no network and no paid service**. The demo below is reproducible byte for byte.
 
-**[Open the live demo](https://jeevan-0508.github.io/risk-swarm/)** — eleven screens, no sign-in, no backend.
+**[Open the live demo](https://jeevan-0508.github.io/risk-swarm/)** — fourteen screens, no sign-in, no backend.
 
 ---
 
@@ -103,7 +103,7 @@ bun run scripts/demo-run.ts     # the whole investigation, printed
 | Why the band is not higher | `decision.gates_failed` and `decision.caps_applied`, both printed |
 | What it cost and whether it was stopped | `result.spent` (agent calls / retrievals / tokens) and `result.attempts` |
 | Whether an agent was allowed to phrase something with a model | `degraded_reason` on the agent output; absent means deterministic wording |
-| That the behaviour is enforced, not described | `bun test` — 372 tests across 28 files, 29 of them adversarial attacks |
+| That the behaviour is enforced, not described | `bun test` — 643 tests across 49 files, 30 of them adversarial attacks |
 
 The same record drives the UI. The browser build is a **pure renderer** over `RunResult`: no screen
 recomputes a number, because a figure computed twice is a figure that can disagree with itself.
@@ -122,7 +122,10 @@ recomputes a number, because a figure computed twice is a figure that can disagr
 | 10 Knowledge & Provenance | Snapshot hashes, the tier ladder, and what LIVE retrieval actually fetched |
 | 11 Scenario Room | Five stress scenarios run against the pinned baseline, and the diff between them |
 | 08a Case File | One run in full — asked and answered times, timeline, agent-by-agent, who disagreed, final result; downloadable as HTML, Word, markdown, JSON or a printed PDF |
-| 12 The Council | The deliberation transcript for the loaded run: seven seats on a ring, who asked whom what, replay, an agent inspector, the decision lineage, and a command bar that refuses rather than improvises |
+| 12 Internal Knowledge | What the system already holds, searched over the committed index, before it retrieves anything |
+| 13 Research | Live retrieval from eight keyless public providers: the plan, every attempt including the failures, and each provider's own reason |
+| 14 Knowledge Delta | The human gate on the taxonomy itself — validate a proposed category, approve it with a name or reject it with a reason |
+| The Council | The deliberation transcript for the loaded run: seven seats on a ring, who asked whom what, replay, an agent inspector, the decision lineage, and a command bar that refuses rather than improvises |
 
 ---
 
@@ -277,7 +280,7 @@ only **tighten** a gate for the pattern it was learned on:
 
 ## The adversarial suite
 
-`src/core/adversarial/attacks.test.ts` holds 15 attacks on the guards rather than tests of the features.
+`src/core/adversarial/attacks.test.ts` holds 16 attacks on the guards rather than tests of the features.
 Each one tries to make the system say something it cannot support: instructions hidden in retrieved text,
 a fence breaker, a pile-on from one publisher wearing many names, one event syndicated to look like a
 trend, an aggregator posing as the publisher, a caller supplying its own tier, a lesson that loosens a
@@ -319,8 +322,8 @@ added because the upstream feed matches news by OR'd keywords, so its own labels
 ```bash
 bun install
 bun run scripts/demo-run.ts        # the full investigation, no key, no network
-bun run dev                        # the eleven screens at /risk-swarm/
-bun test                           # 262 tests, 20 files
+bun run dev                        # the fourteen screens at /risk-swarm/
+bun test                           # 643 tests, 49 files
 ./node_modules/.bin/tsc -b --noEmit # typecheck
 bun run snapshot:check              # verify snapshots against their recorded hashes
 ```
@@ -345,11 +348,49 @@ src/core/persistence/  versioned run records; a record that fails validation is 
 src/core/brief/        the markdown decision brief
 src/core/deliberation/ the Council's deterministic coordinator: a synthesis over a completed run
 src/core/lineage/      decision lineage, evidence still needed, source concentration
-src/core/adversarial/  15 attacks on the guards
-src/app/               the eleven screens: a pure renderer over the run record
-src/council/           screen 12: the deliberation chamber, in its own lazy chunk and stylesheet
+src/core/adversarial/  16 attacks on the guards
+src/core/question/     open-domain question routing: intent, domain, freshness, depth
+src/core/packs/        knowledge packs - the freight taxonomy, and an open pack that carries none
+src/core/research/     the research plan, the provider registry, retrieval, normalization
+src/core/knowledge/    the internal index, the research ledger, the taxonomy approval gate
+src/app/               the fourteen screens: a pure renderer over the run record
+src/visual/            the console's visual vocabulary: state, tokens, geometry, integrity rings
+src/council/           the deliberation chamber, in its own lazy chunk and stylesheet
 docs/                  architecture, domain model, agent contracts, scoring, integrations, test strategy
 ```
+
+---
+
+## Beyond freight
+
+The engine started as a freight-risk system, and for a while the form said so: a question could not be
+asked without a country list and a transport mode. That was a vocabulary problem wearing the costume of a
+domain boundary, and it is gone.
+
+- **A question routes itself.** `src/core/question/` reads intent, domain, freshness need and depth from
+  the question text. Geography and mode are optional, and an empty scope means *no filter* rather than
+  *match nothing*.
+- **Knowledge is a pack, not a constant.** Two ship: the freight pack (the taxonomy, controls, geography
+  and mode vocabularies the pipeline always used, referenced rather than restated) and an **open pack**
+  that carries no taxonomy and no control set and says so. Under the open pack the risk analyst and the
+  governance officer **stand down** instead of producing an empty shape — 5 agents participate, 2 abstain,
+  and the screen names them before the run.
+- **The recommended pack is scored, not looked up.** Every pack is scored against *its own*
+  `relevance_terms`, whole-word. A pack with no vocabulary is reported as unscorable, never as a zero.
+- **Retrieval is real, and separate.** Screen 13 reaches eight keyless public providers (Wikipedia,
+  Wikidata, OpenAlex, Crossref, Hacker News, World Bank, DuckDuckGo, news RSS). One of the eight cannot be
+  read cross-origin from a static host, so it is marked proxy-only and stays off unless you switch a reader
+  proxy on and accept the trust cost, stated on the screen. Every attempt is printed, including the
+  failures, with the provider's own reason.
+- **Research never enters a reproducible run.** `investigate()` is byte-for-byte reproducible and a live
+  network cannot live inside that, so retrieval is its own screen and its own act. Nothing it fetches
+  rewrites a stored run.
+- **The system searches itself first.** Screen 12 searches a committed index of this repository's own
+  taxonomy, controls and documentation — 156 records over 13 sources — and prints each hit's path, byte
+  count and sha256.
+- **The taxonomy has a door with a person behind it.** A research pass may *propose* a category
+  (`KnowledgeDelta`); nothing is knowledge until screen 14 validates it and a named human approves it, with
+  at least two distinct sources, because one source repeated is the same claim twice.
 
 ## Honest limitations
 
@@ -374,6 +415,16 @@ docs/                  architecture, domain model, agent contracts, scoring, int
   the demo run does neither.
 - **LIVE mode is limited by the browser.** Many feeds refuse cross-origin reads from a static host. The
   system reports each refusal instead of working around it.
+- **An approval on screen 14 lasts the session.** `approveProposal` returns a *new* pack; the pinned
+  snapshot on disk is untouched, because a static page has nowhere to write. The screen says so and hands
+  back the approved rule as JSON for a human to commit.
+- **The research pipeline retrieves, it does not read.** It normalizes titles, excerpts, dates, source
+  identity and hashes. It does not fetch article bodies and it does not summarise, so an excerpt is the
+  source's own words or nothing.
+- **The console's visuals have never been checked in a browser by the author of this code.** Every screen
+  is typechecked, built and covered by tests that render or read the markup, but the arcs, lanes and rings
+  of the console layer have not been eyeballed at a real viewport. Layout bugs are possible and would be
+  invisible to the suite.
 
 ## Licence
 
