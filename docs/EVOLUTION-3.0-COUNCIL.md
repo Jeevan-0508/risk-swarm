@@ -105,7 +105,7 @@ plan for everything after it. Cross-session anchor for the Council epic; read be
 | G2 | Agent Inspector, Decision Core (links to `/brief`), Decision Lineage view, timeline | `src/council/` | **done** |
 | G3 | Replay (deterministic, no re-run), command bar | `src/council/` | **done** |
 | G4 | Audio (original, on/off), reduced-motion, mobile vertical layout | `src/council/` | **done** |
-| H | Adversarial tests: fabrication attempts, sealed-event mutation, UI-cannot-create-events, determinism, budget exhaustion | `core/deliberation/*.test.ts` | |
+| H | Adversarial tests: fabrication attempts, sealed-event mutation, UI-cannot-create-events, determinism, budget exhaustion | `core/deliberation/adversarial.test.ts` | **done** |
 | I | README update (verbatim copy from spec), final 10-second product-test self-check | `README.md` | |
 
 Each phase: implement → `tsc -b --noEmit` → `bun test` → `bun run build` → browser sanity check for UI
@@ -339,3 +339,40 @@ Verified: `bun run typecheck` clean · `bun test` 346/346 pass (320 prior + 12 r
 Verified: `bun run typecheck` clean · `bun test` 358/358 pass (346 prior + 8 audio + 4 render) ·
 `bun run build` clean, `Council-*.js` 34.38 kB / `Council-*.css` 1.91 kB (`index-*.js` 455.85 kB, flat
 through all four G phases - nothing has leaked into the console bundle).
+
+## Phase H (the Council under attack), closed out (2026-09-14)
+
+`core/deliberation/adversarial.test.ts`, 14 tests, companion to the existing `attacks.test.ts`. Each one
+is an attempt to make the deliberation layer lie. Where a property is **structural** (there is no code
+path) it is asserted as such; where it is **detective** (SENTINEL blocks) it is asserted as that instead.
+The two are stated separately rather than blurred, because they are different guarantees.
+
+- **Fabricate a citation**: a forged `evidence_ids` entry and a forged `claim_ids` entry are each BLOCKED
+  by SENTINEL's `deliberation_integrity` by name, with the offending id printed. The real transcript
+  passes the identical check. And the stronger property: **every evidence id the council cites was cited
+  or created by a real agent** - the council cannot introduce a source of its own, asserted against the
+  union of all seven outputs' `evidence_cited`/`evidence_created` rather than merely against the graph.
+- **Mutate a sealed event**: detectable on a single altered character; a persistence round trip returns
+  exactly what went in; and laundering every `unresolved` exchange to `resolved` with the outcome
+  rewritten to `CONSENSUS` produces a *different* PULSE `deliberation_health` reading, so the lie does
+  not pass as identical to the honest transcript.
+- **Make the UI author an event**: no module under `src/council` imports the coordinator, the
+  orchestrator as a value, or `DeliberationEvent` as anything but a type - so there is no way to parse an
+  object into an event. Neither `from_agent:` nor `requires_response:` appears as an object key anywhere in
+  the folder, so no event literal exists. No council module calls an array mutator on `events`.
+- **Launder a budget cut-off into agreement**: each of the three budget dimensions, exhausted
+  individually, yields `LIMIT_REACHED`, a non-null `limited_by`, a terminal `resolution` event with
+  status `unresolved`, and content that does not contain the word "consensus". The terminal event
+  survives at `max_events` of 2, 3, 5, 9 and 17, so a cut-off transcript can never simply stop
+  mid-argument.
+- **Let the narration change the recommendation**: the coordinator imports no scoring or policy module,
+  so it has nothing to recompute a band with; and running it at four different budgets leaves
+  `outputs.decision` byte-identical - the brief is an input to the Council, never an output of it.
+
+One layering decision worth recording: this core-side test reads files under `src/council` as **text** to
+assert structural properties of the UI, but imports nothing from there. A core test that imported a UI
+module would be exactly the coupling this project refuses everywhere else, so mutation detection here uses
+a local canonical form rather than borrowing the Council's own `transcriptDigest` (covered in
+`council/replay.test.ts`, which is allowed to import the UI).
+
+Verified: `bun run typecheck` clean · `bun test` 372/372 pass (358 prior + 14) · `bun run build` clean.
