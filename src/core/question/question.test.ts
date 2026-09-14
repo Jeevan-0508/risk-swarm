@@ -11,6 +11,7 @@ const SCENARIOS = {
   capital: 'What is the capital of Germany?',
   share: 'What percentage of freight fraud happened this year in Germany?',
   history: 'Why did the Roman Empire collapse?',
+  protein: 'which has more protein eggs or chicken',
   nonsense: 'blorp',
 };
 
@@ -47,6 +48,14 @@ describe('the question router', () => {
     expect(m.entities.some((e) => e.text === 'GDPR')).toBe(true);
     expect(m.entities.some((e) => e.text === 'EU')).toBe(true);
     expect(m.depth).toBe('deep');
+  });
+
+  it('reads a comparative "which X or Y" question as comparison, not open, with no freight taxonomy involved', () => {
+    const m = routeQuestion(SCENARIOS.protein);
+    expect(m.intent).toBe('comparison');
+    expect(m.domain).toBe('science');
+    expect(m.domain).not.toBe('freight risk');
+    expect(m.requires_external).toBe(true);
   });
 
   it('reads a change question as needing current evidence', () => {

@@ -81,7 +81,7 @@ const INTENT_RULES: Array<[Intent, RegExp]> = [
   ['quantification', /\b(how many|how much|what (?:share|percentage|proportion|fraction)|what % |\bpercent\b|\brate of\b)/],
   ['current_value', /\b(market cap|share price|stock price|current (?:price|value|level|figure)|how much is|worth (?:now|today))/],
   ['temporal_delta', /\b(what changed|what has changed|what.s new|any (?:changes|updates)|recent (?:changes|developments|amendments)|latest (?:changes|developments))\b/],
-  ['comparison', /\b(vs\.?|versus|compared? (?:to|with)|difference between|differs? from|how does .+ differ)\b/],
+  ['comparison', /\b(vs\.?|versus|compared? (?:to|with)|difference between|differs? from|how does .+ differ|which (?:is|are|has|have) (?:more|less|better|worse|bigger|smaller|higher|lower|greater|healthier|safer|stronger|weaker|faster|slower|cheaper))\b/],
   ['risk_assessment', /\b(are we exposed|risk of|risks? (?:in|to|of|for)|exposure to|threat(?:s)? (?:to|in)|vulnerab)/],
   ['enumeration', /\b(list|name the|what are the|which are the|examples of|types of|kinds of)\b/],
   ['causal', /\b(why (?:did|do|does|is|are|has)|what caused|root cause|reason(?:s)? (?:for|why))\b/],
@@ -257,8 +257,11 @@ export function routeQuestion(question: string, options: RouteOptions = {}): Que
     temporal_markers: dedupe(temporal_markers),
     geo,
     depth,
-    // Pinned knowledge is never current, so anything above `low` has to go outside.
-    requires_external: freshness !== 'timeless' || domain === 'general' || intent === 'open',
+    // Pinned knowledge is never current, so anything above `low` has to go outside. A comparison or a
+    // causal claim also has to go outside regardless of freshness: the evidence requirement two lines
+    // above demands independent-per-side or argued-against sources, and a pinned snapshot is one
+    // fixed perspective, never independent sources plural.
+    requires_external: freshness !== 'timeless' || domain === 'general' || intent === 'open' || intent === 'comparison' || intent === 'causal',
     requires_internal: true,
     quantitative,
     evidence_requirements,

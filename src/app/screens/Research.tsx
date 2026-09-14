@@ -10,7 +10,7 @@
  * every reason string is the provider's own.
  */
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Button, Empty, Field, Panel, Row, Tag, inputClass } from '@app/ui/kit';
 import { append, loadLedger, saveLedger } from '@app/lib/ledger';
 import { routeQuestion } from '@core/question/model';
@@ -55,7 +55,11 @@ function EventLine({ event }: { event: ResearchEvent }) {
 }
 
 export function Research() {
-  const [question, setQuestion] = useState('How does a quantum error-correcting code actually work?');
+  // A question can arrive via ?q=, from a screen that decided this run belongs here instead of an
+  // investigation - e.g. New Investigation, when the pinned taxonomy does not cover the question. It
+  // is a starting value only: the operator can still edit or replace it before running anything.
+  const [searchParams] = useSearchParams();
+  const [question, setQuestion] = useState(() => searchParams.get('q') ?? 'How does a quantum error-correcting code actually work?');
   const [proxyEnabled, setProxyEnabled] = useState(false);
   const [running, setRunning] = useState(false);
   const [events, setEvents] = useState<ResearchEvent[]>([]);

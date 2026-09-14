@@ -24,6 +24,7 @@ import { routeQuestion } from '@core/question/model';
 import { recommendPack } from '@core/packs/recommend';
 import { packById } from '@core/packs/registry';
 import { decideParticipation } from '@core/orchestrator/participation';
+import { routeToPipeline } from '@core/orchestrator/route';
 import { AGENT_CODENAME } from '@app/lib/agents';
 
 /** Deliberately spread across domains: the form has to visibly accept a question freight knows nothing about. */
@@ -144,11 +145,23 @@ export function NewInvestigation() {
   const pack = useMemo(() => packById(packId), [packId]);
   const seats = useMemo(() => decideParticipation(routed, pack), [routed, pack]);
   const standDown = seats.filter((d) => !d.participating);
+  const routeDecision = useMemo(() => routeToPipeline(pack), [pack]);
 
   const toggle = (key: 'geo' | 'mode', value: string) =>
     setForm((f) => ({ ...f, [key]: f[key].includes(value) ? f[key].filter((v) => v !== value) : [...f[key], value] }));
 
+  /**
+   * `routeDecision` is `investigate()`'s gate, not a second opinion on top of it: the scout only ever
+   * retrieves against a pinned pack's freight feeds (`core/sources/*`), so a pack with no taxonomy sent
+   * through an investigation cannot produce a real retrieval failure - only a false "not configured"
+   * one, for every provider, every time. Open research (screen 13) retrieves from the live web instead,
+   * and takes the same question rather than making the operator retype it.
+   */
   const submit = async () => {
+    if (routeDecision.route === 'research') {
+      navigate(`/research?q=${encodeURIComponent(question)}`);
+      return;
+    }
     const input: StartInput = { ...form, pack_id: packId, from: iso(fromDate), to: iso(toDate) };
     navigate('/console');
     const id = await start(input);
@@ -273,6 +286,9 @@ export function NewInvestigation() {
               ? `All ${seats.length} agents will take part in this run.`
               : `${standDown.length} of ${seats.length} agents will stand down: ${standDown.map((d) => AGENT_CODENAME[d.agent]).join(', ')}. They abstain with a reason on the record rather than answering from nothing.`}
           </p>
+          {routeDecision.route === 'research' && (
+            <p className="mt-3 hair-t pt-3 text-2xs leading-relaxed text-caution">{routeDecision.reason}</p>
+          )}
         </div>
       </Panel>
 
@@ -391,11 +407,15 @@ export function NewInvestigation() {
 
       <div className="flex items-center justify-between gap-6 hair bg-ink-800 px-4 py-3">
         <p className="text-xs leading-relaxed text-fg-mute">
-          {mode === 'LIVE'
-            ? 'Public feeds are read. Nothing is written anywhere, no email, no external system, no consequential action — the run ends at a recommendation awaiting your verdict.'
-            : 'Nothing is sent anywhere. No email, no external system, no consequential action — the run ends at a recommendation awaiting your verdict.'}
+          {routeDecision.route === 'research'
+            ? 'This question has no pinned taxonomy to investigate against, so it will open screen 13 with the question carried over — nothing is submitted from here.'
+            : mode === 'LIVE'
+              ? 'Public feeds are read. Nothing is written anywhere, no email, no external system, no consequential action — the run ends at a recommendation awaiting your verdict.'
+              : 'Nothing is sent anywhere. No email, no external system, no consequential action — the run ends at a recommendation awaiting your verdict.'}
         </p>
-        <Button onClick={submit} disabled={!ready || control !== null}>start investigation</Button>
+        <Button onClick={submit} disabled={!ready || control !== null}>
+          {routeDecision.route === 'research' ? 'run as open research' : 'start investigation'}
+        </Button>
       </div>
     </div>
   );
