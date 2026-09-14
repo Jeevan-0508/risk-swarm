@@ -97,6 +97,25 @@
 
 .cn-scroll { scrollbar-width: thin; }
 
+/* --- narrow screens --- */
+
+/*
+ * Below `sm` the ring is replaced by a column (see `SeatColumn`), so the chamber's own sizing only has
+ * to hold from `sm` up. Between `sm` and `lg` the circle is the widest thing on the page, so it is
+ * capped rather than allowed to push the transcript off screen.
+ */
+.cn-chamber { max-width: 34rem; margin-inline: auto; }
+
+@media (max-width: 400px) {
+  /* The transcript is the page on a phone: give it the height the ring is no longer using. */
+  .cn-scroll { max-height: none; }
+}
+
+/*
+ * Motion is decoration only. Every state the animation expresses - who is speaking, who was addressed,
+ * how far the transcript has been read - is also written in text next to it, so switching all of it off
+ * loses no information at all.
+ */
 @media (prefers-reduced-motion: reduce) {
   .cn-enter, .cn-beam, .cn-speaking .cn-dot {
     animation: none !important;
@@ -104,4 +123,8 @@
     opacity: 1 !important;
   }
   .cn-beam { stroke-dasharray: none; }
+  /* The speaking seat still has to be identifiable without the breath, so it keeps a solid fill. */
+  .cn-speaking .cn-dot { background: var(--cn-accent); box-shadow: none; }
+  .cn-seat { transition: none; }
+  .cn-event, .cn-event-focus { transition: none; }
 }

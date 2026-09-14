@@ -104,7 +104,7 @@ plan for everything after it. Cross-session anchor for the Council epic; read be
 | G1 | `/council` route shell, Council Core (radial layout + state machine), minimal real Live Deliberation stream | `src/council/` (detached lazy route) | **done** |
 | G2 | Agent Inspector, Decision Core (links to `/brief`), Decision Lineage view, timeline | `src/council/` | **done** |
 | G3 | Replay (deterministic, no re-run), command bar | `src/council/` | **done** |
-| G4 | Audio (original, on/off), reduced-motion, mobile vertical layout | same | |
+| G4 | Audio (original, on/off), reduced-motion, mobile vertical layout | `src/council/` | **done** |
 | H | Adversarial tests: fabrication attempts, sealed-event mutation, UI-cannot-create-events, determinism, budget exhaustion | `core/deliberation/*.test.ts` | |
 | I | README update (verbatim copy from spec), final 10-second product-test self-check | `README.md` | |
 
@@ -307,3 +307,35 @@ groups) · `bun run build` clean, `Council-*.js` 22.60 kB (`index-*.js` 455.85 k
 
 Verified: `bun run typecheck` clean · `bun test` 346/346 pass (320 prior + 12 replay + 14 capability) ·
 `bun run build` clean, `Council-*.js` 31.58 kB (`index-*.js` 455.85 kB, still flat).
+
+## Phase G4 (sound, reduced motion, narrow screens), closed out (2026-09-14)
+
+- `audio.ts`: written from oscillators, nothing sampled. Seven pitches on one minor-pentatonic set (one
+  degree per seat in pipeline order) so **any** order of speakers is consonant - the council can speak in
+  any sequence, at 4x, and the result cannot land on a dissonance a reader would hear as an error. One
+  waveform/duration/gain per event register (sharper for adversarial, longer and softer for the closing
+  resolution), struck-not-swelled envelope so a fast replay stays legible instead of becoming a drone.
+- The one audible distinction that maps onto something evidential - an `unresolved` exchange sits a whole
+  tone lower - is **also printed beside every event**, which is the rule the whole file exists under:
+  sound carries nothing that is not on screen, so a deaf reader, a muted tab and a screenshot lose
+  nothing. Tested: the note ignores an event's words entirely, so the tone cannot leak content.
+- `noteFor()` is pure and total (asserted over all 12 event types x all 7 seats) with no clock and no
+  random source (asserted by reading the module's own text). The AudioContext adapter has no decisions of
+  its own, so there is nothing there worth mocking a browser for; where Web Audio is absent it returns a
+  working no-op instead of throwing.
+- **Silence is the default and the toggle is real**: the context is built on the first switch-on and
+  `close()`d on switch-off, rather than created up front and muted - a page nobody asked for sound on
+  should not be holding an audio device open. The render test asserts the markup ships `sound off`, and
+  that the transport opens paused on the whole transcript rather than auto-playing at the reader.
+- Narrow screens: below `sm` the ring is replaced by `SeatColumn` - the same seven seats, the same
+  lit/unlit and speaking/addressed states, the same counts, laid out vertically. A re-layout, not a
+  reduction: the render test asserts every codename appears in **both** layouts, so the column cannot
+  drift from the ring. Between `sm` and `lg` the circle is capped rather than allowed to push the
+  transcript off screen, and under 400px the transcript takes the height the ring is no longer using.
+- `prefers-reduced-motion`: every animation off, and the speaking seat keeps a solid fill so it stays
+  identifiable without the breath. Nothing is lost, because every state the motion expressed - who
+  speaks, who was addressed, how far the transcript has been read - is written in text beside it.
+
+Verified: `bun run typecheck` clean · `bun test` 358/358 pass (346 prior + 8 audio + 4 render) ·
+`bun run build` clean, `Council-*.js` 34.38 kB / `Council-*.css` 1.91 kB (`index-*.js` 455.85 kB, flat
+through all four G phases - nothing has leaked into the console bundle).

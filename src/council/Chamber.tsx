@@ -17,6 +17,7 @@ import { COUNCIL_ORDER, COUNCIL_SEATS, ringPoint } from './roster';
 import type { Pattern } from '../core/integrations/atlas';
 import { decisionLineage, evidenceNeeded, sourceConcentration } from '../core/lineage/lineage';
 import { AGENT_CODENAME, AGENT_LABEL, AGENT_REMIT, agentOutput } from '../app/lib/agents';
+import { createCouncilAudio, type CouncilAudio } from './audio';
 import { routeCommand, type CommandResult } from './capability';
 import { REPLAY_SPEEDS, advance, frameIntervalMs, rewind, transcriptDigest, type ReplaySpeed } from './replay';
 import { EVENT_TONE, OUTCOME_NOTE, OUTCOME_TONE, TONE_COLOR, chamberState, seatActivity, typeTally, visible } from './derive';
@@ -30,6 +31,54 @@ const CHAMBER_LABEL: Record<ReturnType<typeof chamberState>, string> = {
 
 export function Label({ children }: { children: ReactNode }) {
   return <div className="font-mono text-2xs uppercase tracking-[0.18em] text-fg-mute">{children}</div>;
+}
+
+/**
+ * The ring, vertically. Below `sm` a 7-point circle cannot hold seven labels legibly at any radius, so
+ * the same seats, the same lit/unlit states and the same counts are laid out as a column instead. It is
+ * a re-layout, not a reduction: nothing shown on the ring is dropped here.
+ */
+function SeatColumn({ seats, speaker, addressee, selected, onSelect }: {
+  seats: Array<{ id: AgentId; spoke: number; unresolved: number }>;
+  speaker: AgentId | null;
+  addressee: AgentId | null;
+  selected: AgentId | null;
+  onSelect: (id: AgentId | null) => void;
+}) {
+  return (
+    <div className="sm:hidden">
+      {seats.map(({ id, spoke, unresolved }) => {
+        const seat = COUNCIL_SEATS[id];
+        const classes = [
+          'flex w-full items-center gap-3 py-2 text-left',
+          spoke > 0 ? 'cn-seat-spoken' : 'cn-seat-quiet',
+          id === speaker ? 'cn-speaking' : '',
+          id === addressee ? 'cn-addressed' : '',
+        ].join(' ');
+        return (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onSelect(selected === id ? null : id)}
+            style={{ ['--cn-accent' as string]: seat.accent }}
+            className={classes}
+            aria-pressed={selected === id}
+          >
+            <span className="cn-dot" />
+            <span className="min-w-0 flex-1">
+              <span className="block font-mono text-2xs tracking-[0.16em]" style={{ color: seat.accent }}>
+                {AGENT_CODENAME[id]}
+              </span>
+              <span className="block text-2xs text-fg-mute">{AGENT_LABEL[id]}</span>
+            </span>
+            <span className="num shrink-0 text-2xs text-fg-mute">
+              {spoke} said{unresolved > 0 ? ` · ${unresolved} open` : ''}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 /** ZONE 1 - COUNCIL CORE. Seven seats on a ring, lit by whoever is speaking at the cursor. */
@@ -53,8 +102,16 @@ function CouncilCore({ events, cursor, onSelect, selected }: {
   const to = addressee === null ? null : points[COUNCIL_ORDER.indexOf(addressee)];
   const tone = current === undefined ? TONE_COLOR.state : TONE_COLOR[EVENT_TONE[current.type]];
 
+  const seats = COUNCIL_ORDER.map((id) => ({
+    id,
+    spoke: activity[id]?.spoke ?? 0,
+    unresolved: activity[id]?.unresolved ?? 0,
+  }));
+
   return (
-    <div className="cn-chamber">
+    <>
+    <SeatColumn seats={seats} speaker={speaker} addressee={addressee} selected={selected} onSelect={onSelect} />
+    <div className="cn-chamber hidden sm:block">
       <div className="cn-ring" />
       <div className="cn-ring cn-ring-2" />
       <div className="cn-ring cn-ring-3" />
@@ -114,6 +171,7 @@ function CouncilCore({ events, cursor, onSelect, selected }: {
         );
       })}
     </div>
+    </>
   );
 }
 
@@ -494,7 +552,30 @@ function Transport({ events, cursor, setCursor }: {
 }) {
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<ReplaySpeed>(1);
+  const [sound, setSound] = useState(false);
+  const audio = useRef<CouncilAudio | null>(null);
   const atEnd = cursor >= events.length - 1;
+
+  // The context is built on the first switch-on and closed on switch-off, rather than created up front
+  // and muted: a page that has never been asked for sound should not be holding an audio device open.
+  useEffect(() => {
+    if (!sound) {
+      audio.current?.dispose();
+      audio.current = null;
+      return;
+    }
+    audio.current ??= createCouncilAudio();
+    return () => {
+      audio.current?.dispose();
+      audio.current = null;
+    };
+  }, [sound]);
+
+  // One tone per exchange actually reached. Nothing sounds for a cursor reset to before the first event.
+  useEffect(() => {
+    if (!sound || cursor < 0 || cursor >= events.length) return;
+    audio.current?.play(events[cursor]);
+  }, [sound, cursor, events]);
 
   useEffect(() => {
     if (!playing || events.length === 0) return;
@@ -534,7 +615,16 @@ function Transport({ events, cursor, setCursor }: {
           </button>
         ))}
       </div>
-      <button type="button" onClick={() => (setPlaying(false), setCursor(events.length - 1))} className={`${btn} ml-auto`}>
+      <button
+        type="button"
+        onClick={() => setSound((v) => !v)}
+        aria-pressed={sound}
+        title="Sound carries nothing that is not also written on screen."
+        className={`ml-auto px-1.5 py-0.5 font-mono text-2xs uppercase tracking-[0.12em] transition-colors ${sound ? 'text-fg' : 'text-fg-mute hover:text-fg-dim'}`}
+      >
+        sound {sound ? 'on' : 'off'}
+      </button>
+      <button type="button" onClick={() => (setPlaying(false), setCursor(events.length - 1))} className={btn}>
         whole transcript
       </button>
     </div>

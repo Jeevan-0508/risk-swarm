@@ -162,3 +162,39 @@ describe('the timeline', () => {
     expect(tally.reduce((n, t) => n + t.count, 0)).toBe(result.deliberation.events.length);
   });
 });
+
+describe('the narrow-screen layout and the sound toggle', () => {
+  it('renders the seat column as well as the ring, with the same seven seats and the same counts', async () => {
+    const result = await reference();
+    const html = draw(result);
+    // Both layouts are in the markup and swapped by a media query, so the column cannot drift from the
+    // ring: each seat's codename appears twice, once per layout, and neither list is a subset.
+    for (const id of COUNCIL_ORDER) {
+      const occurrences = html.split(AGENT_CODENAME[id]).length - 1;
+      expect(occurrences >= 2).toBe(true);
+    }
+    expect(html.includes('class="sm:hidden"')).toBe(true);
+    expect(html.includes('cn-chamber hidden sm:block')).toBe(true);
+  });
+
+  it('starts with sound off, so nothing plays until a human asks for it', async () => {
+    const html = draw(await reference());
+    expect(html.includes('sound off')).toBe(true);
+    expect(html.includes('sound on')).toBe(false);
+  });
+
+  it('starts paused rather than auto-playing a replay at the reader', async () => {
+    const result = await reference();
+    const html = draw(result);
+    // The cursor opens on the whole transcript, so the first thing on screen is the complete record.
+    expect(html.includes(`${result.deliberation.events.length}/${result.deliberation.events.length}`)).toBe(true);
+    expect(html.includes('>replay<')).toBe(true);
+    expect(html.includes('>pause<')).toBe(false);
+  });
+
+  it('offers the command bar, and says what it does when it cannot do something', async () => {
+    const html = draw(await reference());
+    expect(html.includes('command bar')).toBe(true);
+    expect(html.includes('Capability unavailable.')).toBe(true);
+  });
+});
