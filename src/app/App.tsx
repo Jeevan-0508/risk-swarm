@@ -25,6 +25,14 @@ import { ScenarioRoom } from '@app/screens/ScenarioRoom';
  */
 const Pantheon = lazy(() => import('../showcase/Pantheon'));
 
+/**
+ * THE COUNCIL is lazy and frameless for the same reasons, plus one of its own: it has its own visual
+ * identity (its own stylesheet, its own ring layout), and rendering it inside the console frame would
+ * make it look like a twelfth dense screen instead of the chamber it is. Reachable from the sidebar,
+ * unlike the showcase, because it reads a real run's real transcript.
+ */
+const Council = lazy(() => import('../council/Council'));
+
 const NAV: Array<{ to: string; n: string; label: string }> = [
   { to: '/', n: '01', label: 'Command Center' },
   { to: '/new', n: '02', label: 'New Investigation' },
@@ -100,7 +108,10 @@ function Frame() {
           <div className="num mt-1 text-lg font-light">{runs.length}</div>
         </div>
         <div className="hair-t px-5 py-3">
-          <Link to="/pantheon" className="text-2xs uppercase tracking-[0.14em] text-fg-mute transition-colors hover:text-fg">
+          <Link to="/council" className="block text-2xs uppercase tracking-[0.14em] text-fg-mute transition-colors hover:text-fg">
+            The Council &#8599;
+          </Link>
+          <Link to="/pantheon" className="mt-2 block text-2xs uppercase tracking-[0.14em] text-fg-mute transition-colors hover:text-fg">
             Meet the Agents &#8599;
           </Link>
         </div>
@@ -130,6 +141,14 @@ export function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
+        <Route
+          path="/council"
+          element={
+            <Suspense fallback={<div className="grid h-full place-items-center"><span className="label">loading</span></div>}>
+              <Council />
+            </Suspense>
+          }
+        />
         <Route
           path="/pantheon"
           element={

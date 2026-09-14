@@ -1,0 +1,107 @@
+/*
+ * THE COUNCIL's own stylesheet. Every class is `cn-` prefixed and this file is imported by Council.tsx
+ * alone, so it ships in the lazy chunk and cannot reach the eleven operational screens or the showcase.
+ *
+ * Its register is deliberately neither the console's (flat, dense, no motion) nor the showcase's (warm,
+ * scroll-told): a chamber. Cool, concentric, low-contrast, with light used to mark who is speaking.
+ * Motion is decoration only - every state the animation expresses is also written in text, so the
+ * reduced-motion block at the bottom removes nothing but the flourish.
+ */
+
+.cn-page {
+  --cn-bg: #06080b;
+  --cn-seat: 0 0 0 1px rgba(120, 140, 180, 0.18);
+  background:
+    radial-gradient(760px 560px at 50% 34%, rgba(90, 120, 170, 0.10), transparent 68%),
+    var(--cn-bg);
+  min-height: 100%;
+  color: #e7ebf1;
+}
+
+.cn-hair { box-shadow: var(--cn-seat); }
+
+/* --- the chamber --- */
+
+.cn-chamber { aspect-ratio: 1 / 1; position: relative; }
+
+.cn-ring {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(120, 140, 180, 0.14);
+  border-radius: 50%;
+}
+
+.cn-ring-2 { inset: 12%; opacity: 0.7; }
+.cn-ring-3 { inset: 26%; opacity: 0.45; }
+
+.cn-seat {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  transition: opacity 220ms linear;
+}
+
+/* A seat that has not spoken yet is present but unlit - never hidden, so the roster is always complete. */
+.cn-seat-quiet { opacity: 0.42; }
+.cn-seat-spoken { opacity: 1; }
+
+.cn-dot {
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--cn-accent);
+  background: color-mix(in srgb, var(--cn-accent) 22%, transparent);
+}
+
+.cn-speaking .cn-dot {
+  background: var(--cn-accent);
+  animation: cn-breathe 1600ms ease-in-out infinite;
+}
+
+.cn-addressed .cn-dot { border-width: 2px; }
+
+@keyframes cn-breathe {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--cn-accent) 55%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--cn-accent) 0%, transparent); }
+}
+
+/* The beam is drawn only when a real event names both a speaker and an addressee. */
+.cn-beam {
+  stroke-dasharray: 3 4;
+  animation: cn-travel 900ms linear infinite;
+}
+
+@keyframes cn-travel {
+  to { stroke-dashoffset: -14; }
+}
+
+.cn-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  width: 46%;
+}
+
+/* --- the transcript --- */
+
+.cn-event { border-left: 2px solid var(--cn-tone); }
+
+.cn-event-focus { background: rgba(120, 140, 180, 0.09); }
+
+.cn-enter { animation: cn-enter 320ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@keyframes cn-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.cn-scroll { scrollbar-width: thin; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cn-enter, .cn-beam, .cn-speaking .cn-dot {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .cn-beam { stroke-dasharray: none; }
+}

@@ -101,7 +101,7 @@ plan for everything after it. Cross-session anchor for the Council epic; read be
 | D2 | Coordinator wired into a real run: agent-to-agent questions/challenges/defenses resolving to real challenger/red-team/position data; determinism test (same seed → identical sequence) | `core/deliberation/` | **done** |
 | D3 | SENTINEL event-validation check, PULSE deliberation-health check, ORBIT diff fields | `core/sentinel/`, `core/pulse/`, `core/orbit/` | **done** |
 | L1 | Decision Lineage over `graph.evidenceChain()` (absorbs EVOLUTION-2.0 Phase E) | `core/lineage/` | **done** |
-| G1 | `/council` route shell, Council Core (radial layout + state machine), minimal real Live Deliberation stream | `app/screens/Council.tsx` or `showcase/`-style detached route | |
+| G1 | `/council` route shell, Council Core (radial layout + state machine), minimal real Live Deliberation stream | `src/council/` (detached lazy route) | **done** |
 | G2 | Agent Inspector, Decision Core (links to `/brief`), Decision Lineage view, timeline | same | |
 | G3 | Replay (deterministic, no re-run), command bar | same | |
 | G4 | Audio (original, on/off), reduced-motion, mobile vertical layout | same | |
@@ -201,3 +201,48 @@ judgment made *at run time* and would drift if recomputed later).
 Verified: `bun x tsc -b --noEmit` clean · `bun test` 292/292 pass (281 prior + 11 new) · `bun run
 build` clean. Not yet done: G1-G4 (`/council` UI - this is where lineage/evidence-needed/
 concentration actually get a screen), H, I.
+
+## Phase G1 (`/council` shell, Council Core, Live Deliberation), closed out (2026-09-14)
+
+Built as a third top-level folder, `src/council/`, on the showcase's precedent rather than as a
+twelfth console screen: own lazy chunk, own `cn-`-prefixed stylesheet, rendered outside `Frame` so it
+has no sidebar and no mode switch. Unlike the showcase it *is* linked from the sidebar, because it
+reads a real run rather than telling a story about one.
+
+- `roster.ts`: `COUNCIL_SEATS` (accent, `trait`, `cannot` per `AgentId`) and `ringPoint()` - pure seat
+  geometry in a 0-100 square, so the ring is identical in a test, on a phone and in a screenshot. The
+  character lines restate what `showcase/gods.ts` already claims; that file is deliberately **not**
+  imported (it keys by display label, this keys by `AgentId`, and sharing it would couple two pages
+  that are allowed to diverge).
+- `derive.ts`: every visual state as a pure reduction of the stored transcript - `chamberState()`
+  (empty/convening/deliberating/resolved, from the cursor's position in the transcript, never a timer),
+  `visible()` (a *prefix* of the real array - it cannot reorder or invent), `seatActivity()`,
+  `threads()` (`parent_event_id` grouping, an orphan promoted to a root rather than dropped),
+  `typeTally()`, `EVENT_TONE`/`TONE_COLOR`/`OUTCOME_NOTE`/`OUTCOME_TONE`. Nothing in this file can
+  construct a `DeliberationEvent`.
+- `Chamber.tsx` / `Council.tsx`: split on purpose. `Chamber` is the whole presentational tree and is
+  free of the session store, of `localStorage` and of the stylesheet import; `Council` is the shell
+  that finds the active run. That split is what makes the render test below possible with no browser.
+- Zones shipped this phase: **Council Core** (7 seats on a ring, lit by whoever speaks at the cursor, a
+  beam drawn only when a real event names both a speaker and an addressee, unlit-but-present seats for
+  agents who have not spoken) and **Live Deliberation** (the transcript in `sequence` order, cursor
+  controls, per-seat filter). **Decision Core** ships as the band + outcome + a link to screen 07 -
+  the recommendation itself is rendered once, by the brief, so the two can never disagree.
+- No run loaded says so, in those words, and offers `/new`. It never seats a demonstration.
+
+Two conventions learned this phase, both worth keeping:
+
+1. **`bun test` does not resolve the `@core`/`@app` tsconfig paths** (the root `tsconfig.json` is a
+   solution file with `files: []` and no `paths`). A *type-only* alias import survives because it is
+   erased; a value import does not. Everything under `src/council/` therefore uses relative imports, so
+   any module here can be pulled into a test.
+2. **A headless render test is the browser check.** `render.test.tsx` renders `Chamber` over a real
+   `investigate()` result via `renderToStaticMarkup` + `StaticRouter`, and asserts the two things `tsc`
+   and the reducer tests both miss: that the tree renders at all, and that every event's `content`
+   appears in the markup **verbatim** (escaped-compared, no paraphrase and no ellipsis truncation),
+   alongside the real outcome, the real event count, the real band, and `withheld` wherever the engine
+   withheld confidence.
+
+Verified: `bun run typecheck` clean · `bun test` 313/313 pass (292 prior + 15 `derive` + 6 `render`) ·
+`bun run build` clean, `Council-*.js` 12.69 kB in its own chunk (`index-*.js` unchanged at 455.81 kB,
+so nothing leaked into the console bundle).
