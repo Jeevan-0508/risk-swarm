@@ -54,8 +54,6 @@ function dimensionAnswer(question: string, a: string, b: string, outcome: Resear
   const corpus = textFor(outcome).toLowerCase();
   const out: Array<{ label: string; winner: string; reason: string }> = [];
   const push = (label: string, winner: string, reason: string) => out.push({ label, winner, reason });
-  const aName = a.toLowerCase();
-  const bName = b.toLowerCase();
 
   const physicalTerms = /(larg|heavier|weight|size|strength|power|muscl|forelimb|speed|agility|armor|weapon|performance)/i;
   const socialTerms = /(social|pride|pack|group|coalition|team|cooperat|solitary|alone|community)/i;
