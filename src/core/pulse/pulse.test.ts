@@ -104,6 +104,24 @@ describe('PULSE', () => {
     expect(report.checks.find((c) => c.key === 'retrieval_health')?.status).toBe('VERIFIED');
   });
 
+  it('reads the engine\'s own retrieval report, not only the UI\'s live channel, and warns when a source failed', () => {
+    const report = runPulse(baseInput({
+      retrieval: { sources_attempted: 3, sources_read: 2, sources_failed: 1, failures: [{ source_key: 'trans_info', kind: 'blocked', reason: 'CORS' }] },
+    }));
+    const check = report.checks.find((c) => c.key === 'retrieval_health');
+    expect(check?.status).toBe('WARNING');
+    expect(check?.detail).toContain('trans_info');
+  });
+
+  it('reads a clean engine-side retrieval as verified, naming what it read', () => {
+    const report = runPulse(baseInput({
+      retrieval: { sources_attempted: 2, sources_read: 2, sources_failed: 0, failures: [] },
+    }));
+    const check = report.checks.find((c) => c.key === 'retrieval_health');
+    expect(check?.status).toBe('VERIFIED');
+    expect(check?.detail).toContain('2 of 2');
+  });
+
   it('warns on retrieval health when a live feed failed rather than substituting for it', () => {
     const report = runPulse(baseInput({
       liveRetrieval: { feeds: [{}], failures: [{}] } as unknown as PulseInput['liveRetrieval'],

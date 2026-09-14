@@ -34,6 +34,58 @@ const evidence = (m: Minter, over: Partial<Parameters<Minter['evidence']>[1]> = 
   });
 
 describe('SENTINEL', () => {
+  it('reports participation integrity as vacuously sound when no participation record was supplied', () => {
+    const g = new RiskGraph();
+    const m = mint();
+    g.add(evidence(m, { id: 'E-001' }));
+    const check = runSentinel({ graph: g, snapshotFiles: [goodFile] }).checks.find((c) => c.key === 'participation_integrity');
+    expect(check?.status).toBe('VERIFIED');
+    expect(check?.detail).toContain('no claim about who was allowed to speak');
+  });
+
+  it('accepts an agent that stood down and left no node behind, naming it', () => {
+    const g = new RiskGraph();
+    const m = mint();
+    g.add(evidence(m, { id: 'E-001' }));
+    const check = runSentinel({
+      graph: g,
+      snapshotFiles: [goodFile],
+      participation: [
+        { agent: 'scout', participating: true, reason: 'Retrieval is needed for every question.' },
+        { agent: 'risk_analyst', participating: false, reason: 'The loaded pack brings no taxonomy to match a pattern against.' },
+      ],
+    }).checks.find((c) => c.key === 'participation_integrity');
+    expect(check?.status).toBe('VERIFIED');
+    expect(check?.detail).toContain('risk_analyst');
+  });
+
+  it('blocks when an agent that stood down still minted a node, because the record contradicts the graph', () => {
+    const g = new RiskGraph();
+    const m = mint();
+    g.add(evidence(m, { id: 'E-001' })); // created_by 'scout'
+    const check = runSentinel({
+      graph: g,
+      snapshotFiles: [goodFile],
+      participation: [{ agent: 'scout', participating: false, reason: 'Stood down for this question.' }],
+    }).checks.find((c) => c.key === 'participation_integrity');
+    expect(check?.status).toBe('BLOCKED');
+    expect(check?.detail).toContain('stood down but minted');
+    expect(check?.node_ids).toEqual(['E-001']);
+  });
+
+  it('blocks a participation decision that states no reason, which is indistinguishable from a silent failure', () => {
+    const g = new RiskGraph();
+    const m = mint();
+    g.add(evidence(m, { id: 'E-001' }));
+    const check = runSentinel({
+      graph: g,
+      snapshotFiles: [goodFile],
+      participation: [{ agent: 'governance_officer', participating: true, reason: '   ' }],
+    }).checks.find((c) => c.key === 'participation_integrity');
+    expect(check?.status).toBe('BLOCKED');
+    expect(check?.detail).toContain('no stated reason');
+  });
+
   it('reports VERIFIED across the board over a clean, minimal graph', () => {
     const g = new RiskGraph();
     const m = mint();

@@ -164,6 +164,11 @@ const DIFF_FIELDS: DiffFieldSpec[] = [
   { key: 'pulse_status', label: 'PULSE status', material: false, read: (r) => r.pulse.status },
   { key: 'deliberation_event_count', label: 'deliberation events', material: false, read: (r) => String(r.deliberation.events.length) },
   { key: 'deliberation_outcome', label: 'deliberation outcome', material: false, read: (r) => r.deliberation.outcome },
+  // Which knowledge the run loaded, and who it let speak. Material: a run that answered from a
+  // different pack, or with an agent stood down, is not the same run under stress - it is a different
+  // run, and reading a band change across that boundary as stress-sensitivity would be wrong.
+  { key: 'pack_id', label: 'knowledge pack', material: true, read: (r) => r.pack.id },
+  { key: 'participating_agents', label: 'agents that spoke', material: true, read: (r) => String(r.participation.filter((d) => d.participating).length) },
 ];
 
 function diff(baseline: RunResult, stressed: RunResult): { fields: OrbitFieldDiff[]; materially_changed: boolean } {

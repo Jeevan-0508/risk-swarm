@@ -14,6 +14,7 @@ import { RiskGraph } from '../domain/graph';
 import { GraphNode, type Evidence, type DeliberationEvent } from '../domain/model';
 import { sourceIdentity } from '../ingest/sanitize';
 import type { SnapshotFileProvenance } from '../integrations/loader';
+import type { ParticipationDecision } from '../orchestrator/participation';
 import { overallStatus, type IntegrityStatus } from '../status';
 import { RUN_LEVEL_TARGET } from '../agents/types';
 
@@ -78,6 +79,12 @@ export interface SentinelInput {
   /** The Council's transcript, if this run generated one. Optional so every existing caller (all 15 of
    *  them, none built for a Council) still compiles unchanged; defaults to no events, not a missing report. */
   deliberationEvents?: DeliberationEvent[];
+  /**
+   * What the run decided each agent was allowed to do, once knowledge packs made that a real decision.
+   * Optional: absent means participation was not recorded for this run, which is reported as unchecked
+   * rather than assumed sound.
+   */
+  participation?: ParticipationDecision[];
 }
 
 const HEX64 = /^[0-9a-f]{64}$/;
@@ -260,6 +267,52 @@ export function runSentinel(input: SentinelInput): SentinelReport {
       : `UNSUPPORTED CLAIM: ${unsupportedDetail.length} deliberation event(s) cite an id that was never minted: ${unsupportedDetail.slice(0, 3).join(', ')}${unsupportedDetail.length > 3 ? ', …' : ''}.`,
     node_ids: [...new Set(unsupportedBy)],
   });
+
+  // 12. Participation integrity. A pack can stand an agent down (see `orchestrator/participation.ts`),
+  //     and the one thing that must never happen is an agent that stood down leaving work in the graph
+  //     anyway: that would mean the record says one thing and the nodes say another. Every decision must
+  //     also carry a stated reason, because "did not participate" with no reason is indistinguishable
+  //     from a silent failure. VERIFIED on any run where all seven speak, which is every freight run.
+  const participation = input.participation ?? [];
+  if (participation.length === 0) {
+    push({
+      key: 'participation_integrity',
+      label: 'Participation integrity',
+      // Vacuously sound, exactly like check 11 over zero deliberation events: with no participation
+      // record there is no claim about who was allowed to speak, so there is nothing for the graph to
+      // contradict. Reporting the *gap* is PULSE's job, not SENTINEL's - SENTINEL checks bookkeeping.
+      status: 'VERIFIED',
+      detail: 'No participation record was supplied with this run, so there is no claim about who was allowed to speak for the graph to contradict.',
+      node_ids: [],
+    });
+  } else {
+    const violations: string[] = [];
+    const offending: string[] = [];
+    for (const decision of participation) {
+      if (decision.reason.trim().length === 0) {
+        violations.push(`${decision.agent} has no stated reason for its participation decision`);
+        continue;
+      }
+      if (decision.participating) continue;
+      const produced = nodes.filter((n) => n.created_by === decision.agent);
+      if (produced.length > 0) {
+        violations.push(`${decision.agent} stood down but minted ${produced.length} node(s)`);
+        offending.push(...produced.map((n) => n.id));
+      }
+    }
+    const stoodDown = participation.filter((d) => !d.participating);
+    push({
+      key: 'participation_integrity',
+      label: 'Participation integrity',
+      status: violations.length === 0 ? 'VERIFIED' : 'BLOCKED',
+      detail: violations.length === 0
+        ? stoodDown.length === 0
+          ? `All ${participation.length} agents participated, each with a stated reason.`
+          : `${stoodDown.length} of ${participation.length} agent(s) stood down (${stoodDown.map((d) => d.agent).join(', ')}) and left no node in the graph, each with a stated reason.`
+        : `RECORD CONTRADICTS GRAPH: ${violations.join('; ')}.`,
+      node_ids: [...new Set(offending)],
+    });
+  }
 
   const status = overallStatus(checks.map((c) => c.status));
   return { status, checks };

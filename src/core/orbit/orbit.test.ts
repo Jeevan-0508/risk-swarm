@@ -79,7 +79,7 @@ describe('ORBIT', () => {
     expect(report.fields.map((f) => f.key)).toEqual([
       'action_band', 'severity_band', 'urgency', 'confidence', 'independent_evidence_count',
       'disagreement_index', 'gates_failed', 'red_team_verdict', 'sentinel_status', 'pulse_status',
-      'deliberation_event_count', 'deliberation_outcome',
+      'deliberation_event_count', 'deliberation_outcome', 'pack_id', 'participating_agents',
     ]);
   }, 30_000);
 });

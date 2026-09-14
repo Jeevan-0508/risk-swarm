@@ -21,6 +21,7 @@ import type { Budget } from '../agents/harness';
 import type { ScoringPolicy } from '../scoring/policy';
 import type { SentinelReport } from '../sentinel/sentinel';
 import type { LiveFetchResult } from '../sources/types';
+import type { RetrievalReport } from '../integrations/fomo';
 import type { DeliberationReport } from '../deliberation/coordinator';
 import { overallStatus, type IntegrityStatus } from '../status';
 
@@ -53,8 +54,16 @@ export interface PulseInput {
    * `StoredRun.input.budget`). Absent means utilization is unchecked, not assumed comfortable.
    */
   budget?: Budget;
-  /** Only present in LIVE mode. Its absence in DEMO/SNAPSHOT reflects the mode, not a gap. */
+  /** Only present in LIVE mode, via the UI's own fetch channel. Its absence reflects the mode, not a gap. */
   liveRetrieval?: LiveFetchResult;
+  /**
+   * How retrieval went as the *engine* saw it (`ScoutOutput.retrieval`). This is the record that closes
+   * the old gap here: PULSE used to be able to speak about retrieval only when the UI handed it a live
+   * fetch result, so an engine-side signal source that partly failed was invisible to the health report
+   * while SCOUT was already reporting it. Null is the honest value for a pinned snapshot, where
+   * retrieval cannot fail.
+   */
+  retrieval?: RetrievalReport | null;
   /** Only present once the Council ran over this result. Its absence reflects a run from before that
    *  feature existed, not a gap in this one. */
   deliberation?: DeliberationReport;
@@ -171,15 +180,29 @@ export function runPulse(input: PulseInput): PulseReport {
     });
   }
 
-  // 8. Retrieval health. Only meaningful in LIVE mode; its absence in DEMO/SNAPSHOT is the expected
-  //    shape of those modes, not a gap, so it is reported VERIFIED rather than WARNING.
+  // 8. Retrieval health, from whichever record exists: the UI's live fetch result when the UI ran the
+  //    fetch, otherwise SCOUT's own retrieval report. A pinned snapshot has neither and cannot fail,
+  //    which is the expected shape of that mode rather than a gap, so it reads VERIFIED.
   if (input.liveRetrieval === undefined) {
-    push({
-      key: 'retrieval_health',
-      label: 'Live retrieval health',
-      status: 'VERIFIED',
-      detail: 'No live retrieval is in scope for this run (DEMO or SNAPSHOT mode).',
-    });
+    const engine = input.retrieval ?? null;
+    if (engine === null) {
+      push({
+        key: 'retrieval_health',
+        label: 'Live retrieval health',
+        status: 'VERIFIED',
+        detail: 'No retrieval could fail in this run: every signal came from a pinned snapshot, and no live fetch was in scope.',
+      });
+    } else {
+      const reasons = engine.failures.map((f) => `${f.source_key} (${f.kind})`).join(', ');
+      push({
+        key: 'retrieval_health',
+        label: 'Live retrieval health',
+        status: engine.sources_failed === 0 ? 'VERIFIED' : 'WARNING',
+        detail: engine.sources_failed === 0
+          ? `${engine.sources_read} of ${engine.sources_attempted} source(s) read by the engine, none failed.`
+          : `${engine.sources_failed} of ${engine.sources_attempted} source(s) could not be read: ${reasons}. SCOUT reported each failure rather than reading the gap as a quiet world.`,
+      });
+    }
   } else {
     const { feeds, failures } = input.liveRetrieval;
     push({

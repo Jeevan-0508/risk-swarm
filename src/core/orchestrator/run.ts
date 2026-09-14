@@ -313,15 +313,17 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
   });
 
   const deliberation = runDeliberation({ run_id: options.run_id, graph, scout, intelligence, analyst, governance, challenger, red_team, decision });
-  const sentinel = runSentinel({ graph, snapshotFiles: scout.snapshot.files, deliberationEvents: deliberation.events });
+  const sentinel = runSentinel({ graph, snapshotFiles: scout.snapshot.files, deliberationEvents: deliberation.events, participation });
   const pulse = runPulse({
     intelligence, governance, challenger, red_team, decision, policy, sentinel,
     spent: harness.spent,
     budget: harness.budget,
     deliberation,
-    // Live retrieval is captured by a UI-only side channel (see `liveSignalSource` in
-    // `app/lib/engine.ts`), not returned through any agent output, so it is not yet in scope for
-    // this engine-side report - a real gap noted in `docs/EVOLUTION-2.0.md`, not a fabricated VERIFIED.
+    // Retrieval as the engine saw it. This used to be a stated gap: only the UI's own live fetch
+    // channel could tell PULSE anything about retrieval, so an engine-side source that partly failed
+    // was visible in SCOUT's report and invisible in the health report. `scout.retrieval` is the
+    // engine's own record, and null for a pinned snapshot, where retrieval cannot fail.
+    retrieval: scout.retrieval,
   });
 
   return {
