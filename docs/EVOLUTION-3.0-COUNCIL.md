@@ -103,7 +103,7 @@ plan for everything after it. Cross-session anchor for the Council epic; read be
 | L1 | Decision Lineage over `graph.evidenceChain()` (absorbs EVOLUTION-2.0 Phase E) | `core/lineage/` | **done** |
 | G1 | `/council` route shell, Council Core (radial layout + state machine), minimal real Live Deliberation stream | `src/council/` (detached lazy route) | **done** |
 | G2 | Agent Inspector, Decision Core (links to `/brief`), Decision Lineage view, timeline | `src/council/` | **done** |
-| G3 | Replay (deterministic, no re-run), command bar | same | |
+| G3 | Replay (deterministic, no re-run), command bar | `src/council/` | **done** |
 | G4 | Audio (original, on/off), reduced-motion, mobile vertical layout | same | |
 | H | Adversarial tests: fabrication attempts, sealed-event mutation, UI-cannot-create-events, determinism, budget exhaustion | `core/deliberation/*.test.ts` | |
 | I | README update (verbatim copy from spec), final 10-second product-test self-check | `README.md` | |
@@ -277,3 +277,33 @@ Three zones added to `Chamber.tsx`, and L1's three core functions finally get a 
 
 Verified: `bun run typecheck` clean · `bun test` 320/320 pass (313 prior + 7 new render assertions
 groups) · `bun run build` clean, `Council-*.js` 22.60 kB (`index-*.js` 455.85 kB, still flat).
+
+## Phase G3 (deterministic replay, command bar), closed out (2026-09-14)
+
+- `replay.ts`: `frameAt()` / `advance()` / `rewind()` / `replay()` / `transcriptDigest()`, all pure. Its
+  **entire** dependency list is one `import type` line - the test asserts that structurally, over the
+  file's own import lines, so "does not re-run `investigate()` or the coordinator" is a property of the
+  module rather than a promise in a comment. Every frame's `event` is the stored object itself
+  (reference-identical, asserted), so replay cannot introduce, drop, paraphrase or reorder an exchange.
+  Speed is pacing only: the test walks the whole transcript at each of 1x/2x/4x and asserts the same id
+  sequence, so a speed can never skip an exchange. The cursor clamps at both ends rather than wrapping -
+  a looping deliberation would imply the council kept going, and it did not.
+- `transcriptDigest()`: an FNV-1a fingerprint over id, order, speaker, addressee, type, status,
+  `requires_response`, parent, every cited id and the exact words. Tested to change on a single altered
+  character, on two swapped exchanges, and on one quietly dropped citation. Labelled `fnv1a:` and
+  documented as **not** a security claim, matching `sources/hash.ts`'s existing honesty about the same
+  fallback - it is a tamper tell for a reader comparing two renderings, nothing more.
+- `capability.ts`: 15 verbs, each one a projection of `RunResult` / the graph / the transcript, plus
+  `UNAVAILABLE = 'Capability unavailable.'` **with no improvising fallback branch**. Tested: an unknown
+  verb, an empty line, and a known verb with a missing or nonsense argument are all refused with exactly
+  that string and nothing else appended; every verb listed in `COMMAND_HELP` really answers; the same
+  command answers identically twice; `goto` mutates nothing but the caller's cursor; `gaps` says the
+  taxonomy is not loaded rather than reporting no gaps; `band` never prints a confidence number when the
+  engine withheld one.
+- UI: `Transport` (play/pause/replay, 1x/2x/4x, start/back/next/whole-transcript) drives the cursor
+  through `advance()`/`rewind()` on a `setInterval` and stops itself at the last event. `CommandBar`
+  echoes each command and its answer, renders a refusal in the caution colour, and states in its own
+  footer that it refuses rather than improvises. The transcript header carries the digest as its title.
+
+Verified: `bun run typecheck` clean · `bun test` 346/346 pass (320 prior + 12 replay + 14 capability) ·
+`bun run build` clean, `Council-*.js` 31.58 kB (`index-*.js` 455.85 kB, still flat).

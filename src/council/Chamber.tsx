@@ -9,7 +9,7 @@
  * output with every cited id already filtered against the graph. There is no code path in this folder
  * that can construct a `DeliberationEvent`, and `render.test.tsx` asserts that over the real run.
  */
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { AgentId, DeliberationEvent } from '../core/domain/model';
 import type { RunResult } from '../core/orchestrator/run';
@@ -17,6 +17,8 @@ import { COUNCIL_ORDER, COUNCIL_SEATS, ringPoint } from './roster';
 import type { Pattern } from '../core/integrations/atlas';
 import { decisionLineage, evidenceNeeded, sourceConcentration } from '../core/lineage/lineage';
 import { AGENT_CODENAME, AGENT_LABEL, AGENT_REMIT, agentOutput } from '../app/lib/agents';
+import { routeCommand, type CommandResult } from './capability';
+import { REPLAY_SPEEDS, advance, frameIntervalMs, rewind, transcriptDigest, type ReplaySpeed } from './replay';
 import { EVENT_TONE, OUTCOME_NOTE, OUTCOME_TONE, TONE_COLOR, chamberState, seatActivity, typeTally, visible } from './derive';
 
 const CHAMBER_LABEL: Record<ReturnType<typeof chamberState>, string> = {
@@ -479,6 +481,144 @@ function Lineage({ result, patterns }: { result: RunResult; patterns: Map<string
   );
 }
 
+/**
+ * ZONE 2a - TRANSPORT. Replay controls over the stored transcript. Playing advances the cursor on a
+ * timer and nothing else: the engine is not re-run, the coordinator is not re-run, and the event shown
+ * at each tick is the very object the run stored. Speed changes pacing only - it can never skip an
+ * exchange. See `replay.ts`, which holds all of the logic as pure functions.
+ */
+function Transport({ events, cursor, setCursor }: {
+  events: DeliberationEvent[];
+  cursor: number;
+  setCursor: (next: number | ((c: number) => number)) => void;
+}) {
+  const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState<ReplaySpeed>(1);
+  const atEnd = cursor >= events.length - 1;
+
+  useEffect(() => {
+    if (!playing || events.length === 0) return;
+    if (atEnd) {
+      setPlaying(false);
+      return;
+    }
+    const timer = window.setInterval(() => setCursor((c) => advance(events, c)), frameIntervalMs(speed));
+    return () => window.clearInterval(timer);
+  }, [playing, speed, atEnd, events, setCursor]);
+
+  const btn = 'font-mono text-2xs uppercase tracking-[0.12em] text-fg-mute transition-colors hover:text-fg';
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2" style={{ borderBottom: '1px solid rgba(120,140,180,0.12)' }}>
+      <button type="button" onClick={() => setCursor(-1)} className={btn}>start</button>
+      <button type="button" onClick={() => setCursor((c) => rewind(c))} className={btn}>back</button>
+      <button
+        type="button"
+        onClick={() => (atEnd ? (setCursor(-1), setPlaying(true)) : setPlaying((p) => !p))}
+        className="border border-line-bright px-2 py-1 font-mono text-2xs uppercase tracking-[0.12em] text-fg-dim transition-colors hover:text-fg"
+        disabled={events.length === 0}
+      >
+        {playing ? 'pause' : atEnd ? 'replay' : 'play'}
+      </button>
+      <button type="button" onClick={() => setCursor((c) => advance(events, c))} className={btn}>next</button>
+      <div className="flex items-center gap-1">
+        {REPLAY_SPEEDS.map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setSpeed(s)}
+            className={`px-1.5 py-0.5 font-mono text-2xs tracking-[0.1em] transition-colors ${s === speed ? 'text-fg' : 'text-fg-mute hover:text-fg-dim'}`}
+            aria-pressed={s === speed}
+          >
+            {s}x
+          </button>
+        ))}
+      </div>
+      <button type="button" onClick={() => (setPlaying(false), setCursor(events.length - 1))} className={`${btn} ml-auto`}>
+        whole transcript
+      </button>
+    </div>
+  );
+}
+
+/**
+ * ZONE 2c - COMMAND BAR. Text in, a real read over this run's stored data out. Anything the router
+ * cannot really do returns the literal words `Capability unavailable.` - there is no branch that
+ * improvises an answer. See `capability.ts`.
+ */
+function CommandBar({ result, patterns, onCursor }: {
+  result: RunResult;
+  patterns: Map<string, Pattern> | null;
+  onCursor: (n: number) => void;
+}) {
+  const [text, setText] = useState('');
+  const [history, setHistory] = useState<Array<{ input: string; out: CommandResult }>>([]);
+  const log = useRef<HTMLDivElement | null>(null);
+
+  const submit = () => {
+    const input = text.trim();
+    if (input === '') return;
+    const out = routeCommand(input, { result, patterns });
+    if (out.kind === 'cursor') onCursor(out.cursor);
+    setHistory((h) => [...h, { input, out }]);
+    setText('');
+  };
+
+  useEffect(() => {
+    const node = log.current;
+    if (node !== null) node.scrollTop = node.scrollHeight;
+  }, [history]);
+
+  return (
+    <div>
+      <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(120,140,180,0.18)' }}>
+        <Label>command bar</Label>
+      </div>
+      {history.length > 0 && (
+        <div ref={log} className="cn-scroll max-h-64 overflow-y-auto px-4 py-3">
+          {history.map((h, i) => (
+            <div key={`${i}-${h.input}`} className="mb-3">
+              <div className="font-mono text-2xs tracking-[0.1em] text-fg-mute">&gt; {h.input}</div>
+              {h.out.kind === 'unavailable' ? (
+                <div className="mt-1 font-mono text-2xs text-caution">{h.out.message}</div>
+              ) : (
+                h.out.lines.map((line, j) => (
+                  <div key={`${j}-${line}`} className="mt-1 whitespace-pre-wrap break-words font-mono text-2xs leading-relaxed text-fg-dim">
+                    {line}
+                  </div>
+                ))
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      <form
+        className="flex items-center gap-2 px-4 py-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+      >
+        <span className="font-mono text-2xs text-fg-mute">&gt;</span>
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="try: outcome, band, who ares, find carrier, gaps, help"
+          aria-label="council command"
+          className="min-w-0 flex-1 bg-transparent font-mono text-2xs text-fg placeholder:text-fg-mute focus:outline-none"
+        />
+        <button type="submit" className="border border-line-bright px-2 py-1 font-mono text-2xs uppercase tracking-[0.12em] text-fg-dim transition-colors hover:text-fg">
+          run
+        </button>
+      </form>
+      <p className="px-4 pb-3 text-2xs leading-relaxed text-fg-mute">
+        Every answer is a projection of this run's own stored output. Anything the router cannot really do
+        answers <span className="text-caution">Capability unavailable.</span> rather than improvising.
+      </p>
+    </div>
+  );
+}
+
 export function Chamber({ result, patterns = null }: { result: RunResult; patterns?: Map<string, Pattern> | null }) {
   const events = result.deliberation.events;
   const [cursor, setCursor] = useState(events.length - 1);
@@ -502,15 +642,10 @@ export function Chamber({ result, patterns = null }: { result: RunResult; patter
                 clear filter
               </button>
             )}
-            <span className="num text-2xs text-fg-mute">{Math.max(0, cursor + 1)}/{events.length}</span>
+            <span className="num text-2xs text-fg-mute" title={transcriptDigest(events)}>{Math.max(0, cursor + 1)}/{events.length}</span>
           </div>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2" style={{ borderBottom: '1px solid rgba(120,140,180,0.12)' }}>
-          <button type="button" onClick={() => setCursor(-1)} className="font-mono text-2xs uppercase tracking-[0.12em] text-fg-mute hover:text-fg">start</button>
-          <button type="button" onClick={() => setCursor((c) => Math.max(-1, c - 1))} className="font-mono text-2xs uppercase tracking-[0.12em] text-fg-mute hover:text-fg">back</button>
-          <button type="button" onClick={() => setCursor((c) => Math.min(events.length - 1, c + 1))} className="font-mono text-2xs uppercase tracking-[0.12em] text-fg-mute hover:text-fg">next</button>
-          <button type="button" onClick={() => setCursor(events.length - 1)} className="ml-auto font-mono text-2xs uppercase tracking-[0.12em] text-fg-mute hover:text-fg">whole transcript</button>
-        </div>
+        <Transport events={events} cursor={cursor} setCursor={setCursor} />
         <div style={{ borderBottom: '1px solid rgba(120,140,180,0.12)' }}>
           <Timeline events={events} cursor={cursor} onCursor={setCursor} />
         </div>
@@ -533,6 +668,10 @@ export function Chamber({ result, patterns = null }: { result: RunResult; patter
 
       <div className="lg:col-span-2">
         <Lineage result={result} patterns={patterns} />
+      </div>
+
+      <div className="cn-hair lg:col-span-2">
+        <CommandBar result={result} patterns={patterns} onCursor={setCursor} />
       </div>
     </div>
   );
