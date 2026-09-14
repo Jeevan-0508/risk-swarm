@@ -9,7 +9,7 @@ import { Edge, GraphNode } from '../domain/model';
 import { RiskGraph } from '../domain/graph';
 import type { RunResult } from '../orchestrator/run';
 
-export const STORE_VERSION = 4;
+export const STORE_VERSION = 5;
 
 const GraphJSON = z.object({ nodes: z.array(GraphNode), edges: z.array(Edge) });
 
@@ -37,6 +37,13 @@ const StoredRunSchema = z.object({
   pulse: z.record(z.string(), z.unknown()),
   /** The Council's own transcript, stored verbatim like sentinel and pulse - STORE_VERSION bumped to 4 for this one. */
   deliberation: z.record(z.string(), z.unknown()),
+  /**
+   * Which knowledge the run convened over, and which seats it stood down. STORE_VERSION bumped to 5
+   * for these two: a v4 record cannot satisfy them and is dropped, because a rehydrated run whose
+   * participation defaulted to "everybody spoke" would put words in the mouth of a seat that abstained.
+   */
+  pack: z.object({ id: z.string().min(1), label: z.string().min(1), summary: z.string() }),
+  participation: z.array(z.object({ agent: z.string().min(1), participating: z.boolean(), reason: z.string().min(1) })),
   /** The request that produced the run, stored opaquely: provenance, never re-interpreted here. */
   request: z.record(z.string(), z.unknown()).nullable().default(null),
   human: z
@@ -76,6 +83,8 @@ export function serializeRun(result: RunResult, envelope: RunEnvelope): StoredRu
     sentinel: result.sentinel as unknown as Record<string, unknown>,
     pulse: result.pulse as unknown as Record<string, unknown>,
     deliberation: result.deliberation as unknown as Record<string, unknown>,
+    pack: result.pack,
+    participation: result.participation,
     request: envelope.request,
     human: envelope.human,
   };
@@ -111,6 +120,8 @@ export function deserializeRun(raw: unknown): RehydratedRun | null {
     sentinel: record.sentinel,
     pulse: record.pulse,
     deliberation: record.deliberation,
+    pack: record.pack,
+    participation: record.participation,
   } as unknown as RunResult;
   return { record, result };
 }

@@ -17,6 +17,7 @@ import { AGENT_CODENAME } from '../app/lib/agents';
 import { Chamber } from './Chamber';
 import { COUNCIL_ORDER, COUNCIL_SEATS } from './roster';
 import { openPack } from '../core/packs/registry';
+import { deserializeRun, serializeRun } from '../core/persistence/serialize';
 import { typeTally } from './derive';
 
 let cached: RunResult | null = null;
@@ -240,5 +241,23 @@ describe('the knowledge pack and the seats it stands down', () => {
       expect(html.includes(AGENT_CODENAME[d.agent])).toBe(true);
       expect(html.includes(escapeHtml(d.reason))).toBe(true);
     }
+  });
+});
+
+describe('the chamber over a run that came back from storage', () => {
+  /**
+   * The bug this exists for: the chamber renders a `RunResult`, and the store hands one back through a
+   * cast. When the engine gained `pack` and `participation`, storage kept neither, so a reloaded run
+   * reached this tree with two fields missing and the whole route went blank. A store round-trip is now
+   * part of what "renders" means here.
+   */
+  it('renders a rehydrated run, not only a freshly computed one', async () => {
+    const r = await reference();
+    const envelope = { mode: 'SNAPSHOT', created_at: '2026-09-13T00:00:00.000Z', completed_at: null, status: 'complete', request: null, human: null };
+    const back = deserializeRun(JSON.parse(JSON.stringify(serializeRun(r, envelope))));
+    expect(back).not.toBeNull();
+    const html = draw(back!.result);
+    expect(html.length > 2000).toBe(true);
+    expect(html.includes(back!.result.pack.label)).toBe(true);
   });
 });

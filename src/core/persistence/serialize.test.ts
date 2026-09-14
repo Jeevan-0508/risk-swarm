@@ -110,6 +110,36 @@ describe('run persistence', () => {
     expect(deserializeRun(stale)).toBeNull();
   });
 
+  it('round-trips the pack and the participation record, so an abstention survives a reload', async () => {
+    const r = await run();
+    const back = deserializeRun(serializeRun(r, ENVELOPE))!;
+    expect(back.result.pack).toEqual(r.pack);
+    expect(back.result.participation).toEqual(r.participation);
+  });
+
+  it('drops a pre-pack record instead of rendering it with a missing field', async () => {
+    const r = await run();
+    const record = serializeRun(r, ENVELOPE) as Record<string, unknown>;
+    delete record.pack;
+    delete record.participation;
+    const stale = { ...record, store_version: 4 };
+    expect(deserializeRun(stale)).toBeNull();
+  });
+
+  /**
+   * The guard that should have existed already. `deserializeRun` casts its way to a `RunResult`, so when
+   * `pack` and `participation` were added to the engine the compiler said nothing and the rehydrated
+   * object quietly lost two required fields - which blanked the Council on any reloaded run. Enumerating
+   * the real result's own keys means the next field added to `RunResult` fails here, loudly, instead of
+   * on a screen.
+   */
+  it('rehydrates every top-level field a real RunResult has - no field can be added and forgotten', async () => {
+    const r = await run();
+    const back = deserializeRun(serializeRun(r, ENVELOPE))!;
+    const missing = Object.keys(r).filter((k) => (back.result as unknown as Record<string, unknown>)[k] === undefined);
+    expect(missing).toEqual([]);
+  });
+
   it('drops a corrupt row from web storage without taking the good ones with it', async () => {
     const r = await run();
     const storage = new FakeStorage();
