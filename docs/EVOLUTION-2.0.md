@@ -23,7 +23,7 @@ incompatible architecture change. This doc is the cross-session anchor — read 
 | B | SENTINEL — evidence-integrity report, engine-side, additive field on `RunResult` | `src/core/sentinel/`, `orchestrator/run.ts` | **done** (`854d20a`, bugfixes `7ca294b`/`c71d95f`) |
 | C | PULSE — system-health report over a completed `RunResult` | `src/core/pulse/` | **done** (`0bfbb51`) |
 | D | ORBIT — deterministic scenario mutators + baseline-vs-stressed diff | `src/core/orbit/` | **done** (`e1d2a1c`) |
-| E | Decision Lineage, Evidence Needed, Source Concentration (pure derivations, no new agent) | `src/core/lineage/` or inline in `decision.ts` output | next |
+| E | Decision Lineage, Evidence Needed, Source Concentration (pure derivations, no new agent) | `src/core/lineage/` or inline in `decision.ts` output | **absorbed into `docs/EVOLUTION-3.0-COUNCIL.md` Phase L1** — design below is reused there, not re-derived |
 | F | Run Comparison / "What Changed?" diff engine (reused by ORBIT and by repeat-investigation) | `src/core/compare/` | |
 | G | New/updated UI screens: Deliberation Room, Decision Lineage, Evidence Needed, Run Comparison,
     Source Concentration, upgraded Evidence Graph/Red Team/Governance/Provenance, Human Decision
