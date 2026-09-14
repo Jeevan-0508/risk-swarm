@@ -7,7 +7,8 @@
  */
 import { useState } from 'react';
 import { DEMO_INPUT, runOptions } from '@app/lib/engine';
-import { runScenario, SCENARIOS, type OrbitReport, type ScenarioId } from '@core/orbit/orbit';
+import { MATERIAL_DIFF_KEYS, runScenario, SCENARIOS, type OrbitReport, type ScenarioId } from '@core/orbit/orbit';
+import { DriftTrace } from '../../visual/DriftTrace';
 import { Button, Empty, Panel, Row, Tag } from '@app/ui/kit';
 import { BAND_TONE, STATUS_TONE } from '@app/ui/kit';
 
@@ -70,6 +71,10 @@ export function ScenarioRoom() {
 
       {report !== null && (
         <>
+          <Panel title="drift under stress" aside={<Tag tone={report.materially_changed ? 'objection' : 'support'}>{report.materially_changed ? 'materially changed' : 'held steady'}</Tag>}>
+            <DriftTrace fields={report.fields} materialKeys={MATERIAL_DIFF_KEYS} />
+          </Panel>
+
           <Panel title="what changed" aside={<Tag tone={report.materially_changed ? 'objection' : 'support'}>{report.materially_changed ? 'materially changed' : 'held steady'}</Tag>} flush>
             <ul className="divide-y divide-line">
               {report.fields.map((f) => (

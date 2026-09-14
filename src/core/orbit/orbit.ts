@@ -171,6 +171,13 @@ const DIFF_FIELDS: DiffFieldSpec[] = [
   { key: 'participating_agents', label: 'agents that spoke', material: true, read: (r) => String(r.participation.filter((d) => d.participating).length) },
 ];
 
+/**
+ * Which diff keys are material, exported so a reader (a chart, a report) cannot hold a second opinion
+ * about what matters and drift out of step with `materially_changed`.
+ */
+export const MATERIAL_DIFF_KEYS: string[] = DIFF_FIELDS.filter((f) => f.material).map((f) => f.key);
+
+
 function diff(baseline: RunResult, stressed: RunResult): { fields: OrbitFieldDiff[]; materially_changed: boolean } {
   const fields = DIFF_FIELDS.map((spec) => {
     const baselineValue = spec.read(baseline);

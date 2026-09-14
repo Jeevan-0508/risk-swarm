@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { demoInput, useSession } from '@app/store/session';
 import { AGENT_CODENAME, AGENT_LABEL, AGENT_ORDER, agentOutput } from '@app/lib/agents';
 import { BAND_TONE, Bar, Button, Dot, Empty, Metric, Panel, SEVERITY_TONE, STATUS_TONE, Tag } from '@app/ui/kit';
+import { IntegrityRing } from '../../visual/IntegrityRing';
 
 export function CommandCenter() {
   const { runs, start, select, mode, running } = useSession();
@@ -125,6 +126,12 @@ export function CommandCenter() {
           )}
         </Panel>
       </div>
+
+      {result !== null && (
+        <Panel title="PULSE · at a glance">
+          <IntegrityRing title="system health" checks={result.pulse.checks} status={result.pulse.status} />
+        </Panel>
+      )}
 
       {result !== null && (
         <Panel title="PULSE · system health" aside={<Tag tone={STATUS_TONE[result.pulse.status]}>{result.pulse.status}</Tag>} flush>

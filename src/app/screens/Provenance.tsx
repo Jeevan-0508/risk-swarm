@@ -10,6 +10,7 @@ import { TIER_WEIGHT } from '@core/domain/model';
 import { useSession } from '@app/store/session';
 import { MODE_NOTE } from '@app/lib/engine';
 import { Empty, Metric, Panel, Row, STATUS_TONE, TIER_TONE, Tag } from '@app/ui/kit';
+import { IntegrityRing } from '../../visual/IntegrityRing';
 
 interface ProvenanceFile { upstream_path: string; path: string; bytes: number; sha256: string }
 interface ProvenanceSource { key: string; upstream_repo: string; upstream_url: string; commit: string; note: string; files: ProvenanceFile[] }
@@ -63,6 +64,12 @@ export function Provenance() {
       <Panel title="mode in force" aside={<Tag tone={mode === 'LIVE' ? 'caution' : 'support'}>{mode}</Tag>}>
         <p className="text-sm leading-relaxed text-fg-dim">{MODE_NOTE[mode]}</p>
       </Panel>
+
+      {result !== null && (
+        <Panel title="SENTINEL · at a glance">
+          <IntegrityRing title="evidence integrity" checks={result.sentinel.checks} status={result.sentinel.status} />
+        </Panel>
+      )}
 
       {result !== null && (
         <Panel title="SENTINEL · evidence integrity" aside={<Tag tone={STATUS_TONE[result.sentinel.status]}>{result.sentinel.status}</Tag>} flush>
