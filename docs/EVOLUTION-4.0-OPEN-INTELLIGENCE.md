@@ -64,6 +64,21 @@ dormant: nothing in the coordinator moves an objection off `open`, so no agent e
 challenge. REVISION and ESCALATION are merely run-dependent. Phase 6 must make DEFENSE/REBUTTAL
 reachable **from real agent output**, or leave them dormant and say so.
 
+**Phase 6 update:** one resolver now exists. The orchestrator's rework loop (`orchestrator/run.ts`)
+drops a hypothesis when a *blocking, reworkable* red-team finding names it, and keeps that finding -
+not deleted - with `resolution: 'accepted'` and the withdrawn hypothesis as a `superseded` node. The
+coordinator's read side (Round 5) already turns that into an `AGREEMENT` event for real, no coordinator
+change needed - `computeScore`/`unresolved_objections` were already resolution-aware, unexercised until
+now. Said plainly: three of the four reworkable classes always target the run as a whole (never a
+specific hypothesis, so rework never fires for them today); the fourth, `unsupported_claim`, targets a
+hypothesis but no shipped pattern's `falsificationTest()` output is ever short enough to trip it. So
+this resolver is real, deterministic, fully typed and covered on its read side by
+`coordinator.test.ts`, but has not yet fired in any live run - honestly unreached, not fabricated.
+`Challenge.resolution` and `RedTeamFinding.resolution === 'rebutted'` still have no resolver at all;
+REBUTTAL stays structurally dormant. Closing that gap for real would mean a second agent examining a
+challenge/objection and answering it from evidence already in the graph, which is a materially bigger
+change than this phase's budget - left dormant and said so, per this doc's own rule.
+
 ### 13-14. Evidence and graph model
 
 `core/domain/model.ts` + `graph.ts`. Append-only, superseding rather than mutating. `Evidence`

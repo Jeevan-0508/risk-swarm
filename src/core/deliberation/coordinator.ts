@@ -10,12 +10,20 @@
  * does not already contain. `DisagreementRoom`'s objections and `score.ts`'s disagreement index stay
  * authoritative; this module narrates them as a sequence, never recomputes them.
  *
- * A consequence worth stating plainly: `resolution` on a `Challenge`/`RedTeamFinding` is always `'open'`
- * in the current pipeline (nothing today sets it to `'accepted'`/`'rebutted'`), so a `DEFENSE`,
- * `REBUTTAL` or resolution-driven `AGREEMENT` event never actually appears over a real run yet. The
- * code path is real and exercised by a hand-built fixture in the test file, dormant rather than
- * fabricated - the same "deferred, not dropped" posture ORBIT documented for its own scope decisions,
- * pending a future agent or human seam that can actually resolve one of these.
+ * `resolution` on a `Challenge`/`RedTeamFinding` is `'open'` unless something in the run actually
+ * resolved it. Today there is exactly one such resolver: when a red-team finding is reworkable
+ * (see `orchestrator/run.ts`) and the orchestrator drops the hypothesis it targets rather than
+ * re-running blind, that finding is kept - not deleted - with `resolution: 'accepted'`, and the
+ * withdrawn hypothesis is kept alongside it as a `superseded` node. This module reads that field
+ * the same way it reads everything else: a `DEFENSE`/`REBUTTAL`/agreement-by-resolution event fires
+ * only when a real resolution is present, never invented to make the transcript look more settled
+ * than the run actually was. A `Challenge` has no such resolver yet, so it stays `'open'` and the
+ * event stays `'unresolved'`, honestly. The one reworkable class that names a specific hypothesis
+ * rather than the run as a whole (`unsupported_claim`) is also not yet reachable by any pattern
+ * shipped today - `analyst.ts` always synthesises a falsification test long enough to clear it - so
+ * this resolver is real, deterministic code with no live occurrence yet either, the same honest gap
+ * as the rest of this paragraph. See `coordinator.test.ts` for both the resolved and the still-open
+ * shape.
  */
 import type { RiskGraph } from '../domain/graph';
 import { DeliberationEvent, type AgentId, type DeliberationEventType, type DeliberationOutcome } from '../domain/model';

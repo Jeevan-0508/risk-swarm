@@ -1,8 +1,10 @@
 /**
  * The Council's coordinator, tested two ways: over the real reference run (determinism, no
  * fabrication, real event shape) and over small hand-built fixtures (budget exhaustion on all three
- * dimensions, and the dormant DEFENSE/REBUTTAL/resolution-driven-AGREEMENT path that never occurs in a
- * real run today because `Challenge.resolution`/`RedTeamFinding.resolution` are always `'open'`).
+ * dimensions, and the DEFENSE/REBUTTAL/resolution-driven-AGREEMENT path: `'accepted'` on a
+ * `RedTeamFinding` is real now, produced by the orchestrator's rework loop; the other resolution
+ * shapes below - `'rebutted'` on either type, `'accepted'` on a `Challenge` - have no resolver yet,
+ * so they stay hand-built).
  */
 import { describe, expect, it } from '../test/bdd';
 import { createFileLoader } from '../integrations/loader.node';
@@ -145,10 +147,14 @@ describe('the Council coordinator, budget termination', () => {
   });
 });
 
-describe('the Council coordinator, the dormant DEFENSE/REBUTTAL/resolution-driven-AGREEMENT path', () => {
-  // Exercised here by construction only. `Challenge.resolution` / `RedTeamFinding.resolution` are
-  // always `'open'` in the current pipeline (nothing today sets them to `'accepted'`/`'rebutted'`), so
-  // this fixture is deliberately hand-built rather than drawn from a real run - see the module doc.
+describe('the Council coordinator, the DEFENSE/REBUTTAL/resolution-driven-AGREEMENT path', () => {
+  // See the module doc: `orchestrator/run.ts` really does produce `resolution: 'accepted'` on a
+  // RedTeamFinding today, when its rework loop drops a hypothesis a blocking reworkable finding
+  // named directly. No real pattern currently synthesises a hypothesis short enough to trip the one
+  // reworkable class that names a hypothesis rather than the run as a whole (`unsupported_claim`;
+  // see `falsificationTest()` in `agents/analyst.ts`), so that producer is real but not yet reachable
+  // by any live run - honestly unexercised, not fabricated. All four resolution shapes are covered
+  // here on the coordinator's read side regardless, by construction.
   const AT = '2026-09-13T10:00:00.000Z';
 
   function fixture(): DeliberationInput {

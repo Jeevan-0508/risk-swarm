@@ -11,7 +11,7 @@
  * Conflating the two is how a system ends up looping forever or, worse, quietly relaxing its own gates.
  */
 import { RiskGraph } from '../domain/graph';
-import type { Edge, GraphNode, IndicatorState, Lesson, RedTeamClass } from '../domain/model';
+import type { Edge, GraphNode, Hypothesis, IndicatorState, Lesson, RedTeamClass, RedTeamFinding } from '../domain/model';
 import { policyFor, type ScoringPolicy } from '../scoring/policy';
 import { runScout, type ScoutOutput } from '../agents/scout';
 import { runIntelligence, type IntelligenceOutput } from '../agents/intelligence';
@@ -167,6 +167,12 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
 
   const maxRework = options.maxRework ?? 2;
   const rework_history: string[] = [];
+  // A finding that triggers a drop is not deleted from the record: the withdrawn hypothesis is kept
+  // (as `superseded`) and the finding that forced the withdrawal is kept too (as `resolution: 'accepted'`),
+  // so the Council can narrate the objection and the agreement it actually produced, rather than a
+  // hypothesis silently vanishing with no trace of why.
+  const resolvedFindings: RedTeamFinding[] = [];
+  const supersededHypotheses: Hypothesis[] = [];
   let attempt = 0;
   let excluded: string[] = [];
   let analyst!: AnalystOutput;
@@ -248,11 +254,20 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
       if (reworkable.length > 0) rework_history.push(`rework limit reached with ${reworkable.length} construction defect(s) still open`);
       break;
     }
-    const drop = analyst.findings.filter((f) => reworkable.some((r) => r.target_id === f.hypothesis.id)).map((f) => f.match.pattern_id);
+    const droppedFindings = analyst.findings.filter((f) => reworkable.some((r) => r.target_id === f.hypothesis.id));
+    const drop = droppedFindings.map((f) => f.match.pattern_id);
+    const resolvedNow = reworkable.filter((r) => droppedFindings.some((f) => f.hypothesis.id === r.target_id));
+    resolvedFindings.push(...resolvedNow.map((r) => ({ ...r, resolution: 'accepted' as const })));
+    supersededHypotheses.push(...droppedFindings.map((f) => f.hypothesis));
     excluded = [...new Set([...excluded, ...drop])];
     rework_history.push(`attempt ${attempt}: ${reworkable.map((f) => f.finding_class).join(', ')} -> dropped ${drop.join(', ') || 'nothing (run-level defect)'}`);
     if (drop.length === 0) break; // nothing to drop, so another attempt would be identical
   }
+
+  // The finding stays on the graph it lived on: a rework-resolved objection is real Council history,
+  // not a live complaint about the final answer, so it is appended rather than replacing anything.
+  if (supersededHypotheses.length > 0) analyst = { ...analyst, superseded: [...analyst.superseded, ...supersededHypotheses] };
+  if (resolvedFindings.length > 0) red_team = { ...red_team, findings: [...red_team.findings, ...resolvedFindings] };
 
   const governanceEvidence = governance.findings.flatMap((f) => (f.evidence ? [f.evidence] : []));
   const allEvidence = [...incidentEvidence, ...governanceEvidence];
