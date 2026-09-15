@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { useSession } from '@app/store/session';
 import { MODE_NOTE, type Mode } from '@app/lib/engine';
 import { Dot, Tag } from '@app/ui/kit';
+import { ScreenErrorBoundary } from '@app/ui/ErrorBoundary';
 import { CommandCenter } from '@app/screens/CommandCenter';
 import { NewInvestigation } from '@app/screens/NewInvestigation';
 import { AgentConsole } from '@app/screens/AgentConsole';
@@ -182,10 +183,16 @@ function Frame() {
           </div>
         </header>
         <div id="screen" className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-          {/* One boundary for all framed screens: a lazy screen must not blank the sidebar with it. */}
-          <Suspense fallback={<span className="label">loading the screen</span>}>
-            <Outlet />
-          </Suspense>
+          {/*
+           * Two boundaries for every framed screen: `Suspense` covers the lazy-chunk loading state,
+           * `ScreenErrorBoundary` covers an actual throw during render. Neither one blanks the sidebar -
+           * a screen that fails to load, or fails to render, never takes the rest of the app with it.
+           */}
+          <ScreenErrorBoundary key={location.pathname}>
+            <Suspense fallback={<span className="label">loading the screen</span>}>
+              <Outlet />
+            </Suspense>
+          </ScreenErrorBoundary>
         </div>
       </main>
     </div>
@@ -204,17 +211,21 @@ export function App() {
         <Route
           path="/council"
           element={
-            <Suspense fallback={<div className="grid h-full place-items-center"><span className="label">loading</span></div>}>
-              <Council />
-            </Suspense>
+            <ScreenErrorBoundary>
+              <Suspense fallback={<div className="grid h-full place-items-center"><span className="label">loading</span></div>}>
+                <Council />
+              </Suspense>
+            </ScreenErrorBoundary>
           }
         />
         <Route
           path="/pantheon"
           element={
-            <Suspense fallback={<div className="grid h-full place-items-center"><span className="label">loading</span></div>}>
-              <Pantheon />
-            </Suspense>
+            <ScreenErrorBoundary>
+              <Suspense fallback={<div className="grid h-full place-items-center"><span className="label">loading</span></div>}>
+                <Pantheon />
+              </Suspense>
+            </ScreenErrorBoundary>
           }
         />
         <Route element={<Frame />}>

@@ -104,4 +104,40 @@ describe('Council orchestration', () => {
     expect(result.positions.ATHENA.position.stance).toBe('insufficient_evidence');
     expect(result.model_diversity.label).toBe('none');
   });
+
+  /**
+   * The exact shape of a real tester's first run: one Olympian (ARES) enabled and keyed against
+   * OpenRouter, the other three left at their out-of-the-box disabled default. The Council must not
+   * assume all four are available, must not crash for the missing three, and must not silently
+   * upgrade to a fuller roster on its own.
+   */
+  it('runs correctly with exactly one Olympian enabled (ARES/OpenRouter) and the rest at their disabled default', async () => {
+    const oneAgentConfig: RegistryConfig = {
+      ...DEFAULT_REGISTRY_CONFIG,
+      ARES: { provider: 'openrouter', model: 'openrouter/free', enabled: true },
+    };
+    let calls = 0;
+    const fetchImpl: typeof fetch = (async (...args: Parameters<typeof fetch>) => {
+      calls += 1;
+      return fakeFetch({
+        'openrouter/free': { stance: 'tiger', confidence: 0.72, reasoning_summary: 'tiger wins a straight contest', claims: [], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] },
+      })(...args);
+    }) as unknown as typeof fetch;
+
+    const result = await runCouncil('which is better in combat: a tiger or a lion?', evidence, oneAgentConfig, { getApiKey: (p) => (p === 'openrouter' ? 'sk-test' : null), fetchImpl });
+
+    expect(calls).toBe(1);
+    expect(result.model_diversity.active_agents).toBe(1);
+    expect(result.positions.ARES.provider).toBe('llm:openrouter/free');
+    expect(result.positions.ARES.position.stance).toBe('tiger');
+    expect(result.positions.ARES.degraded).toBe(false);
+    expect(result.positions.ATHENA.provider).toBe('deterministic');
+    expect(result.positions.ATHENA.position.stance).toBe('insufficient_evidence');
+    expect(result.positions.HADES.provider).toBe('deterministic');
+    expect(result.verdict.provider).toBe('deterministic');
+    expect(result.verdict.verdict.verdict_type).not.toBe(undefined);
+    expect(result.trace.some((e) => e.kind === 'agent_called' && e.agent === 'ARES' && e.detail.includes('openrouter/free'))).toBe(true);
+    expect(result.trace.some((e) => e.kind === 'agent_called' && e.agent === 'ATHENA' && e.detail.includes('deterministic fallback'))).toBe(true);
+    expect(result.trace.some((e) => e.kind === 'zeus_called' && e.detail.includes('mechanically'))).toBe(true);
+  });
 });

@@ -44,8 +44,17 @@ export function Research() {
   const autoStarted = useRef(false);
 
   const assignments = useModelStore((s) => s.assignments);
+  const keys = useModelStore((s) => s.keys);
   const getApiKey = useModelStore((s) => s.getApiKey);
-  const diversity = useModelStore((s) => s.diversity());
+  const diversityFn = useModelStore((s) => s.diversity);
+  /*
+   * Same fix as ModelConfig.tsx: `diversity()` allocates a fresh object every call, so selecting
+   * `(s) => s.diversity()` directly breaks `useSyncExternalStore`'s snapshot-consistency check and
+   * throws "Maximum update depth exceeded" (React error #185) the moment this screen mounts - with no
+   * error boundary in the tree, that blanks the whole app, not just this screen. This is what made
+   * New Investigation -> Research go blank on its own, before Council Mode or any provider call ran.
+   */
+  const diversity = useMemo(() => diversityFn(), [assignments, keys, diversityFn]);
   const councilAvailable = diversity.active_agents > 0;
 
   const text = question.trim();
@@ -171,6 +180,14 @@ export function Research() {
 
           {council !== null && (
             <>
+              <p className="text-2xs leading-relaxed text-fg-mute">
+                The Council below is a separate system from the research pass above, despite sharing two
+                names: HERMES/ATHENA/APOLLO/ARES/HEPHAESTUS (above) are this app's original deterministic
+                open-research agents — no model required, byte-for-byte reproducible. ATHENA/ARES/HADES/ZEUS
+                (below) are EVOLUTION 6.0's Olympian Council — real, independent, bring-your-own-key model
+                calls over the same evidence, synthesized by Zeus. The name overlap (ATHENA, ARES) is
+                coincidental, not the same agent twice.
+              </p>
               <Panel title="OLYMPIAN COUNCIL VERDICT" aside={<Tag tone={council.verdict.verdict.verdict_type === 'CONSENSUS' ? 'support' : council.verdict.verdict.verdict_type === 'UNRESOLVED' ? 'objection' : 'signal'}>{council.verdict.verdict.verdict_type}</Tag>}>
                 <div className="flex items-baseline justify-between gap-4">
                   <div className="text-2xl font-light tracking-tight text-fg">{council.verdict.verdict.answer}</div>
