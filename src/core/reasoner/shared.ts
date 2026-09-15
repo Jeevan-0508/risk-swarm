@@ -42,6 +42,15 @@ export const estimateTokens = (text: string): number => Math.ceil(text.length / 
 export const DEFAULT_REASONER_TIMEOUT_MS = 60_000;
 
 /**
+ * Phase 1 live-debug brief (response-parsing fix): a live OpenRouter free-tier answer came back
+ * `HTTP 200` with `finish_reason: "length"` and an empty `content` — the model's own output budget
+ * ran out, most plausibly to reasoning tokens spent before a final answer, on the previous 800-token
+ * cap. This is a deliberate, bounded 2x, not "just raise it until it works": still a hard ceiling, and
+ * a model that spends *this* budget on reasoning still degrades honestly rather than being retried.
+ */
+export const DEFAULT_MAX_OUTPUT_TOKENS = 1600;
+
+/**
  * Provider error/refusal messages are shown to the user for real diagnosis (EVOLUTION 6.0 Phase 1
  * live-debug brief: a generic "empty response" is not good enough), but they come from someone
  * else's server and must never reach the user with a credential riding along. Strips anything

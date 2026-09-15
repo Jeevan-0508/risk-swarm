@@ -1,5 +1,5 @@
 import { assertNoFabricatedCitations, type ReasonRequest, type ReasonResult, type Reasoner } from './types';
-import { buildPrompt, DEFAULT_REASONER_TIMEOUT_MS, estimateTokens, extractJson, sanitizeProviderMessage } from './shared';
+import { buildPrompt, DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_REASONER_TIMEOUT_MS, estimateTokens, extractJson, sanitizeProviderMessage } from './shared';
 
 /**
  * Optional model-backed reasoner, bring-your-own key. OpenAI-compatible: bearer auth,
@@ -20,21 +20,53 @@ export interface LlmReasonerOptions {
   maxOutputTokens?: number;
 }
 
-type ChatChoice = { message?: { content?: string; refusal?: string }; finish_reason?: string };
+type ChatToolCall = { id?: string; type?: string; function?: { name?: string; arguments?: string } };
+type ChatMessage = {
+  content?: string;
+  refusal?: string;
+  // Present-but-never-printed fields: a "thinking" model can spend its whole output budget here and
+  // leave `content` empty. We only ever check *presence*, never read or log the actual text (TASK 6) —
+  // reading it into the answer would also mean fabricating a position from an unvalidated field.
+  reasoning?: string;
+  reasoning_details?: unknown;
+  tool_calls?: ChatToolCall[];
+};
+type ChatChoice = { message?: ChatMessage; finish_reason?: string };
 type ChatBody = { error?: { message?: string; code?: number }; content?: Array<{ text?: string }>; choices?: ChatChoice[] };
+
+/** True if a field actually carries something (non-empty string/array/object), not just a present-but-vacant key. */
+function isNonEmpty(value: unknown): boolean {
+  if (value == null) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'object') return Object.keys(value as Record<string, unknown>).length > 0;
+  return Boolean(value);
+}
 
 /**
  * Diagnoses why `choices[0].message.content` came back empty when the HTTP call itself succeeded.
  * A provider that answers 200 OK with nothing usable can mean several different things — a
- * moderation refusal, a truncated/filtered generation, or a response shape this adapter doesn't
- * recognise — and each deserves a different, honest message instead of one generic "empty response".
+ * moderation refusal, a tool-call-only turn, a truncated/filtered generation, or a response shape
+ * this adapter doesn't recognise — and each deserves a different, honest message instead of one
+ * generic "empty response". Order matters: a real refusal is the most actionable signal even if a
+ * non-`stop` `finish_reason` is also present, so it is checked first.
  */
 function diagnoseEmptyContent(status: number, body: ChatBody): string {
   const choice = body.choices?.[0];
-  if (choice?.message?.refusal) return `HTTP ${status} — model refused: ${sanitizeProviderMessage(choice.message.refusal)}`;
-  if (choice?.finish_reason && choice.finish_reason !== 'stop') return `HTTP ${status} — no usable content (finish_reason: ${choice.finish_reason})`;
-  if (!body.choices && !body.content) return `HTTP ${status} — response had no "choices" or "content" field`;
-  return `HTTP ${status} — no usable assistant content`;
+  const message = choice?.message;
+
+  if (message?.refusal) return `provider returned HTTP ${status} — model refused: ${sanitizeProviderMessage(message.refusal)}`;
+
+  if (isNonEmpty(message?.tool_calls)) return `provider returned HTTP ${status} — model returned only a tool call, no assistant content`;
+
+  if (choice?.finish_reason && choice.finish_reason !== 'stop') {
+    const spentBudgetOnReasoning = choice.finish_reason === 'length' && (isNonEmpty(message?.reasoning) || isNonEmpty(message?.reasoning_details));
+    const reasoningNote = spentBudgetOnReasoning ? ' — the model spent its output budget on reasoning before an answer' : '';
+    return `provider returned HTTP ${status} but no final content (finish_reason: ${choice.finish_reason})${reasoningNote}`;
+  }
+
+  if (!body.choices && !body.content) return `provider returned HTTP ${status} — response had no "choices" or "content" field`;
+  return `provider returned HTTP ${status} — no usable assistant content`;
 }
 
 export function createLlmReasoner(options: LlmReasonerOptions): Reasoner {
@@ -73,7 +105,7 @@ export function createLlmReasoner(options: LlmReasonerOptions): Reasoner {
             headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
             body: JSON.stringify({
               model: options.model,
-              max_tokens: options.maxOutputTokens ?? 800,
+              max_tokens: options.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
               temperature: 0,
               messages: [{ role: 'user', content: prompt }],
             }),

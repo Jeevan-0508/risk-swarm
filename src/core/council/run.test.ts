@@ -169,7 +169,7 @@ describe('Council orchestration', () => {
     const result = await runCouncil('which is better in combat: a tiger or a lion?', evidence, oneAgentConfig, { getApiKey: (p) => (p === 'openrouter' ? 'sk-test' : null), fetchImpl });
 
     expect(result.positions.ARES.degraded).toBe(true);
-    expect(result.positions.ARES.degraded_reason).toBe('HTTP 200 — no usable assistant content');
+    expect(result.positions.ARES.degraded_reason).toBe('provider returned HTTP 200 — no usable assistant content');
     expect(result.positions.ARES.provider).toBe('llm:openrouter/free');
     expect(result.disagreement.independent_count).toBe(0);
     expect(result.verdict.provider).toBe('deterministic');

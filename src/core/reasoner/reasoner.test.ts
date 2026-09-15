@@ -1,7 +1,7 @@
 import { describe, expect, it } from '../test/bdd';
 import { createDeterministicReasoner } from './deterministic';
 import { createLlmReasoner } from './llm';
-import { DEFAULT_REASONER_TIMEOUT_MS } from './shared';
+import { DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_REASONER_TIMEOUT_MS } from './shared';
 import { assertNoFabricatedCitations, citedIds, FabricatedCitationError, type ReasonRequest } from './types';
 
 interface Finding {
@@ -114,7 +114,7 @@ describe('llm reasoner', () => {
     const r = createLlmReasoner({ ...base, fetchImpl: jsonResponse('') });
     const out = await r.propose(req());
     expect(out.degraded).toBe(true);
-    expect(out.degraded_reason).toBe('HTTP 200 — no usable assistant content');
+    expect(out.degraded_reason).toBe('provider returned HTTP 200 — no usable assistant content');
   });
 
   it('parses a real OpenRouter/OpenAI choices-shape response', async () => {
@@ -134,7 +134,7 @@ describe('llm reasoner', () => {
     });
     const out = await r.propose(req());
     expect(out.degraded).toBe(true);
-    expect(out.degraded_reason).toBe('HTTP 200 — model refused: I cannot help with that request.');
+    expect(out.degraded_reason).toBe('provider returned HTTP 200 — model refused: I cannot help with that request.');
   });
 
   it('reports a non-stop finish_reason instead of a generic empty response', async () => {
@@ -144,14 +144,92 @@ describe('llm reasoner', () => {
     });
     const out = await r.propose(req());
     expect(out.degraded).toBe(true);
-    expect(out.degraded_reason).toBe('HTTP 200 — no usable content (finish_reason: content_filter)');
+    expect(out.degraded_reason).toBe('provider returned HTTP 200 but no final content (finish_reason: content_filter)');
   });
 
   it('reports a missing choices/content field distinctly from an empty one', async () => {
     const r = createLlmReasoner({ ...base, fetchImpl: openRouterResponse({}) });
     const out = await r.propose(req());
     expect(out.degraded).toBe(true);
-    expect(out.degraded_reason).toBe('HTTP 200 — response had no "choices" or "content" field');
+    expect(out.degraded_reason).toBe('provider returned HTTP 200 — response had no "choices" or "content" field');
+  });
+
+  it('reports a length-truncated response with no reasoning field using the plain finish_reason message', async () => {
+    const r = createLlmReasoner({
+      ...base,
+      fetchImpl: openRouterResponse({ choices: [{ message: { content: '' }, finish_reason: 'length' }] }),
+    });
+    const out = await r.propose(req());
+    expect(out.degraded).toBe(true);
+    expect(out.degraded_reason).toBe('provider returned HTTP 200 but no final content (finish_reason: length)');
+  });
+
+  it('flags a length-truncated response as reasoning-budget-spent when a reasoning field is present, without leaking it', async () => {
+    const secretChainOfThought = 'SECRET_CHAIN_OF_THOUGHT: the carrier is definitely lying because...';
+    const r = createLlmReasoner({
+      ...base,
+      fetchImpl: openRouterResponse({ choices: [{ message: { content: '', reasoning: secretChainOfThought }, finish_reason: 'length' }] }),
+    });
+    const out = await r.propose(req());
+    expect(out.degraded).toBe(true);
+    expect(out.degraded_reason).toBe(
+      'provider returned HTTP 200 but no final content (finish_reason: length) — the model spent its output budget on reasoning before an answer',
+    );
+    expect(out.degraded_reason).not.toContain(secretChainOfThought);
+    expect(JSON.stringify(out)).not.toContain(secretChainOfThought);
+  });
+
+  it('treats an empty-string reasoning field as absent, not as evidence of a reasoning-budget spend', async () => {
+    const r = createLlmReasoner({
+      ...base,
+      fetchImpl: openRouterResponse({ choices: [{ message: { content: '', reasoning: '' }, finish_reason: 'length' }] }),
+    });
+    const out = await r.propose(req());
+    expect(out.degraded_reason).toBe('provider returned HTTP 200 but no final content (finish_reason: length)');
+  });
+
+  it('reports a tool-call-only turn distinctly from other empty-content cases', async () => {
+    const r = createLlmReasoner({
+      ...base,
+      fetchImpl: openRouterResponse({
+        choices: [{ message: { content: '', tool_calls: [{ id: 'call_1', type: 'function', function: { name: 'lookup', arguments: '{}' } }] }, finish_reason: 'tool_calls' }],
+      }),
+    });
+    const out = await r.propose(req());
+    expect(out.degraded).toBe(true);
+    expect(out.degraded_reason).toBe('provider returned HTTP 200 — model returned only a tool call, no assistant content');
+  });
+
+  it('does not mistake an empty tool_calls array for a tool-call-only response', async () => {
+    const r = createLlmReasoner({
+      ...base,
+      fetchImpl: openRouterResponse({ choices: [{ message: { content: '', tool_calls: [] }, finish_reason: 'length' }] }),
+    });
+    const out = await r.propose(req());
+    expect(out.degraded_reason).toBe('provider returned HTTP 200 but no final content (finish_reason: length)');
+  });
+
+  it('prefers a real refusal over a co-occurring non-stop finish_reason', async () => {
+    const r = createLlmReasoner({
+      ...base,
+      fetchImpl: openRouterResponse({ choices: [{ message: { content: '', refusal: 'blocked by policy' }, finish_reason: 'length' }] }),
+    });
+    const out = await r.propose(req());
+    expect(out.degraded_reason).toBe('provider returned HTTP 200 — model refused: blocked by policy');
+  });
+
+  it('still succeeds normally on finish_reason stop with real content, unaffected by the parsing fix', async () => {
+    const r = createLlmReasoner({
+      ...base,
+      fetchImpl: openRouterResponse({ choices: [{ message: { content: JSON.stringify({ statement: 'Fine as-is', evidence: ['E-001'] }) }, finish_reason: 'stop' }] }),
+    });
+    const out = await r.propose(req());
+    expect(out.degraded).toBe(false);
+    expect(out.value.statement).toBe('Fine as-is');
+  });
+
+  it('raises the default max_tokens above the previous 800-token cap, as a named constant', () => {
+    expect(DEFAULT_MAX_OUTPUT_TOKENS).toBeGreaterThan(800);
   });
 
   it("surfaces the provider's real error message on a non-200 status, sanitized", async () => {
