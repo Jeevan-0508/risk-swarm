@@ -35,6 +35,13 @@ export function extractJson(text: string): unknown {
 export const estimateTokens = (text: string): number => Math.ceil(text.length / 4);
 
 /**
+ * Phase 1 live-debug brief: the previous 20s default aborted a free-tier OpenRouter router
+ * (`openrouter/free`) mid-answer under real load. 60s is still a hard ceiling, not infinite — a
+ * hung request must resolve to an honest degraded result, never hang the Research screen forever.
+ */
+export const DEFAULT_REASONER_TIMEOUT_MS = 60_000;
+
+/**
  * Provider error/refusal messages are shown to the user for real diagnosis (EVOLUTION 6.0 Phase 1
  * live-debug brief: a generic "empty response" is not good enough), but they come from someone
  * else's server and must never reach the user with a credential riding along. Strips anything

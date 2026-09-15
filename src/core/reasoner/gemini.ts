@@ -1,5 +1,5 @@
 import { assertNoFabricatedCitations, type ReasonRequest, type ReasonResult, type Reasoner } from './types';
-import { buildPrompt, estimateTokens, extractJson } from './shared';
+import { buildPrompt, DEFAULT_REASONER_TIMEOUT_MS, estimateTokens, extractJson } from './shared';
 
 /**
  * Google Gemini reasoner, bring-your-own key. Same contract and the same failure discipline as
@@ -22,7 +22,7 @@ export interface GeminiReasonerOptions {
 
 export function createGeminiReasoner(options: GeminiReasonerOptions): Reasoner {
   const fetchImpl = options.fetchImpl ?? fetch;
-  const timeoutMs = options.timeoutMs ?? 20_000;
+  const timeoutMs = options.timeoutMs ?? DEFAULT_REASONER_TIMEOUT_MS;
   const baseUrl = options.baseUrl ?? 'https://generativelanguage.googleapis.com/v1beta/models';
 
   return {
@@ -68,7 +68,10 @@ export function createGeminiReasoner(options: GeminiReasonerOptions): Reasoner {
           clearTimeout(timer);
         }
       } catch (err) {
-        return degrade(err instanceof Error && err.name === 'AbortError' ? 'provider timed out' : 'provider request failed', est_tokens);
+        return degrade(
+          err instanceof Error && err.name === 'AbortError' ? `provider timed out after ${(timeoutMs / 1000).toFixed(1)}s` : 'provider request failed',
+          est_tokens,
+        );
       }
 
       if (!text.trim()) return degrade('empty response', est_tokens);

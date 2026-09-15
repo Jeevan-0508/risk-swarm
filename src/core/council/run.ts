@@ -44,7 +44,7 @@ export async function runCouncil(
       kind: 'agent_called',
       agent,
       detail: a.enabled
-        ? `${agent} reasoning independently over ${evidence.length} evidence item(s) via ${a.provider}/${a.model}`
+        ? `${agent} reasoning independently over ${evidence.length} evidence item(s) via ${a.provider}/${a.model} — request started`
         : `${agent} has no model configured — using its deterministic fallback over ${evidence.length} evidence item(s), not an independent model opinion`,
     });
   }
@@ -57,10 +57,18 @@ export async function runCouncil(
     const result = settled[i]!;
     positionsForDeliberation[agent] = result;
     positions[agent] = { position: result.value, provider: result.provider, degraded: result.degraded, degraded_reason: result.degraded_reason, ms: result.ms, est_tokens: result.est_tokens };
+    // Elapsed time only means something for a real network call - a deterministic fallback resolves
+    // in under a millisecond and printing "0.0s" next to it would read as a measurement, not a fact.
+    const wasNetworkCall = result.provider !== 'deterministic';
+    const elapsedS = (result.ms / 1000).toFixed(1);
     push(
       result.degraded
-        ? { kind: 'agent_degraded', agent, detail: `${agent} could not reason independently: ${result.degraded_reason}` }
-        : { kind: 'position_ready', agent, detail: `${agent} → "${result.value.stance}" (${Math.round(result.value.confidence * 100)}% confidence, ${result.provider})` },
+        ? { kind: 'agent_degraded', agent, detail: `${agent} could not reason independently: ${result.degraded_reason}${wasNetworkCall ? ` (elapsed ${elapsedS}s)` : ''}` }
+        : {
+            kind: 'position_ready',
+            agent,
+            detail: `${agent} → "${result.value.stance}" (${Math.round(result.value.confidence * 100)}% confidence, ${result.provider})${wasNetworkCall ? ` — provider response received in ${elapsedS}s` : ''}`,
+          },
     );
   }
 

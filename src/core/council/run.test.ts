@@ -175,4 +175,29 @@ describe('Council orchestration', () => {
     expect(result.verdict.provider).toBe('deterministic');
     expect(result.verdict.verdict.unresolved.some((u) => u.includes('No independent LLM positions available'))).toBe(true);
   });
+
+  /**
+   * TASK 3 of the live-timeout brief: the trace must show when a real request started and how long it
+   * actually took, without inventing a number for a deterministic fallback that never made a call.
+   */
+  it('records request-started and response-latency observability in the trace for a real model call', async () => {
+    const fetchImpl = fakeFetch({
+      'athena-model': { stance: 'tiger', confidence: 0.8, reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+      'ares-model': { stance: 'tiger', confidence: 0.7, reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+      'hades-model': { stance: 'tiger', confidence: 0.6, reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+      'zeus-model': { verdict_type: 'CONSENSUS', answer: 'tiger', confidence: 0.7, rationale: [], minority_view: null, unresolved: [], cited_evidence_ids: [] },
+    });
+    const result = await runCouncil('lion vs tiger?', evidence, enabledConfig, { getApiKey: () => 'sk-test', fetchImpl });
+
+    expect(result.trace.some((e) => e.kind === 'agent_called' && e.agent === 'ARES' && e.detail.includes('request started'))).toBe(true);
+    expect(result.trace.some((e) => e.kind === 'position_ready' && e.agent === 'ARES' && e.detail.includes('provider response received in'))).toBe(true);
+    // A disabled agent's deterministic fallback trace line must not claim a fabricated latency measurement.
+    const oneAgentConfig: RegistryConfig = { ...DEFAULT_REGISTRY_CONFIG, ARES: { provider: 'openrouter', model: 'openrouter/free', enabled: true } };
+    const partial = await runCouncil('lion vs tiger?', evidence, oneAgentConfig, {
+      getApiKey: (p) => (p === 'openrouter' ? 'sk-test' : null),
+      fetchImpl: fakeFetch({ 'openrouter/free': { stance: 'tiger', confidence: 0.7, reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] } }),
+    });
+    expect(partial.trace.some((e) => e.kind === 'position_ready' && e.agent === 'ATHENA' && e.detail.includes('provider response received in'))).toBe(false);
+  });
+
 });

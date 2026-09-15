@@ -1,5 +1,6 @@
 import { describe, expect, it } from '../test/bdd';
 import { createGeminiReasoner } from './gemini';
+import { DEFAULT_REASONER_TIMEOUT_MS } from './shared';
 import type { ReasonRequest } from './types';
 
 interface Finding {
@@ -77,5 +78,23 @@ describe('gemini reasoner', () => {
     const out = await createGeminiReasoner({ ...base, fetchImpl: boom }).propose(req());
     expect(out.degraded_reason).toBe('provider request failed');
     expect(JSON.stringify(out)).not.toContain('sk-test');
+  });
+
+  it('shares the 60s default timeout constant with the OpenRouter/OpenAI adapter', () => {
+    expect(DEFAULT_REASONER_TIMEOUT_MS).toBe(60_000);
+  });
+
+  it('times out after the configured duration, converting AbortError to a precise reason', async () => {
+    const hanging = ((_url: string, init?: { signal?: AbortSignal }) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          const err = new Error('The operation was aborted.');
+          err.name = 'AbortError';
+          reject(err);
+        });
+      })) as unknown as typeof fetch;
+    const out = await createGeminiReasoner({ ...base, timeoutMs: 100, fetchImpl: hanging }).propose(req());
+    expect(out.degraded).toBe(true);
+    expect(out.degraded_reason).toBe('provider timed out after 0.1s');
   });
 });

@@ -1,5 +1,5 @@
 import { assertNoFabricatedCitations, type ReasonRequest, type ReasonResult, type Reasoner } from './types';
-import { buildPrompt, estimateTokens, extractJson, sanitizeProviderMessage } from './shared';
+import { buildPrompt, DEFAULT_REASONER_TIMEOUT_MS, estimateTokens, extractJson, sanitizeProviderMessage } from './shared';
 
 /**
  * Optional model-backed reasoner, bring-your-own key. OpenAI-compatible: bearer auth,
@@ -39,7 +39,7 @@ function diagnoseEmptyContent(status: number, body: ChatBody): string {
 
 export function createLlmReasoner(options: LlmReasonerOptions): Reasoner {
   const fetchImpl = options.fetchImpl ?? fetch;
-  const timeoutMs = options.timeoutMs ?? 20_000;
+  const timeoutMs = options.timeoutMs ?? DEFAULT_REASONER_TIMEOUT_MS;
 
   return {
     id: `llm:${options.model}`,
@@ -108,7 +108,10 @@ export function createLlmReasoner(options: LlmReasonerOptions): Reasoner {
         }
       } catch (err) {
         // Deliberately not interpolating the error: provider errors can echo request headers.
-        return degrade(err instanceof Error && err.name === 'AbortError' ? 'provider timed out' : 'provider request failed', est_tokens);
+        return degrade(
+          err instanceof Error && err.name === 'AbortError' ? `provider timed out after ${(timeoutMs / 1000).toFixed(1)}s` : 'provider request failed',
+          est_tokens,
+        );
       }
 
       if (emptyReason) return degrade(emptyReason, est_tokens);
