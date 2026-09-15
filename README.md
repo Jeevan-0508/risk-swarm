@@ -125,6 +125,7 @@ recomputes a number, because a figure computed twice is a figure that can disagr
 | 12 Internal Knowledge | What the system already holds, searched over the committed index, before it retrieves anything |
 | 13 Research | Live retrieval from eight keyless public providers: the plan, every attempt including the failures, and each provider's own reason |
 | 14 Knowledge Delta | The human gate on the taxonomy itself — validate a proposed category, approve it with a name or reject it with a reason |
+| 15 Model Configuration | EVOLUTION 6.0 — assign real providers/models to ATHENA/ARES/HADES/ZEUS, bring your own API key, browser-only, see model diversity |
 | The Council | The deliberation transcript for the loaded run: seven seats on a ring, who asked whom what, replay, an agent inspector, the decision lineage, and a command bar that refuses rather than improvises |
 
 ---

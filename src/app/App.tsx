@@ -16,6 +16,7 @@ import { CaseFile } from '@app/screens/CaseFile';
 import { Provenance } from '@app/screens/Provenance';
 import { EvidenceGraph } from '@app/screens/EvidenceGraph';
 import { RedTeam } from '@app/screens/RedTeam';
+import { useModelStore } from '@app/store/models';
 
 /**
  * The showcase page is lazy so it never enters the console's bundle, and it lives outside `Frame` so it
@@ -33,6 +34,7 @@ const Pantheon = lazy(() => import('../showcase/Pantheon'));
 const InternalKnowledge = lazy(() => import('@app/screens/InternalKnowledge').then((m) => ({ default: m.InternalKnowledge })));
 const Research = lazy(() => import('@app/screens/Research').then((m) => ({ default: m.Research })));
 const KnowledgeDelta = lazy(() => import('@app/screens/KnowledgeDelta').then((m) => ({ default: m.KnowledgeDelta })));
+const ModelConfig = lazy(() => import('@app/screens/ModelConfig').then((m) => ({ default: m.ModelConfig })));
 const ScenarioRoom = lazy(() => import('@app/screens/ScenarioRoom').then((m) => ({ default: m.ScenarioRoom })));
 
 /**
@@ -58,6 +60,7 @@ const NAV: Array<{ to: string; n: string; label: string }> = [
   { to: '/knowledge', n: '12', label: 'Internal Knowledge' },
   { to: '/research', n: '13', label: 'Research' },
   { to: '/knowledge-delta', n: '14', label: 'Knowledge Delta' },
+  { to: '/models', n: '15', label: 'Model Configuration' },
 ];
 
 const MODES: Mode[] = ['DEMO', 'SNAPSHOT', 'LIVE'];
@@ -191,7 +194,9 @@ function Frame() {
 
 export function App() {
   const hydrate = useSession((s) => s.hydrate);
+  const hydrateModels = useModelStore((s) => s.hydrate);
   useEffect(() => hydrate(), [hydrate]);
+  useEffect(() => hydrateModels(), [hydrateModels]);
 
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
@@ -229,6 +234,7 @@ export function App() {
           <Route path="/knowledge" element={<InternalKnowledge />} />
           <Route path="/research" element={<Research />} />
           <Route path="/knowledge-delta" element={<KnowledgeDelta />} />
+          <Route path="/models" element={<ModelConfig />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

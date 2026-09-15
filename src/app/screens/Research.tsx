@@ -6,6 +6,10 @@ import { planResearch } from '@core/research/plan';
 import type { ResearchEvent } from '@core/research/execute';
 import { READER_PROXY_HOST, runResearch, type ResearchOutcome } from '@app/lib/research';
 import { deliberateOpenResearch, type OpenAnswer } from '@core/research/open-deliberation';
+import { runCouncil } from '@core/council/run';
+import type { CouncilResult, CouncilTraceEvent } from '@core/council/types';
+import { useModelStore } from '@app/store/models';
+import { Link } from 'react-router-dom';
 
 const toneFor = (status: ResearchOutcome['execution']['status']): 'support' | 'caution' | 'objection' =>
   status === 'ok' ? 'support' : status === 'search_failed' ? 'objection' : 'caution';
@@ -34,7 +38,15 @@ export function Research() {
   const [outcome, setOutcome] = useState<ResearchOutcome | null>(null);
   const [answer, setAnswer] = useState<OpenAnswer | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [councilMode, setCouncilMode] = useState(false);
+  const [council, setCouncil] = useState<CouncilResult | null>(null);
+  const [councilTrace, setCouncilTrace] = useState<CouncilTraceEvent[]>([]);
   const autoStarted = useRef(false);
+
+  const assignments = useModelStore((s) => s.assignments);
+  const getApiKey = useModelStore((s) => s.getApiKey);
+  const diversity = useModelStore((s) => s.diversity());
+  const councilAvailable = diversity.active_agents > 0;
 
   const text = question.trim();
   const routed = useMemo(() => text.length > 12 ? routeQuestion(text) : null, [text]);
@@ -47,10 +59,16 @@ export function Research() {
     setEvents([]);
     setOutcome(null);
     setAnswer(null);
+    setCouncil(null);
+    setCouncilTrace([]);
     try {
       const result = await runResearch({ question: text, proxyEnabled }, (event) => setEvents((all) => [...all, event]));
       setOutcome(result);
       setAnswer(deliberateOpenResearch(text, result));
+      if (councilMode && councilAvailable && result.merged.items.length > 0) {
+        const councilResult = await runCouncil(text, result.merged.items, assignments, { getApiKey }, (event) => setCouncilTrace((all) => [...all, event]));
+        setCouncil(councilResult);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -84,10 +102,18 @@ export function Research() {
           <textarea value={question} rows={3} onChange={(e) => setQuestion(e.target.value)} className={`${inputClass} resize-none text-base leading-snug`} placeholder="Which is better, tiger or lion?" />
         </Field>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-4 hair-t pt-3">
-          <label className="flex items-start gap-2 text-2xs text-fg-mute">
-            <input type="checkbox" checked={proxyEnabled} onChange={(e) => setProxyEnabled(e.target.checked)} className="mt-0.5" />
-            allow the reader proxy for providers that cannot be reached directly
-          </label>
+          <div className="space-y-2">
+            <label className="flex items-start gap-2 text-2xs text-fg-mute">
+              <input type="checkbox" checked={proxyEnabled} onChange={(e) => setProxyEnabled(e.target.checked)} className="mt-0.5" />
+              allow the reader proxy for providers that cannot be reached directly
+            </label>
+            <label className="flex items-start gap-2 text-2xs text-fg-mute">
+              <input type="checkbox" checked={councilMode} disabled={!councilAvailable} onChange={(e) => setCouncilMode(e.target.checked)} className="mt-0.5" />
+              {councilAvailable
+                ? <span>Council Mode — real independent LLM reasoning ({diversity.active_agents} agent(s), {diversity.label} model diversity)</span>
+                : <span>Council Mode unavailable — <Link to="/models" className="text-signal underline">configure a provider and key</Link> to enable real LLM reasoning</span>}
+            </label>
+          </div>
           <Button onClick={() => void run()} disabled={text.length <= 12 || running}>{running ? 'swarm researching…' : 'run the swarm'}</Button>
         </div>
       </Panel>
@@ -142,6 +168,58 @@ export function Research() {
             <p className="mt-4 max-w-4xl text-base leading-relaxed text-fg-dim">{answer.answer}</p>
             <p className="mt-4 border-l-2 border-signal pl-3 text-xs leading-relaxed text-fg-mute">{answer.caveat}</p>
           </Panel>
+
+          {council !== null && (
+            <>
+              <Panel title="OLYMPIAN COUNCIL VERDICT" aside={<Tag tone={council.verdict.verdict.verdict_type === 'CONSENSUS' ? 'support' : council.verdict.verdict.verdict_type === 'UNRESOLVED' ? 'objection' : 'signal'}>{council.verdict.verdict.verdict_type}</Tag>}>
+                <div className="flex items-baseline justify-between gap-4">
+                  <div className="text-2xl font-light tracking-tight text-fg">{council.verdict.verdict.answer}</div>
+                  <div className="num text-sm text-fg-mute">{Math.round(council.verdict.verdict.confidence * 100)}% confidence</div>
+                </div>
+                <ul className="mt-3 space-y-1">{council.verdict.verdict.rationale.map((r, i) => <li key={i} className="text-xs leading-relaxed text-fg-dim">— {r}</li>)}</ul>
+                {council.verdict.verdict.minority_view !== null && (
+                  <p className="mt-4 border-l-2 border-signal pl-3 text-xs leading-relaxed text-fg-mute"><span className="label">minority view</span><br />{council.verdict.verdict.minority_view}</p>
+                )}
+                {council.verdict.verdict.unresolved.length > 0 && (
+                  <p className="mt-3 border-l-2 border-objection pl-3 text-xs leading-relaxed text-fg-mute"><span className="label">unresolved</span><br />{council.verdict.verdict.unresolved.join(' ')}</p>
+                )}
+                <p className="mt-4 text-2xs text-fg-mute">Zeus · {council.verdict.provider}{council.verdict.degraded && ` · degraded: ${council.verdict.degraded_reason}`}</p>
+              </Panel>
+
+              <Panel title="independent positions" aside={<Tag tone="signal">model diversity: {council.model_diversity.label}</Tag>}>
+                <div className="grid gap-3 md:grid-cols-3">
+                  {(['ATHENA', 'ARES', 'HADES'] as const).map((agent) => {
+                    const p = council.positions[agent];
+                    return (
+                      <div key={agent} className="border border-line bg-ink-800 p-4">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="text-sm text-fg">{agent}</span>
+                          <Tag tone={p.degraded ? 'caution' : 'support'}>{p.degraded ? 'degraded' : 'independent'}</Tag>
+                        </div>
+                        <div className="mt-1 label">{p.provider}</div>
+                        <div className="mt-3 text-lg text-fg">{p.position.stance}</div>
+                        <div className="num mt-1 text-2xs text-fg-mute">{Math.round(p.position.confidence * 100)}% confidence</div>
+                        <p className="mt-2 text-2xs leading-relaxed text-fg-dim">{p.position.reasoning_summary}</p>
+                        {p.degraded && <p className="mt-2 text-2xs text-objection">degraded: {p.degraded_reason}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="mt-4 text-2xs leading-relaxed text-fg-mute">
+                  disagreement: {council.disagreement.agreement} across {council.disagreement.independent_count} independent position(s)
+                  {council.disagreement.distinct_stances.length > 0 && ` — ${council.disagreement.distinct_stances.join(', ')}`}
+                </p>
+              </Panel>
+
+              {councilTrace.length > 0 && (
+                <Panel title="council trace" aside={<span className="num text-2xs text-fg-mute">{councilTrace.length} events</span>}>
+                  <div className="max-h-56 space-y-0.5 overflow-y-auto">
+                    {councilTrace.map((e, i) => <div key={i} className="num text-2xs leading-relaxed text-fg-mute">{e.at.slice(11, 19)} · {e.kind}{e.agent ? ` · ${e.agent}` : ''} · {e.detail}</div>)}
+                  </div>
+                </Panel>
+              )}
+            </>
+          )}
 
           <Panel title="agent deliberation" aside={<span className="num text-2xs text-fg-mute">{answer.agents.length} active agents</span>}>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
