@@ -33,12 +33,29 @@ function textFor(outcome: ResearchOutcome): string {
   return outcome.merged.items.map((i) => `${i.evidence.title}. ${i.evidence.excerpt_or_summary}`).join(' ');
 }
 
-function comparisonParts(question: string): [string, string] | null {
+/**
+ * Three attempts, each covering a shape the other two do not:
+ *   1. An adjective right before the connective ("which is better tiger or lion") - the connective
+ *      can be "or", so this has to run before anything that treats "or" as ambiguous.
+ *   2. "X vs/versus/compared to/with Y", start to end of the question - the connective itself
+ *      brackets the two sides, whatever the rest of the sentence says.
+ *   3. A bare "A or B" with no adjective and no vs/versus ("tiger or lion", "Germany or France for
+ *      GDP"): unlike attempt 2, "or" is common enough in ordinary English that it cannot bracket a
+ *      whole sentence in half, so this only accepts it where the two sides read as two bare names -
+ *      immediately followed by end of sentence, punctuation, or a preposition starting a new phrase.
+ *      "should I email John or call him instead" has no such boundary after "call" and is correctly
+ *      left unmatched.
+ */
+export function comparisonParts(question: string): [string, string] | null {
   const q = question.trim().replace(/[?!.]+$/, '');
   const m = q.match(/(?:which\s+is\s+)?(?:better|stronger|faster|safer|worse|bigger|smaller)\s+(.+?)\s+(?:or|vs\.?|versus)\s+(.+)$/i);
   if (m) return [m[1].trim(), m[2].trim()];
   const v = q.match(/^(.+?)\s+(?:vs\.?|versus|compared with|compared to)\s+(.+)$/i);
-  return v ? [v[1].trim(), v[2].trim()] : null;
+  if (v) return [v[1].trim(), v[2].trim()];
+  const bare = question.match(
+    /\b([A-Za-z][\w-]*)\s+or\s+([A-Za-z][\w-]*)\b(?=\s*(?:[?.!]|$|\s+(?:for|in|on|at|about|regarding|concerning|by|with|during|since|under|over|per|from)\b))/i,
+  );
+  return bare ? [bare[1].trim(), bare[2].trim()] : null;
 }
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
