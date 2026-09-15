@@ -43,10 +43,22 @@ export type RegistryConfig = Record<OlympianAgent, ModelAssignment>;
  * Deliberately disabled out of the box: Council Mode must be an explicit opt-in, never a surprise
  * network call the first time a user opens the Research screen. Model names are starting suggestions,
  * not a hard-coded dependency — the registry accepts whatever model string the user types.
+ *
+ * ARES's suggestion (EVOLUTION 6.0 Phase 1.7b live-debug brief): a live run against `openrouter/free`
+ * came back HTTP 200, `finish_reason: "length"`, no final content. `openrouter/free` is not itself a
+ * model — it is OpenRouter's own dynamic router over a pool of free models, and can land on one whose
+ * reasoning mode defaults on, which spends the whole shared output-token budget on reasoning tokens
+ * before it ever emits an answer. `google/gemma-4-31b-it:free` is a specific, currently-listed $0
+ * model, verified live against OpenRouter's own `/api/v1/models` rather than guessed: its `reasoning`
+ * capability reports `{ mandatory: false, default_enabled: false }`, so it will not spend budget on
+ * reasoning unless a caller opts in, which this adapter never does, and it supports `response_format`
+ * — well suited to the short, single-JSON-value analytical positions Council agents produce, without
+ * paying a deep-reasoning tax on every proposal. `openrouter/free` remains fully valid to type into
+ * this same field; this only changes the suggestion a fresh, unopened Model Config screen starts with.
  */
 export const DEFAULT_REGISTRY_CONFIG: RegistryConfig = {
   ATHENA: { provider: 'openai', model: 'gpt-4o-mini', enabled: false },
-  ARES: { provider: 'openrouter', model: 'deepseek/deepseek-chat', enabled: false },
+  ARES: { provider: 'openrouter', model: 'google/gemma-4-31b-it:free', enabled: false },
   HADES: { provider: 'google', model: 'gemini-1.5-flash', enabled: false },
   ZEUS: { provider: 'openai', model: 'gpt-4o-mini', enabled: false },
 };

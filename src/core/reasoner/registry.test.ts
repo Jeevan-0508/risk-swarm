@@ -36,6 +36,16 @@ describe('model registry', () => {
     expect(reasoners.ARES.id).toBe('deterministic'); // default config, disabled
   });
 
+  it('ships ARES with a free OpenRouter model whose reasoning does not default on (Phase 1.7b)', () => {
+    // `openrouter/free` is a router over a free-model pool and can land on one that spends the whole
+    // output budget on reasoning before an answer (the live-debug brief this default responds to).
+    // `google/gemma-4-31b-it:free` reports `reasoning.default_enabled: false` on OpenRouter's own
+    // model listing, so it will not do that unless a caller opts in, which this codebase never does.
+    expect(DEFAULT_REGISTRY_CONFIG.ARES.provider).toBe('openrouter');
+    expect(DEFAULT_REGISTRY_CONFIG.ARES.model).toBe('google/gemma-4-31b-it:free');
+    expect(DEFAULT_REGISTRY_CONFIG.ARES.enabled).toBe(false); // still an explicit opt-in, unchanged
+  });
+
   it('reports no diversity when nothing is configured', () => {
     const d = modelDiversity(DEFAULT_REGISTRY_CONFIG, { getApiKey: () => null });
     expect(d.label).toBe('none');
