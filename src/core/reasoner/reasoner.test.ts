@@ -275,6 +275,17 @@ describe('llm reasoner', () => {
     expect(out.degraded_reason).toBe('response was not valid JSON');
   });
 
+  it('recovers the real answer even when a stray, never-closed brace appears in prose before it', async () => {
+    // Independent-verification finding: an opener that never finds its close must not abandon the
+    // whole scan — it has to keep looking past it, or a real, valid answer later in the same text
+    // would never be reached. The stray "{x, unbalanced" below has no matching close anywhere.
+    const withStrayBracket = `Notation like {x, unbalanced example. Actual answer: ${JSON.stringify({ statement: 'Recovered despite an earlier stray unbalanced bracket', evidence: ['E-001'] })}`;
+    const r = createLlmReasoner({ ...base, fetchImpl: openRouterResponse({ choices: [{ message: { content: withStrayBracket }, finish_reason: 'stop' }] }) });
+    const out = await r.propose(req());
+    expect(out.degraded).toBe(false);
+    expect(out.value.statement).toBe('Recovered despite an earlier stray unbalanced bracket');
+  });
+
   it('raises the default max_tokens above the previous 800-token cap, as a named constant', () => {
     expect(DEFAULT_MAX_OUTPUT_TOKENS).toBeGreaterThan(800);
   });

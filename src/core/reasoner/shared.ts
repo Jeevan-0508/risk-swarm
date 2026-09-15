@@ -88,7 +88,11 @@ function findBalancedJsonSpans(text: string): string[] {
         if (depth === 0) { end = j; break; }
       }
     }
-    if (end === -1) break; // no matching close anywhere after this — genuinely truncated, nothing more to find
+    // An opener with no matching close anywhere after it is not proof the *rest* of the text has
+    // nothing valid — a stray, never-closed bracket in prose before the real answer must not stop the
+    // scan from ever reaching that answer. Move on by one character and keep looking; only a genuinely
+    // bracket-free remainder (checked by the caller's final raw `JSON.parse`) ends up with no span at all.
+    if (end === -1) { i++; continue; }
     spans.push(text.slice(i, end + 1));
     i = end + 1;
   }
