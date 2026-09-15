@@ -96,6 +96,7 @@ export function createLlmReasoner(options: LlmReasonerOptions): Reasoner {
 
       let text: string;
       let emptyReason: string | null = null;
+      let finishReasonForDiagnostics: string | null = null;
       try {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -134,6 +135,7 @@ export function createLlmReasoner(options: LlmReasonerOptions): Reasoner {
             return degrade(`HTTP ${res.status} — provider error: ${sanitizeProviderMessage(body.error.message ?? 'unknown error')}`, est_tokens);
           }
           text = body.content?.[0]?.text ?? body.choices?.[0]?.message?.content ?? '';
+          finishReasonForDiagnostics = body.choices?.[0]?.finish_reason ?? null;
 
           // Phase 1 live-debug brief: dev-only, safe-metadata-only diagnostic. `import.meta.env.DEV`
           // is a Vite build-time constant — false (and dead-code-eliminated) in `bun run build`'s
@@ -169,7 +171,20 @@ export function createLlmReasoner(options: LlmReasonerOptions): Reasoner {
       let parsed: unknown;
       try {
         parsed = extractJson(text);
-      } catch {
+      } catch (err) {
+        // Phase 1.7a live-debug brief: dev-only, safe-metadata-only. Never the response text itself —
+        // only enough shape to tell markdown-fenced/prose-wrapped/schema-echoed/truncated apart without
+        // ever printing what the model actually said.
+        if (import.meta.env.DEV) {
+          console.debug('[llm reasoner] JSON extraction failed', {
+            model: options.model,
+            finish_reason: finishReasonForDiagnostics,
+            content_present: text.trim().length > 0,
+            content_length: text.length,
+            looks_fenced: /```/.test(text),
+            parse_error: err instanceof Error ? sanitizeProviderMessage(err.message) : 'unknown',
+          });
+        }
         return degrade('response was not valid JSON', est_tokens);
       }
 

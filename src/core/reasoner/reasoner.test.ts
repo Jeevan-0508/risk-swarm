@@ -228,6 +228,53 @@ describe('llm reasoner', () => {
     expect(out.value.statement).toBe('Fine as-is');
   });
 
+  /**
+   * Phase 1.7a live-debug brief: a real `openrouter/free` response degraded "response was not valid
+   * JSON" with `finish_reason: "stop"` and non-empty content — meaning the model answered, just not
+   * with a bare, unwrapped JSON value. These four tests reproduce the actual, harmless things a real
+   * (especially free-tier) model does around its answer, and pin that each recovers the real value
+   * rather than degrading, while a genuinely broken response still degrades honestly.
+   */
+  it('recovers a JSON answer wrapped in a ```json code fence', async () => {
+    const fenced = '```json\n' + JSON.stringify({ statement: 'Fenced answer', evidence: ['E-001'] }) + '\n```';
+    const r = createLlmReasoner({ ...base, fetchImpl: openRouterResponse({ choices: [{ message: { content: fenced }, finish_reason: 'stop' }] }) });
+    const out = await r.propose(req());
+    expect(out.degraded).toBe(false);
+    expect(out.value.statement).toBe('Fenced answer');
+  });
+
+  it('recovers a JSON answer surrounded by chatty prose before and after it', async () => {
+    const prose = `Sure! Here is my structured answer:\n\n${JSON.stringify({ statement: 'Prose-wrapped answer', evidence: ['E-001'] })}\n\nLet me know if you need anything else.`;
+    const r = createLlmReasoner({ ...base, fetchImpl: openRouterResponse({ choices: [{ message: { content: prose }, finish_reason: 'stop' }] }) });
+    const out = await r.propose(req());
+    expect(out.degraded).toBe(false);
+    expect(out.value.statement).toBe('Prose-wrapped answer');
+  });
+
+  it('recovers the real answer when the model echoes the (invalid-as-JSON) schema hint text before it', async () => {
+    const echoed = `REQUIRED SHAPE: { statement: string, evidence: string[] }\n\n${JSON.stringify({ statement: 'Real answer after schema echo', evidence: ['E-001'] })}`;
+    const r = createLlmReasoner({ ...base, fetchImpl: openRouterResponse({ choices: [{ message: { content: echoed }, finish_reason: 'stop' }] }) });
+    const out = await r.propose(req());
+    expect(out.degraded).toBe(false);
+    expect(out.value.statement).toBe('Real answer after schema echo');
+  });
+
+  it('does not miscount a brace or bracket quoted inside the answer\'s own string values', async () => {
+    const withQuotedBraces = `Explanation: I considered the {alternative} phrasing first. Final answer: ${JSON.stringify({ statement: 'Uses braces like {this} and [this] inside a value', evidence: ['E-001'] })}`;
+    const r = createLlmReasoner({ ...base, fetchImpl: openRouterResponse({ choices: [{ message: { content: withQuotedBraces }, finish_reason: 'stop' }] }) });
+    const out = await r.propose(req());
+    expect(out.degraded).toBe(false);
+    expect(out.value.statement).toBe('Uses braces like {this} and [this] inside a value');
+  });
+
+  it('still degrades honestly when the JSON is genuinely truncated, not just wrapped', async () => {
+    const truncated = '{"statement":"Cut off mid-str';
+    const r = createLlmReasoner({ ...base, fetchImpl: openRouterResponse({ choices: [{ message: { content: truncated }, finish_reason: 'length' }] }) });
+    const out = await r.propose(req());
+    expect(out.degraded).toBe(true);
+    expect(out.degraded_reason).toBe('response was not valid JSON');
+  });
+
   it('raises the default max_tokens above the previous 800-token cap, as a named constant', () => {
     expect(DEFAULT_MAX_OUTPUT_TOKENS).toBeGreaterThan(800);
   });

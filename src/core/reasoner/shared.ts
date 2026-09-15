@@ -25,11 +25,87 @@ export function buildPrompt<T>(req: ReasonRequest<T>, frame = PROMPT_FRAME): str
   ].join('\n\n');
 }
 
-/** Finds the first balanced-looking `{...}` or `[...]` span in free text and parses it. Throws on failure. */
+/**
+ * Phase 1.7a live-debug brief: a real `openrouter/free` response came back `finish_reason: "stop"`,
+ * non-empty content, and still degraded "response was not valid JSON" — while the same request shape
+ * against OpenAI (ATHENA) parsed cleanly. The previous version of this function took the *first*
+ * `{`/`[` in the whole text to the *last* `}`/`]` in the whole text and parsed everything in between
+ * as one span. That is correct only when the response contains exactly one JSON value and nothing
+ * else. It silently corrupts the extraction whenever a free-tier model does any of the harmless things
+ * real models do: wraps the answer in a ```json fence, adds a sentence of preamble before or after it,
+ * or (this prompt's own fault, not the model's) echoes back the literal `REQUIRED SHAPE` hint text —
+ * `{ stance: string, confidence: number (0-1), ... }`, which is not valid JSON — before giving its
+ * real, filled-in answer. Any of those adds a second, unrelated bracket region that the old "first to
+ * last" span swallowed whole, producing a string that is neither the schema hint nor the real answer
+ * and parses as neither.
+ *
+ * Fixed the same way regardless of which of those actually happened, without special-casing any one
+ * of them: strip a single whole-response code fence if present, then scan for every top-level,
+ * depth-balanced (and string-literal-aware, so a brace inside a quoted value never miscounts) JSON
+ * span in the text, and return the first one that actually parses. A schema-hint echo is balanced but
+ * not valid JSON (bare identifiers, not real values) and is skipped, not merged into an adjacent span;
+ * genuinely truncated content — no complete balanced span anywhere — still throws, honestly, exactly
+ * as before.
+ */
+function stripWholeResponseCodeFence(text: string): string {
+  const m = text.trim().match(/^```[a-zA-Z]*\r?\n?([\s\S]*?)\r?\n?```$/);
+  return m ? m[1] : text;
+}
+
+function tryParseJson(text: string): { ok: true; value: unknown } | { ok: false } {
+  try {
+    return { ok: true, value: JSON.parse(text) };
+  } catch {
+    return { ok: false };
+  }
+}
+
+/** Every top-level `{...}`/`[...]` span whose brackets are actually balanced, ignoring anything inside a JSON string literal (so a brace or bracket quoted in a value never throws off the count). */
+function findBalancedJsonSpans(text: string): string[] {
+  const spans: string[] = [];
+  const CLOSE: Record<string, string> = { '{': '}', '[': ']' };
+  let i = 0;
+  while (i < text.length) {
+    const open = text[i];
+    if (open !== '{' && open !== '[') { i++; continue; }
+    const close = CLOSE[open]!;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    let end = -1;
+    for (let j = i; j < text.length; j++) {
+      const c = text[j];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (c === '\\') escaped = true;
+        else if (c === '"') inString = false;
+        continue;
+      }
+      if (c === '"') { inString = true; continue; }
+      if (c === open) depth++;
+      else if (c === close) {
+        depth--;
+        if (depth === 0) { end = j; break; }
+      }
+    }
+    if (end === -1) break; // no matching close anywhere after this — genuinely truncated, nothing more to find
+    spans.push(text.slice(i, end + 1));
+    i = end + 1;
+  }
+  return spans;
+}
+
 export function extractJson(text: string): unknown {
-  const start = text.indexOf('{') === -1 ? text.indexOf('[') : Math.min(...[text.indexOf('{'), text.indexOf('[')].filter((n) => n >= 0));
-  const end = Math.max(text.lastIndexOf('}'), text.lastIndexOf(']'));
-  return JSON.parse(start >= 0 && end > start ? text.slice(start, end + 1) : text);
+  const direct = tryParseJson(stripWholeResponseCodeFence(text).trim());
+  if (direct.ok) return direct.value;
+
+  for (const span of findBalancedJsonSpans(text)) {
+    const parsed = tryParseJson(span);
+    if (parsed.ok) return parsed.value;
+  }
+
+  // Nothing in the response parsed as JSON at all — the same honest failure as before, never fabricated.
+  return JSON.parse(text);
 }
 
 export const estimateTokens = (text: string): number => Math.ceil(text.length / 4);
