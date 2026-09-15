@@ -7,6 +7,7 @@ import type { ResearchEvent } from '@core/research/execute';
 import { READER_PROXY_HOST, runResearch, type ResearchOutcome } from '@app/lib/research';
 import { deliberateOpenResearch, type OpenAnswer } from '@core/research/open-deliberation';
 import { runCouncil } from '@core/council/run';
+import { selectEvidenceForCouncil } from '@core/council/evidence-selection';
 import { NO_INDEPENDENT_POSITIONS_MESSAGE } from '@core/council/deliberate';
 import type { CouncilResult, CouncilTraceEvent } from '@core/council/types';
 import { useModelStore } from '@app/store/models';
@@ -76,7 +77,7 @@ export function Research() {
       setOutcome(result);
       setAnswer(deliberateOpenResearch(text, result));
       if (councilMode && councilAvailable && result.merged.items.length > 0) {
-        const councilResult = await runCouncil(text, result.merged.items, assignments, { getApiKey }, (event) => setCouncilTrace((all) => [...all, event]));
+        const councilResult = await runCouncil(text, selectEvidenceForCouncil(result.merged.items), assignments, { getApiKey }, (event) => setCouncilTrace((all) => [...all, event]));
         setCouncil(councilResult);
       }
     } catch (e) {

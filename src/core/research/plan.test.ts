@@ -117,4 +117,49 @@ describe('subject extraction', () => {
     expect(comparisonSides(routeQuestion('GDPR vs the EU AI Act'))).not.toBe(null);
     expect(comparisonSides(routeQuestion('Explain quantum computing.'))).toBe(null);
   });
+
+  it('falls back to a bare "A or B" at the tail of the question when there is no vs/versus/difference connective', () => {
+    expect(comparisonSides(routeQuestion('which planet has largest diameter in solarsyatem mercury or jupiter?'))).toEqual(['mercury', 'jupiter']);
+    expect(comparisonSides(routeQuestion('which has more protein eggs or chicken'))).toEqual(['eggs', 'chicken']);
+  });
+
+  it('does not let the bare "or" fallback fire on a plain, non-comparative question', () => {
+    expect(comparisonSides(routeQuestion('what is the capital of Germany?'))).toBe(null);
+  });
+});
+
+describe('comparison queries preserve both entities and the topic, and correct retrieval typos', () => {
+  const LIVE = 'which planet has largest diameter in solarsyatem mercury or jupiter?';
+
+  it('gives each side of the live example its own query, containing that entity, the other absent from it, and the topic word "diameter"', () => {
+    const p = plan(LIVE);
+    const a = p.dimensions.find((d) => d.key === 'comparison_a');
+    const b = p.dimensions.find((d) => d.key === 'comparison_b');
+    expect(a?.queries[0]).toContain('mercury');
+    expect(a?.queries[0]).not.toContain('jupiter');
+    expect(a?.queries[0]).toContain('diameter');
+    expect(b?.queries[0]).toContain('jupiter');
+    expect(b?.queries[0]).not.toContain('mercury');
+    expect(b?.queries[0]).toContain('diameter');
+  });
+
+  it('never sends the raw typo "solarsyatem" to a provider; it is corrected to "solar system" for retrieval', () => {
+    const p = plan(LIVE);
+    for (const d of p.dimensions) {
+      for (const q of d.queries) expect(q.toLowerCase()).not.toContain('solarsyatem');
+    }
+    expect(p.dimensions.some((d) => d.queries.some((q) => q.toLowerCase().includes('solar system')))).toBe(true);
+  });
+
+  it('still preserves the exact original question, typo included, outside of the generated queries', () => {
+    expect(routeQuestion(LIVE).query).toBe(LIVE);
+  });
+
+  it('does not regress the already-working named-entity comparison (GDPR vs the EU AI Act)', () => {
+    const p = plan('Explain GDPR and how it differs from the EU AI Act.');
+    const a = p.dimensions.find((d) => d.key === 'comparison_a');
+    const b = p.dimensions.find((d) => d.key === 'comparison_b');
+    expect(a?.queries[0]).toBe('GDPR it');
+    expect(b?.queries[0]).toBe('EU AI Act');
+  });
 });

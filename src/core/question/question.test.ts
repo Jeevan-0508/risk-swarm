@@ -130,3 +130,31 @@ describe('question decomposition', () => {
     expect(e.some((x) => x.kind === 'proper_noun' && x.text === 'Germany')).toBe(false);
   });
 });
+
+describe('a which-X-has-superlative-A-or-B comparison', () => {
+  const LIVE = 'which planet has largest diameter in solarsyatem mercury or jupiter?';
+
+  it('reads as comparison, not open, even with a noun between which and the verb', () => {
+    const m = routeQuestion(LIVE);
+    expect(m.intent).toBe('comparison');
+  });
+
+  it('recognises other superlatives the same way, not just largest', () => {
+    for (const word of ['biggest', 'smallest', 'highest', 'lowest', 'greatest', 'most']) {
+      expect(routeQuestion(`which planet is ${word} mercury or jupiter?`).intent).toBe('comparison');
+    }
+  });
+
+  it('still requires a recognised comparison form: a plain superlative alone is not one', () => {
+    expect(routeQuestion('what is the largest planet?').intent).not.toBe('comparison');
+  });
+
+  it('preserves the exact original question, typo included, as the query', () => {
+    const m = routeQuestion(LIVE);
+    expect(m.query).toBe(LIVE);
+  });
+
+  it('is deterministic for the typo-laden live case too', () => {
+    expect(JSON.stringify(routeQuestion(LIVE))).toBe(JSON.stringify(routeQuestion(LIVE)));
+  });
+});

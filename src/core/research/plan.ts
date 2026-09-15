@@ -17,6 +17,7 @@
 import type { Capability, ProviderId } from './providers/types';
 import { PROVIDERS, providersFor } from './providers/types';
 import type { QuestionModel } from '../question/model';
+import { normalizeQueryText } from './query-normalize';
 
 export interface ResearchDimension {
   key: string;
@@ -133,26 +134,61 @@ const INTENT_SHAPES: Record<QuestionModel['intent'], string[]> = {
 };
 
 /**
- * The subject phrase: quoted spans first, then acronyms, then capitalised names, then the leading
- * content words. Bounded at four tokens because a longer string stops behaving like a search query.
+ * Comparative words that mark a comparison but are not themselves a search term: the intent already
+ * captures "largest", so repeating it in a query buys nothing, and the two sides are queried on
+ * their own words, not this vocabulary.
  */
-export function subjectOf(question: QuestionModel): string {
+const COMPARISON_FILLER = new Set([
+  'which', 'has', 'have', 'is', 'are', 'more', 'less', 'better', 'worse', 'bigger', 'smaller', 'higher',
+  'lower', 'greater', 'healthier', 'safer', 'stronger', 'weaker', 'faster', 'slower', 'cheaper',
+  'largest', 'biggest', 'smallest', 'highest', 'lowest', 'greatest', 'most', 'least',
+]);
+
+/** The words a comparison is actually about, once both sides and the comparative itself are removed. */
+function comparisonTopic(question: QuestionModel, sides: [string, string]): string[] {
+  const sideWords = new Set(`${sides[0]} ${sides[1]}`.toLowerCase().split(/\s+/).filter((w) => w.length > 0));
+  return question.keywords.filter((k) => !sideWords.has(k.toLowerCase()) && !COMPARISON_FILLER.has(k.toLowerCase()));
+}
+
+/**
+ * The subject phrase: quoted spans first, then acronyms, then capitalised names, then - if the
+ * question is a comparison with no named entity to anchor on - both sides plus what they are being
+ * compared on, then the leading content words. Bounded at eight tokens (four when there are no sides
+ * to preserve) because a longer string stops behaving like a search query.
+ */
+export function subjectOf(question: QuestionModel, sides: [string, string] | null = null): string {
   const quoted = question.entities.filter((e) => e.kind === 'quoted').map((e) => e.text);
   if (quoted.length > 0) return quoted.slice(0, 2).join(' ');
   const named = question.entities.filter((e) => e.kind === 'acronym' || e.kind === 'proper_noun').map((e) => e.text);
   if (named.length > 0) return named.slice(0, 3).join(' ');
+  if (sides !== null && question.entities.length === 0) {
+    return [...sides[0].split(/\s+/), ...sides[1].split(/\s+/), ...comparisonTopic(question, sides)].slice(0, 8).join(' ');
+  }
   return question.keywords.slice(0, 4).join(' ');
 }
 
-/** The two sides of a comparison, split on the comparison word the question actually used. */
+/**
+ * The two sides of a comparison, split on the comparison word the question actually used. "vs"/
+ * "versus"/etc. bracket the two sides cleanly, so the string is split in half on the connective. A
+ * bare "A or B" does not: it appears only at the tail of the question, with every qualifying word
+ * before it ("which planet has largest diameter ... mercury or jupiter"), so halving the whole
+ * string would put all the noise in side A. It is therefore matched as its own, narrower fallback.
+ */
 export function comparisonSides(question: QuestionModel): [string, string] | null {
-  const m = question.query.match(/^(.*?)\b(?:vs\.?|versus|compared to|compared with|difference between|differs? from)\b(.*)$/i);
-  if (m === null) return null;
   const clean = (s: string) => s.replace(/\b(what|is|the|between|and|how|does|do|explain|from|to|with)\b/gi, ' ').replace(/[^\p{L}\p{N}\s\-]/gu, ' ').replace(/\s+/g, ' ').trim();
-  const a = clean(m[1]);
-  const b = clean(m[2]);
-  if (a.length === 0 || b.length === 0) return null;
-  return [a, b];
+  const m = question.query.match(/^(.*?)\b(?:vs\.?|versus|compared to|compared with|difference between|differs? from)\b(.*)$/i);
+  if (m !== null) {
+    const a = clean(m[1]);
+    const b = clean(m[2]);
+    if (a.length > 0 && b.length > 0) return [a, b];
+  }
+  const bare = question.query.match(/\b([a-z][\w-]*)\s+(?:or|and)\s+([a-z][\w-]*)[?.!]?\s*$/i);
+  if (bare !== null) {
+    const a = clean(bare[1]);
+    const b = clean(bare[2]);
+    if (a.length > 0 && b.length > 0) return [a, b];
+  }
+  return null;
 }
 
 const geoSuffix = (question: QuestionModel): string => (question.geo.length > 0 && question.geo.length <= 3 ? ` ${question.geo.join(' ')}` : '');
@@ -173,9 +209,13 @@ export function planResearch(question: QuestionModel, options: PlanOptions = {})
   const budget: ResearchBudget = { ...BUDGET_BY_DEPTH[question.depth], ...(options.budget ?? {}) };
   const notes: string[] = [...question.notes];
 
-  const subject = subjectOf(question);
   const sides = comparisonSides(question);
+  const subject = subjectOf(question, sides);
   const keys = INTENT_SHAPES[question.intent];
+  // Only used without a named entity to anchor on: when one exists (e.g. "GDPR vs the EU AI Act"),
+  // `subject` already carries both sides via `entitiesOf`, and repeating the topic fragment here would
+  // just pad an already-correct query.
+  const anchorless = sides !== null && question.entities.length === 0;
 
   const built: ResearchDimension[] = [];
   for (const key of keys) {
@@ -185,15 +225,15 @@ export function planResearch(question: QuestionModel, options: PlanOptions = {})
     let phrase = subject;
     if (key === 'comparison_a') {
       if (sides === null) continue;
-      phrase = sides[0];
+      phrase = anchorless ? [sides[0], ...comparisonTopic(question, sides)].join(' ') : sides[0];
     }
     if (key === 'comparison_b') {
       if (sides === null) continue;
-      phrase = sides[1];
+      phrase = anchorless ? [sides[1], ...comparisonTopic(question, sides)].join(' ') : sides[1];
     }
     if (phrase.length === 0) continue;
 
-    const query = `${phrase}${shape.suffix.length > 0 ? ` ${shape.suffix}` : ''}${key === 'exposure' || key === 'current_state' ? geoSuffix(question) : ''}`.trim();
+    const query = normalizeQueryText(`${phrase}${shape.suffix.length > 0 ? ` ${shape.suffix}` : ''}${key === 'exposure' || key === 'current_state' ? geoSuffix(question) : ''}`.trim());
     const providers = selectProviders(shape.capabilities, proxyEnabled);
     if (providers.length === 0) {
       notes.push(`Dimension "${shape.label}" was dropped: every provider that serves it needs the reader proxy, which is off.`);
