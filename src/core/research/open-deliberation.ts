@@ -43,10 +43,70 @@ function comparisonParts(question: string): [string, string] | null {
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-function sideHas(evidence: ResearchOutcome['merged']['items'], side: string, terms: RegExp): boolean {
-  const sideRe = new RegExp(`\\b${escapeRegExp(side)}\\b`, 'i');
-  return evidence.some((item) => sideRe.test(`${item.evidence.title} ${item.evidence.excerpt_or_summary}`) && terms.test(`${item.evidence.title} ${item.evidence.excerpt_or_summary}`));
+/** Tolerates a plural ('tigers') without matching an unrelated word that merely starts with the side name. */
+const sideRegExp = (side: string): RegExp => new RegExp(`\\b${escapeRegExp(side)}s?\\b`, 'i');
+
+const splitSentences = (text: string): string[] => text.split(/(?<=[.!?])\s+/).filter((s) => s.trim().length > 0);
+
+/** "Lions live in prides while tigers are solitary" names both sides but states one fact per side; splitting on the contrast conjunction turns it back into two single-side clauses instead of one ambiguous sentence. */
+const splitClauses = (sentence: string): string[] => sentence.split(/\s+(?:while|whereas|although|though)\s+/i).filter((c) => c.trim().length > 0);
+
+const COMPARATIVE = '(?:more|bigger|larger|stronger|heavier|faster|greater|better)';
+
+/**
+ * A comparison article routinely names both sides in the same clause ("tigers outweigh lions"), so
+ * "does this item mention side X and match the terms" is true for both sides on almost every real
+ * article and never resolves anything. This scores clause-by-clause instead: a clause naming only one
+ * side counts for it (for `forTerms`) or for the *other* side (for `againstTerms` - "tigers are
+ * solitary" is evidence against tiger's social score, not for it). A clause naming both sides only
+ * counts if it states an explicit direction ("X ... than Y" or "X outweighs Y"); left ambiguous otherwise.
+ */
+function sideAdvantage(
+  evidence: ResearchOutcome['merged']['items'],
+  a: string,
+  b: string,
+  forTerms: RegExp,
+  againstTerms: RegExp | null = null,
+): 'a' | 'b' | 'context-dependent' {
+  const aRe = sideRegExp(a);
+  const bRe = sideRegExp(b);
+  const direction = (x: RegExp, y: RegExp) =>
+    new RegExp(`${x.source}[^.!?]{0,60}?\\b(?:${COMPARATIVE}\\b[^.!?]{0,30}?\\bthan|outweighs?)\\b[^.!?]{0,30}?${y.source}`, 'i');
+  const aOverB = direction(aRe, bRe);
+  const bOverA = direction(bRe, aRe);
+  let scoreA = 0;
+  let scoreB = 0;
+  for (const item of evidence) {
+    // The title alone (e.g. "Tiger Vs. Lion Size Comparison") is a label, not a claim - and its own
+    // abbreviation period ('Vs.') fools the sentence splitter into orphaning a fragment that can name
+    // one side next to an unrelated word ('Lion Size'), crediting a side for nothing it actually said.
+    for (const sentence of splitSentences(item.evidence.excerpt_or_summary)) {
+      for (const clause of splitClauses(sentence)) {
+        const matchesFor = forTerms.test(clause);
+        const matchesAgainst = againstTerms !== null && againstTerms.test(clause);
+        if (!matchesFor && !matchesAgainst) continue;
+        const hasA = aRe.test(clause);
+        const hasB = bRe.test(clause);
+        if (hasA && !hasB) {
+          if (matchesFor) scoreA += 1;
+          if (matchesAgainst) scoreB += 1;
+        } else if (hasB && !hasA) {
+          if (matchesFor) scoreB += 1;
+          if (matchesAgainst) scoreA += 1;
+        } else if (hasA && hasB && matchesFor) {
+          if (aOverB.test(clause)) scoreA += 1;
+          else if (bOverA.test(clause)) scoreB += 1;
+        }
+      }
+    }
+  }
+  if (scoreA > scoreB) return 'a';
+  if (scoreB > scoreA) return 'b';
+  return 'context-dependent';
 }
+
+const winnerOf = (advantage: 'a' | 'b' | 'context-dependent', a: string, b: string): string =>
+  advantage === 'a' ? a : advantage === 'b' ? b : 'context-dependent';
 
 function dimensionAnswer(question: string, a: string, b: string, outcome: ResearchOutcome): Array<{ label: string; winner: string; reason: string }> {
   const q = question.toLowerCase();
@@ -55,25 +115,21 @@ function dimensionAnswer(question: string, a: string, b: string, outcome: Resear
   const out: Array<{ label: string; winner: string; reason: string }> = [];
   const push = (label: string, winner: string, reason: string) => out.push({ label, winner, reason });
 
-  const physicalTerms = /(larg|heavier|weight|size|strength|power|muscl|forelimb|speed|agility|armor|weapon|performance)/i;
-  const socialTerms = /(social|pride|pack|group|coalition|team|cooperat|solitary|alone|community)/i;
+  const physicalFor = /(larg|heavier|weight|size|strength|power|muscl|forelimb|speed|agility|armor|weapon|performance|outweigh)/i;
+  const physicalAgainst = /(smaller|weaker|slower|lighter|frailer)/i;
+  const socialFor = /(social|pride|pack|group|coalition|team|cooperat|community)/i;
+  const socialAgainst = /(solitary|alone|loner)/i;
 
   if (/(combat|fight|fighting|one[- ]on[- ]one|strength|power)/i.test(q)) {
-    const aPhysical = sideHas(evidence, a, physicalTerms);
-    const bPhysical = sideHas(evidence, b, physicalTerms);
-    push('Combat / physical capability', aPhysical && !bPhysical ? a : bPhysical && !aPhysical ? b : 'context-dependent', 'The retrieved evidence is used to compare documented physical or performance traits; it does not establish a guaranteed real-world contest.');
+    push('Combat / physical capability', winnerOf(sideAdvantage(evidence, a, b, physicalFor, physicalAgainst), a, b), 'The retrieved evidence is used to compare documented physical or performance traits; it does not establish a guaranteed real-world contest.');
   }
 
   if (/(pack|pride|social|group|team|coordinat)/i.test(q) || /better/.test(q)) {
-    const aSocial = sideHas(evidence, a, socialTerms);
-    const bSocial = sideHas(evidence, b, socialTerms);
-    push('Social / group behaviour', aSocial && !bSocial ? a : bSocial && !aSocial ? b : 'context-dependent', 'The retrieved evidence is used to compare the social/group traits explicitly associated with each side.');
+    push('Social / group behaviour', winnerOf(sideAdvantage(evidence, a, b, socialFor, socialAgainst), a, b), 'The retrieved evidence is used to compare the social/group traits explicitly associated with each side.');
   }
 
   if (/better/.test(q) && /tiger\b/i.test(corpus) && /lion\b/i.test(corpus) && out.every((d) => d.label !== 'Combat / physical capability')) {
-    const aPhysical = sideHas(evidence, a, physicalTerms);
-    const bPhysical = sideHas(evidence, b, physicalTerms);
-    push('Combat / physical capability', aPhysical && !bPhysical ? a : bPhysical && !aPhysical ? b : 'context-dependent', 'The comparison was broad, so the system added a relevant physical-capability dimension from the retrieved evidence rather than pretending that “better” has one universal meaning.');
+    push('Combat / physical capability', winnerOf(sideAdvantage(evidence, a, b, physicalFor, physicalAgainst), a, b), 'The comparison was broad, so the system added a relevant physical-capability dimension from the retrieved evidence rather than pretending that “better” has one universal meaning.');
   }
 
   if (out.length === 0) push('Overall', 'context-dependent', 'The evidence does not establish a single objective winner for this wording.');
