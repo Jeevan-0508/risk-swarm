@@ -11,6 +11,7 @@ import { selectEvidenceForCouncil } from '@core/council/evidence-selection';
 import { NO_INDEPENDENT_POSITIONS_MESSAGE } from '@core/council/deliberate';
 import type { CouncilResult, CouncilTraceEvent } from '@core/council/types';
 import { useModelStore } from '@app/store/models';
+import { swarmDecisionPanelTitle } from '@app/lib/research-ownership';
 import { Link } from 'react-router-dom';
 
 const toneFor = (status: ResearchOutcome['execution']['status']): 'support' | 'caution' | 'objection' =>
@@ -174,7 +175,7 @@ export function Research() {
 
       {answer !== null && outcome !== null && (
         <>
-          <Panel title="SWARM DECISION" aside={<Tag tone={toneFor(outcome.execution.status)}>{outcome.execution.status}</Tag>}>
+          <Panel title={swarmDecisionPanelTitle(council)} aside={<Tag tone={toneFor(outcome.execution.status)}>{outcome.execution.status}</Tag>}>
             <div className="text-2xl font-light tracking-tight text-fg">{answer.headline}</div>
             <p className="mt-4 max-w-4xl text-base leading-relaxed text-fg-dim">{answer.answer}</p>
             <p className="mt-4 border-l-2 border-signal pl-3 text-xs leading-relaxed text-fg-mute">{answer.caveat}</p>
@@ -188,7 +189,9 @@ export function Research() {
                 open-research agents — no model required, byte-for-byte reproducible. ATHENA/ARES/HADES/ZEUS
                 (below) are EVOLUTION 6.0's Olympian Council — real, independent, bring-your-own-key model
                 calls over the same evidence, synthesized by Zeus. The name overlap (ATHENA, ARES) is
-                coincidental, not the same agent twice.
+                coincidental, not the same agent twice. With Council Mode on, the Council's verdict below is
+                the authoritative final decision; the panel above is the legacy pipeline's own analysis of
+                the same evidence, kept for context and provenance, not a competing answer.
               </p>
               <Panel title="OLYMPIAN COUNCIL VERDICT" aside={<Tag tone={council.verdict.verdict.verdict_type === 'CONSENSUS' ? 'support' : council.verdict.verdict.verdict_type === 'UNRESOLVED' ? 'objection' : 'signal'}>{council.verdict.verdict.verdict_type}</Tag>}>
                 <div className="flex items-baseline justify-between gap-4">
