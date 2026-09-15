@@ -8,7 +8,7 @@
  */
 import type { NormalizedEvidence } from '../research/normalize';
 import { createOlympianReasoners, modelDiversity, type RegistryConfig, type RegistryDeps } from '../reasoner/registry';
-import { assessDisagreement } from './deliberate';
+import { assessDisagreement, NO_INDEPENDENT_POSITIONS_MESSAGE } from './deliberate';
 import { requestVerdict } from './deliberate';
 import { requestPosition } from './positions';
 import { REASONING_AGENTS, type CouncilResult, type CouncilTraceEvent, type ReasoningAgent } from './types';
@@ -65,7 +65,13 @@ export async function runCouncil(
   }
 
   const disagreement = assessDisagreement(positionsForDeliberation);
-  push({ kind: 'disagreement_assessed', detail: `${disagreement.agreement} across ${disagreement.independent_count} independent position(s): ${disagreement.distinct_stances.join(', ') || 'none'}` });
+  push({
+    kind: 'disagreement_assessed',
+    detail:
+      disagreement.independent_count === 0
+        ? NO_INDEPENDENT_POSITIONS_MESSAGE
+        : `${disagreement.agreement} across ${disagreement.independent_count} independent position(s): ${disagreement.distinct_stances.join(', ') || 'none'}`,
+  });
 
   push({
     kind: 'zeus_called',

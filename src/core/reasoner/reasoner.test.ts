@@ -28,6 +28,10 @@ const req = (over: Partial<ReasonRequest<Finding>> = {}): ReasonRequest<Finding>
 const jsonResponse = (payload: unknown, ok = true, status = 200): typeof fetch =>
   (async () => ({ ok, status, json: async () => ({ content: [{ text: typeof payload === 'string' ? payload : JSON.stringify(payload) }] }) })) as unknown as typeof fetch;
 
+/** Real OpenRouter/OpenAI `choices[0].message` shape, as opposed to `jsonResponse`'s Anthropic-style `content[0].text`. */
+const openRouterResponse = (body: Record<string, unknown>, ok = true, status = 200): typeof fetch =>
+  (async () => ({ ok, status, json: async () => body })) as unknown as typeof fetch;
+
 describe('citation provenance', () => {
   it('finds ids anywhere in a nested output', () => {
     expect(citedIds({ a: ['E-001'], b: { c: 'H-04 is supported by E-002' } })).toEqual(['E-001']);
@@ -82,16 +86,74 @@ describe('llm reasoner', () => {
     expect(out.value.statement).toContain('carrier substitution');
   });
 
-  it('falls back on malformed JSON, on prose, and on an empty answer', async () => {
-    for (const [payload, reason] of [
-      ['not json at all', 'response was not valid JSON'],
-      ['', 'empty response'],
-    ] as const) {
-      const r = createLlmReasoner({ ...base, fetchImpl: jsonResponse(payload) });
-      const out = await r.propose(req());
-      expect(out.degraded).toBe(true);
-      expect(out.degraded_reason).toBe(reason);
-    }
+  it('falls back on malformed JSON and on prose', async () => {
+    const r = createLlmReasoner({ ...base, fetchImpl: jsonResponse('not json at all') });
+    const out = await r.propose(req());
+    expect(out.degraded).toBe(true);
+    expect(out.degraded_reason).toBe('response was not valid JSON');
+  });
+
+  it('reports a precise, non-generic reason for an empty answer instead of bare "empty response"', async () => {
+    const r = createLlmReasoner({ ...base, fetchImpl: jsonResponse('') });
+    const out = await r.propose(req());
+    expect(out.degraded).toBe(true);
+    expect(out.degraded_reason).toBe('HTTP 200 — no usable assistant content');
+  });
+
+  it('parses a real OpenRouter/OpenAI choices-shape response', async () => {
+    const r = createLlmReasoner({
+      ...base,
+      fetchImpl: openRouterResponse({ choices: [{ message: { content: JSON.stringify({ statement: 'Rephrased via OpenRouter', evidence: ['E-001'] }) }, finish_reason: 'stop' }] }),
+    });
+    const out = await r.propose(req());
+    expect(out.degraded).toBe(false);
+    expect(out.value.statement).toBe('Rephrased via OpenRouter');
+  });
+
+  it('reports a model refusal instead of a generic empty response', async () => {
+    const r = createLlmReasoner({
+      ...base,
+      fetchImpl: openRouterResponse({ choices: [{ message: { content: '', refusal: 'I cannot help with that request.' }, finish_reason: 'stop' }] }),
+    });
+    const out = await r.propose(req());
+    expect(out.degraded).toBe(true);
+    expect(out.degraded_reason).toBe('HTTP 200 — model refused: I cannot help with that request.');
+  });
+
+  it('reports a non-stop finish_reason instead of a generic empty response', async () => {
+    const r = createLlmReasoner({
+      ...base,
+      fetchImpl: openRouterResponse({ choices: [{ message: { content: null }, finish_reason: 'content_filter' }] }),
+    });
+    const out = await r.propose(req());
+    expect(out.degraded).toBe(true);
+    expect(out.degraded_reason).toBe('HTTP 200 — no usable content (finish_reason: content_filter)');
+  });
+
+  it('reports a missing choices/content field distinctly from an empty one', async () => {
+    const r = createLlmReasoner({ ...base, fetchImpl: openRouterResponse({}) });
+    const out = await r.propose(req());
+    expect(out.degraded).toBe(true);
+    expect(out.degraded_reason).toBe('HTTP 200 — response had no "choices" or "content" field');
+  });
+
+  it("surfaces the provider's real error message on a non-200 status, sanitized", async () => {
+    const r = createLlmReasoner({
+      ...base,
+      fetchImpl: openRouterResponse({ error: { message: 'model not found: openrouter/free — authorization: Bearer sk-should-not-appear' } }, false, 400),
+    });
+    const out = await r.propose(req());
+    expect(out.degraded).toBe(true);
+    expect(out.degraded_reason).toContain('provider returned HTTP 400');
+    expect(out.degraded_reason).toContain('model not found: openrouter/free');
+    expect(out.degraded_reason).not.toContain('sk-should-not-appear');
+  });
+
+  it('surfaces a top-level provider error even when the HTTP status itself is 200', async () => {
+    const r = createLlmReasoner({ ...base, fetchImpl: openRouterResponse({ error: { message: 'upstream provider overloaded', code: 200 } }) });
+    const out = await r.propose(req());
+    expect(out.degraded).toBe(true);
+    expect(out.degraded_reason).toBe('HTTP 200 — provider error: upstream provider overloaded');
   });
 
   it('rejects a model answer that fabricates an evidence id', async () => {

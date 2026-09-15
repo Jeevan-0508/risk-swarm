@@ -1,5 +1,5 @@
 import { assertNoFabricatedCitations, type ReasonRequest, type ReasonResult, type Reasoner } from './types';
-import { buildPrompt, estimateTokens, extractJson } from './shared';
+import { buildPrompt, estimateTokens, extractJson, sanitizeProviderMessage } from './shared';
 
 /**
  * Optional model-backed reasoner, bring-your-own key. OpenAI-compatible: bearer auth,
@@ -18,6 +18,23 @@ export interface LlmReasonerOptions {
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
   maxOutputTokens?: number;
+}
+
+type ChatChoice = { message?: { content?: string; refusal?: string }; finish_reason?: string };
+type ChatBody = { error?: { message?: string; code?: number }; content?: Array<{ text?: string }>; choices?: ChatChoice[] };
+
+/**
+ * Diagnoses why `choices[0].message.content` came back empty when the HTTP call itself succeeded.
+ * A provider that answers 200 OK with nothing usable can mean several different things — a
+ * moderation refusal, a truncated/filtered generation, or a response shape this adapter doesn't
+ * recognise — and each deserves a different, honest message instead of one generic "empty response".
+ */
+function diagnoseEmptyContent(status: number, body: ChatBody): string {
+  const choice = body.choices?.[0];
+  if (choice?.message?.refusal) return `HTTP ${status} — model refused: ${sanitizeProviderMessage(choice.message.refusal)}`;
+  if (choice?.finish_reason && choice.finish_reason !== 'stop') return `HTTP ${status} — no usable content (finish_reason: ${choice.finish_reason})`;
+  if (!body.choices && !body.content) return `HTTP ${status} — response had no "choices" or "content" field`;
+  return `HTTP ${status} — no usable assistant content`;
 }
 
 export function createLlmReasoner(options: LlmReasonerOptions): Reasoner {
@@ -46,6 +63,7 @@ export function createLlmReasoner(options: LlmReasonerOptions): Reasoner {
       const est_tokens = estimateTokens(prompt);
 
       let text: string;
+      let emptyReason: string | null = null;
       try {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -61,9 +79,30 @@ export function createLlmReasoner(options: LlmReasonerOptions): Reasoner {
             }),
             signal: controller.signal,
           });
-          if (!res.ok) return degrade(`provider returned HTTP ${res.status}`, est_tokens);
-          const body = (await res.json()) as { content?: Array<{ text?: string }>; choices?: Array<{ message?: { content?: string } }> };
+
+          if (!res.ok) {
+            let providerMessage: string | undefined;
+            try {
+              providerMessage = ((await res.json()) as ChatBody)?.error?.message;
+            } catch {
+              // Error body wasn't JSON — the status code alone still tells the real story.
+            }
+            return degrade(
+              providerMessage
+                ? `provider returned HTTP ${res.status} — ${sanitizeProviderMessage(providerMessage)}`
+                : `provider returned HTTP ${res.status}`,
+              est_tokens,
+            );
+          }
+
+          const body = (await res.json()) as ChatBody;
+          // OpenRouter documents errors as always carrying a matching non-200 status, but proxied and
+          // free-tier models have been reported to answer 200 OK with a top-level `error` anyway.
+          if (body.error) {
+            return degrade(`HTTP ${res.status} — provider error: ${sanitizeProviderMessage(body.error.message ?? 'unknown error')}`, est_tokens);
+          }
           text = body.content?.[0]?.text ?? body.choices?.[0]?.message?.content ?? '';
+          if (!text.trim()) emptyReason = diagnoseEmptyContent(res.status, body);
         } finally {
           clearTimeout(timer);
         }
@@ -72,7 +111,7 @@ export function createLlmReasoner(options: LlmReasonerOptions): Reasoner {
         return degrade(err instanceof Error && err.name === 'AbortError' ? 'provider timed out' : 'provider request failed', est_tokens);
       }
 
-      if (!text.trim()) return degrade('empty response', est_tokens);
+      if (emptyReason) return degrade(emptyReason, est_tokens);
 
       let parsed: unknown;
       try {

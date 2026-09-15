@@ -14,6 +14,17 @@ import type { Reasoner, ReasonRequest, ReasonResult } from '../reasoner/types';
 import type { CouncilVerdict, DisagreementAssessment, OlympianPosition, ReasoningAgent } from './types';
 import { REASONING_AGENTS } from './types';
 
+/** Shown wherever a disagreement or verdict would otherwise be computed over zero real opinions. */
+export const NO_INDEPENDENT_POSITIONS_MESSAGE = 'No independent LLM positions available — every agent was deterministic fallback or degraded.';
+
+/**
+ * A position only counts as an independent opinion if a real model actually answered: `degraded` false
+ * rules out a failed call, and `provider !== 'deterministic'` rules out an agent that was never enabled
+ * and so never left this machine. Two deterministic fallbacks that happen to agree are not a consensus —
+ * they are the same non-LLM code path run twice, and must not be counted or narrated as independent.
+ */
+const isIndependentPosition = (r: ReasonResult<OlympianPosition>): boolean => !r.degraded && r.provider !== 'deterministic';
+
 const clamp01 = (n: number): number => (Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0);
 const stdev = (xs: number[]): number => {
   if (xs.length < 2) return 0;
@@ -25,7 +36,7 @@ const stdev = (xs: number[]): number => {
 const normaliseStance = (stance: string): string => stance.trim().toLowerCase().replace(/^the\s+/, '').replace(/[.!?]+$/, '');
 
 export function assessDisagreement(positions: Record<ReasoningAgent, ReasonResult<OlympianPosition>>): DisagreementAssessment {
-  const independent = REASONING_AGENTS.filter((a) => !positions[a].degraded);
+  const independent = REASONING_AGENTS.filter((a) => isIndependentPosition(positions[a]));
   const stances = {} as Record<ReasoningAgent, string>;
   for (const a of REASONING_AGENTS) stances[a] = positions[a].value.stance;
 
@@ -83,13 +94,13 @@ function validateVerdict(raw: unknown): CouncilVerdict {
 
 /** The mechanical, no-model verdict: never averages away a real split, never invents a rationale beyond the positions it was given. */
 function fallbackVerdict(positions: Record<ReasoningAgent, ReasonResult<OlympianPosition>>, disagreement: DisagreementAssessment): CouncilVerdict {
-  const independent = REASONING_AGENTS.filter((a) => !positions[a].degraded);
+  const independent = REASONING_AGENTS.filter((a) => isIndependentPosition(positions[a]));
   const confidences = independent.map((a) => positions[a].value.confidence);
   const meanConfidence = confidences.length === 0 ? 0 : confidences.reduce((a, b) => a + b, 0) / confidences.length;
   const rationale = independent.map((a) => `${a}: ${positions[a].value.stance} (${positions[a].value.reasoning_summary})`);
 
   if (independent.length === 0) {
-    return { verdict_type: 'UNRESOLVED', answer: 'insufficient_evidence', confidence: 0, rationale: [], minority_view: null, unresolved: ['No Olympian produced an independent position.'], cited_evidence_ids: [] };
+    return { verdict_type: 'UNRESOLVED', answer: 'insufficient_evidence', confidence: 0, rationale: [], minority_view: null, unresolved: [NO_INDEPENDENT_POSITIONS_MESSAGE], cited_evidence_ids: [] };
   }
   if (disagreement.agreement === 'strong_consensus') {
     return { verdict_type: 'CONSENSUS', answer: positions[independent[0]!].value.stance, confidence: clamp01(meanConfidence), rationale, minority_view: null, unresolved: [], cited_evidence_ids: [...new Set(independent.flatMap((a) => positions[a].value.evidence_ids))] };

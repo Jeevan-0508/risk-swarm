@@ -33,3 +33,20 @@ export function extractJson(text: string): unknown {
 }
 
 export const estimateTokens = (text: string): number => Math.ceil(text.length / 4);
+
+/**
+ * Provider error/refusal messages are shown to the user for real diagnosis (EVOLUTION 6.0 Phase 1
+ * live-debug brief: a generic "empty response" is not good enough), but they come from someone
+ * else's server and must never reach the user with a credential riding along. Strips anything
+ * shaped like a bearer token, an `Authorization:` header echo or a raw API key, then truncates so a
+ * verbose provider payload cannot flood the trace.
+ */
+export function sanitizeProviderMessage(message: string, maxLength = 220): string {
+  const redacted = message
+    .replace(/bearer\s+\S+/gi, 'bearer [redacted]')
+    .replace(/authorization\s*:\s*\S+/gi, 'authorization: [redacted]')
+    .replace(/\b(sk|pk|rk)-[A-Za-z0-9_-]{8,}/gi, '[redacted-key]')
+    .replace(/\bAIza[A-Za-z0-9_-]{10,}/g, '[redacted-key]');
+  const oneLine = redacted.replace(/\s+/g, ' ').trim();
+  return oneLine.length > maxLength ? `${oneLine.slice(0, maxLength)}…` : oneLine;
+}

@@ -103,6 +103,10 @@ describe('Council orchestration', () => {
     expect(calls).toBe(0);
     expect(result.positions.ATHENA.position.stance).toBe('insufficient_evidence');
     expect(result.model_diversity.label).toBe('none');
+    // Three deterministic fallbacks that happen to agree are not a genuine consensus (TASK 4).
+    expect(result.disagreement.independent_count).toBe(0);
+    expect(result.disagreement.agreement).toBe('inconclusive');
+    expect(result.trace.some((e) => e.kind === 'disagreement_assessed' && e.detail.includes('No independent LLM positions available'))).toBe(true);
   });
 
   /**
@@ -139,5 +143,36 @@ describe('Council orchestration', () => {
     expect(result.trace.some((e) => e.kind === 'agent_called' && e.agent === 'ARES' && e.detail.includes('openrouter/free'))).toBe(true);
     expect(result.trace.some((e) => e.kind === 'agent_called' && e.agent === 'ATHENA' && e.detail.includes('deterministic fallback'))).toBe(true);
     expect(result.trace.some((e) => e.kind === 'zeus_called' && e.detail.includes('mechanically'))).toBe(true);
+    // Exactly one genuine LLM position (ARES); ATHENA/HADES are deterministic fallback and must not
+    // inflate the independent count or be counted toward a "consensus" (TASK 4).
+    expect(result.disagreement.independent_count).toBe(1);
+    expect(result.disagreement.agreement).toBe('inconclusive');
+  });
+
+  /**
+   * Reproduces the live-debug report verbatim: ARES/OpenRouter/openrouter-free enabled, the provider
+   * answers HTTP 200 with a `choices` array whose `message.content` is empty. This must never surface
+   * as the old bare "empty response" — it must say plainly that the call succeeded but returned nothing
+   * usable, and it must never be silently treated as a real independent position.
+   */
+  it('ARES/OpenRouter empty-content response degrades with a precise reason, not a silent "empty response"', async () => {
+    const oneAgentConfig: RegistryConfig = {
+      ...DEFAULT_REGISTRY_CONFIG,
+      ARES: { provider: 'openrouter', model: 'openrouter/free', enabled: true },
+    };
+    const fetchImpl: typeof fetch = (async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ choices: [{ message: { content: '' }, finish_reason: 'stop' }] }),
+    })) as unknown as typeof fetch;
+
+    const result = await runCouncil('which is better in combat: a tiger or a lion?', evidence, oneAgentConfig, { getApiKey: (p) => (p === 'openrouter' ? 'sk-test' : null), fetchImpl });
+
+    expect(result.positions.ARES.degraded).toBe(true);
+    expect(result.positions.ARES.degraded_reason).toBe('HTTP 200 — no usable assistant content');
+    expect(result.positions.ARES.provider).toBe('llm:openrouter/free');
+    expect(result.disagreement.independent_count).toBe(0);
+    expect(result.verdict.provider).toBe('deterministic');
+    expect(result.verdict.verdict.unresolved.some((u) => u.includes('No independent LLM positions available'))).toBe(true);
   });
 });

@@ -7,6 +7,7 @@ import type { ResearchEvent } from '@core/research/execute';
 import { READER_PROXY_HOST, runResearch, type ResearchOutcome } from '@app/lib/research';
 import { deliberateOpenResearch, type OpenAnswer } from '@core/research/open-deliberation';
 import { runCouncil } from '@core/council/run';
+import { NO_INDEPENDENT_POSITIONS_MESSAGE } from '@core/council/deliberate';
 import type { CouncilResult, CouncilTraceEvent } from '@core/council/types';
 import { useModelStore } from '@app/store/models';
 import { Link } from 'react-router-dom';
@@ -200,7 +201,11 @@ export function Research() {
                 {council.verdict.verdict.unresolved.length > 0 && (
                   <p className="mt-3 border-l-2 border-objection pl-3 text-xs leading-relaxed text-fg-mute"><span className="label">unresolved</span><br />{council.verdict.verdict.unresolved.join(' ')}</p>
                 )}
-                <p className="mt-4 text-2xs text-fg-mute">Zeus · {council.verdict.provider}{council.verdict.degraded && ` · degraded: ${council.verdict.degraded_reason}`}</p>
+                <p className="mt-4 text-2xs text-fg-mute">
+                  {council.verdict.provider === 'deterministic'
+                    ? 'ZEUS / DETERMINISTIC FALLBACK — LLM synthesis unavailable — deterministic fallback used.'
+                    : `Zeus · ${council.verdict.provider}${council.verdict.degraded ? ` · degraded: ${council.verdict.degraded_reason}` : ''}`}
+                </p>
               </Panel>
 
               <Panel title="independent positions" aside={<Tag tone="signal">model diversity: {council.model_diversity.label}</Tag>}>
@@ -211,7 +216,7 @@ export function Research() {
                       <div key={agent} className="border border-line bg-ink-800 p-4">
                         <div className="flex items-baseline justify-between gap-2">
                           <span className="text-sm text-fg">{agent}</span>
-                          <Tag tone={p.degraded ? 'caution' : 'support'}>{p.degraded ? 'degraded' : 'independent'}</Tag>
+                          <Tag tone={p.degraded ? 'caution' : p.provider === 'deterministic' ? 'neutral' : 'support'}>{p.degraded ? 'degraded' : p.provider === 'deterministic' ? 'DETERMINISTIC FALLBACK' : 'INDEPENDENT · LLM'}</Tag>
                         </div>
                         <div className="mt-1 label">{p.provider}</div>
                         <div className="mt-3 text-lg text-fg">{p.position.stance}</div>
@@ -223,8 +228,10 @@ export function Research() {
                   })}
                 </div>
                 <p className="mt-4 text-2xs leading-relaxed text-fg-mute">
-                  disagreement: {council.disagreement.agreement} across {council.disagreement.independent_count} independent position(s)
-                  {council.disagreement.distinct_stances.length > 0 && ` — ${council.disagreement.distinct_stances.join(', ')}`}
+                  {council.disagreement.independent_count === 0
+                    ? NO_INDEPENDENT_POSITIONS_MESSAGE
+                    : <>disagreement: {council.disagreement.agreement} across {council.disagreement.independent_count} independent position(s)
+                  {council.disagreement.distinct_stances.length > 0 && ` — ${council.disagreement.distinct_stances.join(', ')}`}</>}
                 </p>
               </Panel>
 

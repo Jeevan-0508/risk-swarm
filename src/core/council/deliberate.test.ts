@@ -1,5 +1,5 @@
 import { describe, expect, it } from '../test/bdd';
-import { assessDisagreement, requestVerdict } from './deliberate';
+import { assessDisagreement, requestVerdict, NO_INDEPENDENT_POSITIONS_MESSAGE } from './deliberate';
 import { createDeterministicReasoner } from '../reasoner/deterministic';
 import { assertNoFabricatedCitations, type Reasoner } from '../reasoner/types';
 import type { OlympianPosition, ReasoningAgent } from './types';
@@ -20,6 +20,18 @@ function positions(rows: Array<[ReasoningAgent, string, number, boolean?]>): Rec
   const out = {} as Record<ReasoningAgent, ReasonResult<OlympianPosition>>;
   for (const [a, s, c, d] of rows) out[a] = position(a, s, c, d);
   return out;
+}
+
+/** What a genuinely disabled agent actually returns: `degraded: false` (nothing failed) but `provider: 'deterministic'` — it never called a model at all. */
+function deterministicFallbackPosition(agent: ReasoningAgent, stance: string): ReasonResult<OlympianPosition> {
+  return {
+    value: { agent, stance, confidence: 0, reasoning_summary: `${agent} deterministic fallback`, claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+    provider: 'deterministic',
+    degraded: false,
+    degraded_reason: null,
+    est_tokens: 0,
+    ms: 1,
+  };
 }
 
 describe('disagreement assessment', () => {
@@ -51,6 +63,28 @@ describe('disagreement assessment', () => {
     const d = assessDisagreement(positions([['ATHENA', 'tiger', 0.8], ['ARES', 'insufficient_evidence', 0.3, true], ['HADES', 'insufficient_evidence', 0.3, true]]));
     expect(d.agreement).toBe('inconclusive');
   });
+
+  it('does not count a disabled agent\'s deterministic fallback as independent, even though it reports degraded: false', () => {
+    const rows: Record<ReasoningAgent, ReasonResult<OlympianPosition>> = {
+      ATHENA: deterministicFallbackPosition('ATHENA', 'insufficient_evidence'),
+      HADES: deterministicFallbackPosition('HADES', 'insufficient_evidence'),
+      ARES: position('ARES', 'tiger', 0.7, true),
+    };
+    const d = assessDisagreement(rows);
+    expect(d.independent_count).toBe(0);
+    expect(d.agreement).toBe('inconclusive');
+  });
+
+  it('counts a genuine LLM position as independent alongside excluded deterministic fallbacks', () => {
+    const rows: Record<ReasoningAgent, ReasonResult<OlympianPosition>> = {
+      ATHENA: deterministicFallbackPosition('ATHENA', 'insufficient_evidence'),
+      HADES: deterministicFallbackPosition('HADES', 'insufficient_evidence'),
+      ARES: position('ARES', 'tiger', 0.7, false),
+    };
+    const d = assessDisagreement(rows);
+    expect(d.independent_count).toBe(1);
+    expect(d.stances.ARES).toBe('tiger');
+  });
 });
 
 describe('Zeus verdict', () => {
@@ -79,6 +113,26 @@ describe('Zeus verdict', () => {
     const out = await requestVerdict(createDeterministicReasoner(), 'lion vs tiger?', split, d);
     expect(out.value.verdict_type).toBe('UNRESOLVED');
     expect(out.value.unresolved.length).toBeGreaterThan(0);
+  });
+
+  it('is explicit that Zeus never really adjudicated when every position was deterministic fallback or degraded', async () => {
+    const rows: Record<ReasoningAgent, ReasonResult<OlympianPosition>> = {
+      ATHENA: {
+        value: { agent: 'ATHENA', stance: 'insufficient_evidence', confidence: 0, reasoning_summary: 'x', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+        provider: 'deterministic', degraded: false, degraded_reason: null, est_tokens: 0, ms: 1,
+      },
+      HADES: {
+        value: { agent: 'HADES', stance: 'insufficient_evidence', confidence: 0, reasoning_summary: 'x', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+        provider: 'deterministic', degraded: false, degraded_reason: null, est_tokens: 0, ms: 1,
+      },
+      ARES: position('ARES', 'tiger', 0.7, true),
+    };
+    const d = assessDisagreement(rows);
+    expect(d.independent_count).toBe(0);
+    const out = await requestVerdict(createDeterministicReasoner(), 'lion vs tiger?', rows, d);
+    expect(out.provider).toBe('deterministic');
+    expect(out.value.verdict_type).toBe('UNRESOLVED');
+    expect(out.value.unresolved).toContain(NO_INDEPENDENT_POSITIONS_MESSAGE);
   });
 
   it('rejects a Zeus answer that cites an evidence id none of the three positions ever cited', async () => {
