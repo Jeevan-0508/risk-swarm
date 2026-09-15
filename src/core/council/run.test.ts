@@ -200,4 +200,108 @@ describe('Council orchestration', () => {
     expect(partial.trace.some((e) => e.kind === 'position_ready' && e.agent === 'ATHENA' && e.detail.includes('provider response received in'))).toBe(false);
   });
 
+  /**
+   * EVOLUTION 6.0 Phase 1.7: the second real Olympian coming online. ATHENA on OpenAI, ARES on
+   * OpenRouter — deliberately different providers, mirroring the live setup this brief describes —
+   * with HADES/ZEUS left at their disabled default, exactly as a real tester adding a second key
+   * would leave them. Both must reason independently in the same run, and the run must record each
+   * one's actual provider/model identity distinctly rather than a shared or generic label.
+   */
+  it('runs correctly with ATHENA (OpenAI) and ARES (OpenRouter) both enabled as real, independent Olympians', async () => {
+    const twoAgentConfig: RegistryConfig = {
+      ...DEFAULT_REGISTRY_CONFIG,
+      ATHENA: { provider: 'openai', model: 'gpt-4o-mini', enabled: true },
+      ARES: { provider: 'openrouter', model: 'openrouter/free', enabled: true },
+    };
+    const sentBodies: Array<{ model: string; raw: string }> = [];
+    const fetchImpl: typeof fetch = (async (url: string, init?: RequestInit) => {
+      const raw = init?.body as string;
+      sentBodies.push({ model: (JSON.parse(raw) as { model: string }).model, raw });
+      return fakeFetch({
+        'gpt-4o-mini': { stance: 'jupiter', confidence: 0.85, reasoning_summary: 'evidence favors jupiter by diameter', claims: ['Jupiter is the largest planet'], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] },
+        'openrouter/free': { stance: 'jupiter', confidence: 0.72, reasoning_summary: 'contest goes to jupiter on raw size', claims: ['Jupiter wins on diameter'], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] },
+      })(url, init);
+    }) as unknown as typeof fetch;
+
+    const result = await runCouncil(
+      'which is bigger: mercury or jupiter?',
+      evidence,
+      twoAgentConfig,
+      { getApiKey: (p) => (p === 'openai' || p === 'openrouter' ? 'sk-test' : null), fetchImpl },
+    );
+
+    expect(sentBodies).toHaveLength(2);
+    expect(result.positions.ATHENA.provider).toBe('llm:gpt-4o-mini');
+    expect(result.positions.ARES.provider).toBe('llm:openrouter/free');
+    expect(result.positions.ATHENA.degraded).toBe(false);
+    expect(result.positions.ARES.degraded).toBe(false);
+    expect(result.positions.HADES.provider).toBe('deterministic');
+    expect(result.verdict.provider).toBe('deterministic'); // ZEUS untouched — still no LLM per TASK scope
+    expect(result.model_diversity.active_agents).toBe(2);
+    expect(result.model_diversity.providers).toBe(2);
+    expect(result.disagreement.independent_count).toBe(2);
+    expect(result.trace.some((e) => e.kind === 'agent_called' && e.agent === 'ATHENA' && e.detail.includes('openai/gpt-4o-mini'))).toBe(true);
+    expect(result.trace.some((e) => e.kind === 'agent_called' && e.agent === 'ARES' && e.detail.includes('openrouter/openrouter/free'))).toBe(true);
+
+    // Independence: each outbound request body was built and sent before either response existed,
+    // so neither can carry the other's model name or persona — pinned explicitly, not just assumed.
+    const athenaBody = sentBodies.find((b) => b.model === 'gpt-4o-mini')!.raw;
+    const aresBody = sentBodies.find((b) => b.model === 'openrouter/free')!.raw;
+    expect(athenaBody).not.toContain('openrouter/free');
+    expect(athenaBody).not.toContain('ARES');
+    expect(aresBody).not.toContain('gpt-4o-mini');
+    expect(aresBody).not.toContain('ATHENA');
+  });
+
+  /**
+   * Fault isolation has to hold in both directions. The existing test above this one proves ARES
+   * failing does not break ATHENA/HADES; this proves the same when ATHENA is the one that fails —
+   * ARES must still return its own real, non-degraded position from the same run.
+   */
+  it('isolates ATHENA\'s provider failure too: ARES still reaches a real, non-degraded position', async () => {
+    const twoAgentConfig: RegistryConfig = {
+      ...DEFAULT_REGISTRY_CONFIG,
+      ATHENA: { provider: 'openai', model: 'gpt-4o-mini', enabled: true },
+      ARES: { provider: 'openrouter', model: 'openrouter/free', enabled: true },
+    };
+    const flaky: typeof fetch = (async (url: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(init.body as string) : {};
+      if (body.model === 'gpt-4o-mini') return { ok: false, status: 500, json: async () => ({ error: { message: 'internal error' } }) };
+      return fakeFetch({
+        'openrouter/free': { stance: 'jupiter', confidence: 0.7, reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+      })(url, init);
+    }) as unknown as typeof fetch;
+
+    const result = await runCouncil('which is bigger: mercury or jupiter?', evidence, twoAgentConfig, { getApiKey: () => 'sk-test', fetchImpl: flaky });
+
+    expect(result.positions.ATHENA.degraded).toBe(true);
+    expect(result.positions.ATHENA.degraded_reason).toContain('HTTP 500');
+    expect(result.positions.ARES.degraded).toBe(false);
+    expect(result.positions.ARES.position.stance).toBe('jupiter');
+    expect(result.trace.some((e) => e.kind === 'agent_degraded' && e.agent === 'ATHENA')).toBe(true);
+  });
+
+  /**
+   * Mirror of the existing "ARES only" test above: with ATHENA the one real, keyed Olympian and
+   * everything else left at the disabled default, the Council must not assume ARES/HADES are
+   * available, and ARES's deterministic fallback must not be mistaken for an independent opinion.
+   */
+  it('runs correctly with exactly one Olympian enabled (ATHENA/OpenAI) and the rest at their disabled default', async () => {
+    const oneAgentConfig: RegistryConfig = { ...DEFAULT_REGISTRY_CONFIG, ATHENA: { provider: 'openai', model: 'gpt-4o-mini', enabled: true } };
+    const result = await runCouncil(
+      'which planet has the largest diameter, mercury or jupiter?',
+      evidence,
+      oneAgentConfig,
+      { getApiKey: (p) => (p === 'openai' ? 'sk-test' : null), fetchImpl: fakeFetch({ 'gpt-4o-mini': { stance: 'jupiter', confidence: 0.8, reasoning_summary: 'a', claims: [], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] } }) },
+    );
+
+    expect(result.model_diversity.active_agents).toBe(1);
+    expect(result.positions.ATHENA.provider).toBe('llm:gpt-4o-mini');
+    expect(result.positions.ATHENA.degraded).toBe(false);
+    expect(result.positions.ARES.provider).toBe('deterministic');
+    expect(result.positions.ARES.position.stance).toBe('insufficient_evidence');
+    expect(result.verdict.provider).toBe('deterministic');
+    expect(result.disagreement.independent_count).toBe(1);
+  });
+
 });

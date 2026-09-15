@@ -115,4 +115,32 @@ describe('Olympian position requests', () => {
   it('did not raise the output token cap again this turn — the fix is the prompt, not the ceiling', () => {
     expect(DEFAULT_MAX_OUTPUT_TOKENS).toBe(1600);
   });
+
+  /**
+   * EVOLUTION 6.0 Phase 1.7 (ATHENA activation): Athena's first-round request must be built from
+   * nothing but the question, the retrieved evidence, and her own persona — never another Olympian's
+   * name, answer, confidence, or the disagreement/verdict machinery that only exists once every
+   * position is back. This is the same structural guarantee ARES already had; asserting it by name
+   * for ATHENA pins it against a future change that threads one agent's output into another's request.
+   */
+  it('builds ATHENA\'s request from only her own role, the question and the evidence — no other Olympian is mentioned', () => {
+    const req = buildPositionRequest('ATHENA', 'which planet has the largest diameter, mercury or jupiter?', evidence);
+    expect(req.task).toBe('council.position.athena');
+    expect(req.instruction).toContain('ATHENA');
+    expect(req.instruction).not.toContain('ARES');
+    expect(req.instruction).not.toContain('HADES');
+    expect(req.instruction).not.toContain('ZEUS');
+    expect(req.instruction).not.toMatch(/confidence|disagreement|consensus|verdict/i);
+    const fullPrompt = JSON.stringify(req);
+    expect(fullPrompt).not.toContain('ARES');
+    expect(fullPrompt).not.toContain('HADES');
+  });
+
+  it('gives ATHENA and ARES their own distinct persona instructions over the identical evidence', () => {
+    const athenaReq = buildPositionRequest('ATHENA', 'q', evidence);
+    const aresReq = buildPositionRequest('ARES', 'q', evidence);
+    expect(athenaReq.instruction).not.toBe(aresReq.instruction);
+    expect(athenaReq.data_blocks).toEqual(aresReq.data_blocks);
+    expect(athenaReq.allowed_evidence_ids).toEqual(aresReq.allowed_evidence_ids);
+  });
 });
