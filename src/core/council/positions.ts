@@ -49,8 +49,31 @@ const PERSONA: Record<ReasoningAgent, Persona> = {
 const SCHEMA_HINT =
   '{ stance: string, confidence: number (0-1), reasoning_summary: string, claims: string[], evidence_ids: string[], evidence_requests: string[], assumptions: string[] }';
 
+/**
+ * Phase 1 live-debug brief (evidence-payload fix): a live ARES/OpenRouter call over 37 evidence items
+ * came back `HTTP 200`, `finish_reason: "length"`, empty content. Measured directly from this module's
+ * own output: 37 evidence blocks at the research pipeline's own per-item storage ceiling (title 300
+ * chars, excerpt 1200 chars) run to ~58,000 characters — over 97% of the whole prompt, ~14,800
+ * estimated input tokens on top of a ~1,400-char fixed frame. OpenRouter's own docs confirm reasoning
+ * tokens are billed from the *same* output budget as final content, and `openrouter/free` randomly
+ * routes to a pool that explicitly includes "DeepSeek R1 (free) — DeepSeek's reasoning model": a much
+ * larger prompt to digest is a real, plausible driver of a reasoning-heavy model exhausting that
+ * shared budget before it ever emits JSON.
+ *
+ * This bounds how much of each item's excerpt *this prompt* repeats — nothing else. It does not touch
+ * the research engine's own storage truncation (still 300/1200, `normalize.ts`, untouched), does not
+ * drop any evidence item or id (every item still gets its own block; `allowed_evidence_ids` is
+ * unaffected), and does not invent anything: a truncated excerpt is marked with `…`, never rewritten
+ * or summarized by anything other than the research pipeline that produced it.
+ */
+const COUNCIL_EXCERPT_CHAR_LIMIT = 320;
+
+function truncateForCouncilPrompt(text: string, limit = COUNCIL_EXCERPT_CHAR_LIMIT): string {
+  return text.length <= limit ? text : `${text.slice(0, limit)}…`;
+}
+
 function evidenceBlock(item: NormalizedEvidence): string {
-  return `<<<EVIDENCE id="${item.evidence.id}" source="${item.provenance.source_identity}">>> ${item.evidence.title}. ${item.evidence.excerpt_or_summary} <<<END>>>`;
+  return `<<<EVIDENCE id="${item.evidence.id}" source="${item.provenance.source_identity}">>> ${item.evidence.title}. ${truncateForCouncilPrompt(item.evidence.excerpt_or_summary)} <<<END>>>`;
 }
 
 type PositionBody = Omit<OlympianPosition, 'agent'>;

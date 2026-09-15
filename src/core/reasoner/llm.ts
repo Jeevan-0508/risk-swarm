@@ -134,6 +134,24 @@ export function createLlmReasoner(options: LlmReasonerOptions): Reasoner {
             return degrade(`HTTP ${res.status} — provider error: ${sanitizeProviderMessage(body.error.message ?? 'unknown error')}`, est_tokens);
           }
           text = body.content?.[0]?.text ?? body.choices?.[0]?.message?.content ?? '';
+
+          // Phase 1 live-debug brief: dev-only, safe-metadata-only diagnostic. `import.meta.env.DEV`
+          // is a Vite build-time constant — false (and dead-code-eliminated) in `bun run build`'s
+          // production bundle, so this line and everything in it never ships. Only ever the shape of
+          // the exchange, never its content: no prompt text, no response body, no reasoning/tool_calls
+          // text, no key, no header.
+          if (import.meta.env.DEV) {
+            console.debug('[llm reasoner] request/response diagnostic', {
+              model: options.model,
+              max_tokens: options.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
+              prompt_chars: prompt.length,
+              status: res.status,
+              finish_reason: body.choices?.[0]?.finish_reason ?? null,
+              content_present: text.trim().length > 0,
+              elapsed_ms: Date.now() - started,
+            });
+          }
+
           if (!text.trim()) emptyReason = diagnoseEmptyContent(res.status, body);
         } finally {
           clearTimeout(timer);
