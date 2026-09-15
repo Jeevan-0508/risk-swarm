@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button, Field, Panel, Row, Tag, inputClass } from '@app/ui/kit';
 import { OLYMPIAN_AGENTS, PROVIDERS, type OlympianAgent, type ProviderId } from '@core/reasoner/registry';
 import { agentLabel } from '@app/lib/models';
@@ -66,7 +66,19 @@ export function ModelConfig() {
   const hydrate = useModelStore((s) => s.hydrate);
   const hydrated = useModelStore((s) => s.hydrated);
   const clearKeys = useModelStore((s) => s.clearKeys);
-  const diversity = useModelStore((s) => s.diversity());
+  /*
+   * `diversity()` builds a fresh object every call. Selecting `(s) => s.diversity()` directly hands
+   * `useSyncExternalStore` a snapshot that is never referentially equal to itself between the two reads
+   * React does per render to check for tearing — React never stops re-rendering to reconcile the
+   * "changed" state, and it throws "Maximum update depth exceeded" (React error #185) with no error
+   * boundary anywhere in the tree to catch it, so the whole app unmounts blank. Select the stable
+   * primitives (`assignments`, `keys`) and the stable method reference instead, and memoize the call
+   * so it only recomputes when the state actually changed.
+   */
+  const assignments = useModelStore((s) => s.assignments);
+  const keys = useModelStore((s) => s.keys);
+  const diversityFn = useModelStore((s) => s.diversity);
+  const diversity = useMemo(() => diversityFn(), [assignments, keys, diversityFn]);
   useEffect(() => { if (!hydrated) hydrate(); }, [hydrated, hydrate]);
 
   return (
