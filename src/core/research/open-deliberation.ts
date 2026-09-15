@@ -145,7 +145,7 @@ function dimensionAnswer(question: string, a: string, b: string, outcome: Resear
     push('Social / group behaviour', winnerOf(sideAdvantage(evidence, a, b, socialFor, socialAgainst), a, b), 'The retrieved evidence is used to compare the social/group traits explicitly associated with each side.');
   }
 
-  if (/better/.test(q) && /tiger\b/i.test(corpus) && /lion\b/i.test(corpus) && out.every((d) => d.label !== 'Combat / physical capability')) {
+  if (/better/.test(q) && sideRegExp(a).test(corpus) && sideRegExp(b).test(corpus) && out.every((d) => d.label !== 'Combat / physical capability')) {
     push('Combat / physical capability', winnerOf(sideAdvantage(evidence, a, b, physicalFor, physicalAgainst), a, b), 'The comparison was broad, so the system added a relevant physical-capability dimension from the retrieved evidence rather than pretending that “better” has one universal meaning.');
   }
 

@@ -77,11 +77,21 @@ const FRESHNESS_MARKERS: Array<[Freshness, string[]]> = [
   ['medium', ['this year', 'this quarter', 'last month', 'upcoming', 'changed', 'change', 'changes', 'new', 'update', 'updated', 'so far', 'trend', 'emerging']],
 ];
 
+export const COMPARATIVE_WORDS = [
+  'more', 'less', 'better', 'worse', 'bigger', 'smaller', 'larger', 'higher', 'lower', 'greater',
+  'healthier', 'safer', 'stronger', 'weaker', 'faster', 'slower', 'cheaper',
+  'largest', 'biggest', 'smallest', 'highest', 'lowest', 'greatest', 'most', 'least',
+  'win', 'wins', 'won', 'winner', 'beat', 'beats', 'defeat', 'defeats',
+];
+
 const INTENT_RULES: Array<[Intent, RegExp]> = [
   ['quantification', /\b(how many|how much|what (?:share|percentage|proportion|fraction)|what % |\bpercent\b|\brate of\b)/],
   ['current_value', /\b(market cap|share price|stock price|current (?:price|value|level|figure)|how much is|worth (?:now|today))/],
   ['temporal_delta', /\b(what changed|what has changed|what.s new|any (?:changes|updates)|recent (?:changes|developments|amendments)|latest (?:changes|developments))\b/],
-  ['comparison', /\b(vs\.?|versus|compared? (?:to|with)|difference between|differs? from|how does .+ differ|which (?:\S+\s+){0,2}(?:is|are|has|have) (?:more|less|better|worse|bigger|smaller|higher|lower|greater|healthier|safer|stronger|weaker|faster|slower|cheaper|largest|biggest|smallest|highest|lowest|greatest|most|least))\b/],
+  ['comparison', new RegExp(
+    '\\b(vs\\.?|versus|compared? (?:to|with)|compar(?:e|es|ing)|difference between|differs? from|how does .+ differ|' +
+      '(?:which|who|what) (?:\\S+\\s+){0,2}(?:is|are|has|have|would|will) (?:' + COMPARATIVE_WORDS.join('|') + '))\\b',
+  )],
   ['risk_assessment', /\b(are we exposed|risk of|risks? (?:in|to|of|for)|exposure to|threat(?:s)? (?:to|in)|vulnerab)/],
   ['enumeration', /\b(list|name the|what are the|which are the|examples of|types of|kinds of)\b/],
   ['causal', /\b(why (?:did|do|does|is|are|has)|what caused|root cause|reason(?:s)? (?:for|why))\b/],

@@ -158,3 +158,43 @@ describe('a which-X-has-superlative-A-or-B comparison', () => {
     expect(JSON.stringify(routeQuestion(LIVE))).toBe(JSON.stringify(routeQuestion(LIVE)));
   });
 });
+describe('EVOLUTION 6.0 Phase 1.8: a generic "who/what is/would X, A or B" contest reads as comparison', () => {
+  it('recognises "who would win" as a comparison, not open, for the live tiger/lion question', () => {
+    expect(routeQuestion('who would win in a fight tiger or lion ?').intent).toBe('comparison');
+  });
+
+  it('recognises "who is stronger" as comparison rather than falling through to definition', () => {
+    expect(routeQuestion('who is stronger, tiger or lion?').intent).toBe('comparison');
+  });
+
+  it('recognises "which is larger" as comparison, not just "which is largest"', () => {
+    expect(routeQuestion('which is larger, Jupiter or Mercury?').intent).toBe('comparison');
+  });
+
+  it('keeps the already-working "which is better A or B" comparison unchanged', () => {
+    expect(routeQuestion('which is better BMW or Mercedes?').intent).toBe('comparison');
+  });
+
+  it('recognises "who would win" between two named entities', () => {
+    expect(routeQuestion('who would win, Superman or Batman?').intent).toBe('comparison');
+  });
+
+  it('recognises a bare imperative "compare X and Y"', () => {
+    expect(routeQuestion('compare BMW and Mercedes').intent).toBe('comparison');
+  });
+
+  it('does not turn every "who"/"what" question into a comparison', () => {
+    expect(routeQuestion('What causes thunderstorms?').intent).not.toBe('comparison');
+    expect(routeQuestion('Who is the CEO of Amazon?').intent).not.toBe('comparison');
+  });
+
+  it('preserves the exact original question, space-before-punctuation and all', () => {
+    const LIVE = 'who would win in a fight tiger or lion ?';
+    expect(routeQuestion(LIVE).query).toBe(LIVE);
+  });
+
+  it('is deterministic for the live tiger/lion case', () => {
+    const LIVE = 'who would win in a fight tiger or lion ?';
+    expect(JSON.stringify(routeQuestion(LIVE))).toBe(JSON.stringify(routeQuestion(LIVE)));
+  });
+});

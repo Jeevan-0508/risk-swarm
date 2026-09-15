@@ -163,3 +163,77 @@ describe('comparison queries preserve both entities and the topic, and correct r
     expect(b?.queries[0]).toBe('EU AI Act');
   });
 });
+describe('EVOLUTION 6.0 Phase 1.8: comparison subjects survive query construction for a generic contest question', () => {
+  const LIVE = 'who would win in a fight tiger or lion ?';
+
+  it('extracts both explicit sides of the live tiger/lion question, space before the question mark and all', () => {
+    expect(comparisonSides(routeQuestion(LIVE))).toEqual(['tiger', 'lion']);
+  });
+
+  it('keeps "tiger" and "lion" together in every generated query, and drops "win" as pure comparison filler', () => {
+    const p = plan(LIVE);
+    expect(p.question.intent).toBe('comparison');
+    const a = p.dimensions.find((d) => d.key === 'comparison_a');
+    const b = p.dimensions.find((d) => d.key === 'comparison_b');
+    const def = p.dimensions.find((d) => d.key === 'definition');
+    expect(a?.queries[0]).toContain('tiger');
+    expect(b?.queries[0]).toContain('lion');
+    expect(def?.queries[0]).toContain('tiger');
+    expect(def?.queries[0]).toContain('lion');
+    for (const d of p.dimensions) {
+      for (const q of d.queries) {
+        expect(q.toLowerCase().split(/\s+/)).not.toContain('win');
+      }
+    }
+  });
+
+  it('does not over-expand a single side into an ambiguous bare word: each side query still carries the other subject or the fight topic, never "tiger" or "lion" alone', () => {
+    const p = plan(LIVE);
+    const a = p.dimensions.find((d) => d.key === 'comparison_a');
+    const b = p.dimensions.find((d) => d.key === 'comparison_b');
+    expect(a?.queries[0]).not.toBe('tiger');
+    expect(b?.queries[0]).not.toBe('lion');
+  });
+
+  it('extracts both sides for "who is stronger, A or B" phrasing', () => {
+    expect(comparisonSides(routeQuestion('who is stronger, tiger or lion?'))).toEqual(['tiger', 'lion']);
+  });
+
+  it('extracts both named entities for "which is larger, Jupiter or Mercury"', () => {
+    const p = plan('which is larger, Jupiter or Mercury?');
+    const a = p.dimensions.find((d) => d.key === 'comparison_a');
+    const b = p.dimensions.find((d) => d.key === 'comparison_b');
+    expect(a?.queries[0]).toContain('Jupiter');
+    expect(a?.queries[0]).not.toContain('Mercury');
+    expect(b?.queries[0]).toContain('Mercury');
+    expect(b?.queries[0]).not.toContain('Jupiter');
+  });
+
+  it('extracts both named entities for "who would win, Superman or Batman"', () => {
+    const p = plan('who would win, Superman or Batman?');
+    const a = p.dimensions.find((d) => d.key === 'comparison_a');
+    const b = p.dimensions.find((d) => d.key === 'comparison_b');
+    expect(a?.queries[0]).toContain('Superman');
+    expect(a?.queries[0]).not.toContain('Batman');
+    expect(b?.queries[0]).toContain('Batman');
+    expect(b?.queries[0]).not.toContain('Superman');
+  });
+
+  it('leaves the already-working "which is better BMW or Mercedes" pairing unchanged', () => {
+    const p = plan('which is better BMW or Mercedes?');
+    const a = p.dimensions.find((d) => d.key === 'comparison_a');
+    const b = p.dimensions.find((d) => d.key === 'comparison_b');
+    expect(a?.queries[0]).toContain('BMW');
+    expect(b?.queries[0]).toContain('Mercedes');
+  });
+
+  it('does not treat a normal non-comparison question as a two-subject contest', () => {
+    const p = plan('What causes thunderstorms?');
+    expect(p.dimensions.find((d) => d.key === 'comparison_a')).toBeUndefined();
+    expect(p.dimensions.find((d) => d.key === 'comparison_b')).toBeUndefined();
+  });
+
+  it('preserves the original question byte-for-byte; only the generated queries are normalised', () => {
+    expect(routeQuestion(LIVE).query).toBe(LIVE);
+  });
+});

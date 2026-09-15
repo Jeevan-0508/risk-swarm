@@ -136,3 +136,32 @@ describe('the legacy decision layer agrees with the new intent classifier instea
     expect(comparisonParts(LIVE.replace('solarsyatem', 'solar system'))).toEqual(['mercury', 'jupiter']);
   });
 });
+describe('EVOLUTION 6.0 Phase 1.8: the broad-"better" bonus combat dimension is generic, not hardcoded to tiger/lion', () => {
+  it('adds the bonus physical-capability dimension for a wolf/bear comparison, exactly as it already did for tiger/lion', () => {
+    const wolfBear = {
+      execution: { status: 'ok' },
+      merged: {
+        items: [
+          { evidence: { id: 'EV-01', title: 'Wolf reference', excerpt_or_summary: 'The wolf is a strong pack hunter.', url: 'https://en.wikipedia.org/wiki/Wolf' }, provenance: { source_identity: 'en.wikipedia.org' } },
+          { evidence: { id: 'EV-02', title: 'Bear reference', excerpt_or_summary: 'The bear is a powerful solitary animal.', url: 'https://en.wikipedia.org/wiki/Bear' }, provenance: { source_identity: 'en.wikipedia.org' } },
+        ],
+      },
+    } as unknown as ResearchOutcome;
+    const result = deliberateOpenResearch('which is better wolf or bear?', wolfBear);
+    expect(result.dimensions.some((d) => d.label === 'Social / group behaviour')).toBe(true);
+    expect(result.dimensions.some((d) => d.label === 'Combat / physical capability')).toBe(true);
+  });
+
+  it('does not add the bonus dimension for a pair the corpus never actually names', () => {
+    const unnamed = {
+      execution: { status: 'ok' },
+      merged: {
+        items: [
+          { evidence: { id: 'EV-01', title: 'Unrelated reference', excerpt_or_summary: 'This article never mentions either side by name.', url: 'https://en.wikipedia.org/wiki/Unrelated' }, provenance: { source_identity: 'en.wikipedia.org' } },
+        ],
+      },
+    } as unknown as ResearchOutcome;
+    const result = deliberateOpenResearch('which is better wolf or bear?', unnamed);
+    expect(result.dimensions.some((d) => d.label === 'Combat / physical capability')).toBe(false);
+  });
+});

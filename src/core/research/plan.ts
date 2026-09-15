@@ -16,7 +16,7 @@
  */
 import type { Capability, ProviderId } from './providers/types';
 import { PROVIDERS, providersFor } from './providers/types';
-import type { QuestionModel } from '../question/model';
+import { COMPARATIVE_WORDS, type QuestionModel } from '../question/model';
 import { normalizeQueryText } from './query-normalize';
 
 export interface ResearchDimension {
@@ -138,11 +138,7 @@ const INTENT_SHAPES: Record<QuestionModel['intent'], string[]> = {
  * captures "largest", so repeating it in a query buys nothing, and the two sides are queried on
  * their own words, not this vocabulary.
  */
-const COMPARISON_FILLER = new Set([
-  'which', 'has', 'have', 'is', 'are', 'more', 'less', 'better', 'worse', 'bigger', 'smaller', 'higher',
-  'lower', 'greater', 'healthier', 'safer', 'stronger', 'weaker', 'faster', 'slower', 'cheaper',
-  'largest', 'biggest', 'smallest', 'highest', 'lowest', 'greatest', 'most', 'least',
-]);
+const COMPARISON_FILLER = new Set(['which', 'has', 'have', 'is', 'are', ...COMPARATIVE_WORDS]);
 
 /** The words a comparison is actually about, once both sides and the comparative itself are removed. */
 function comparisonTopic(question: QuestionModel, sides: [string, string]): string[] {
@@ -182,7 +178,7 @@ export function comparisonSides(question: QuestionModel): [string, string] | nul
     const b = clean(m[2]);
     if (a.length > 0 && b.length > 0) return [a, b];
   }
-  const bare = question.query.match(/\b([a-z][\w-]*)\s+(?:or|and)\s+([a-z][\w-]*)[?.!]?\s*$/i);
+  const bare = question.query.match(/\b([a-z][\w-]*)\s+(?:or|and)\s+([a-z][\w-]*)[\s?.!]*$/i);
   if (bare !== null) {
     const a = clean(bare[1]);
     const b = clean(bare[2]);

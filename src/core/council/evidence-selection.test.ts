@@ -112,3 +112,49 @@ describe('Council evidence selection', () => {
     expect(strict.length).toBeLessThanOrEqual(1);
   });
 });
+describe('EVOLUTION 6.0 Phase 1.8: relevance ranking survives a sports-team/human-name keyword collision (tiger/lion contest)', () => {
+  const TIGER_LION_QUESTION = 'who would win in a fight tiger or lion ?';
+  const tlDeps = deps(TIGER_LION_QUESTION);
+
+  const WHO_WOULD_WIN = 'Lion vs Tiger: Who Would Win in a Fight?';
+  const STRENGTH_COMPARISON = 'Tiger vs Lion Size and Strength Comparison';
+
+  const CONTEST_CORPUS = [
+    doc(STRENGTH_COMPARISON, 'In a hypothetical fight between a tiger and a lion, the tiger is generally larger and has a strength advantage due to its size.'),
+    doc(WHO_WOULD_WIN, 'Wildlife experts compare the lion and tiger, weighing size, strength and combat ability to assess who would win a fight.'),
+    doc('Detroit Lions Sign New Quarterback in Free Agency Win', 'The Detroit Lions improved their roster this offseason, securing a big win in free agency before the new season.'),
+    doc('Detroit Tigers Fight for Playoff Spot', 'The Detroit Tigers must fight for a playoff spot down the stretch of the season.'),
+    doc('Boxer "Tiger" Malone Wins Title Fight', 'Boxer John "Tiger" Malone won his title fight this weekend with a dominant performance.'),
+    doc('Wildlife Conservation Efforts for Big Cats', 'Conservation groups are working to protect tiger and lion populations from habitat loss.'),
+  ];
+
+  it('ranks both genuine tiger/lion comparison documents above the Detroit Lions and Detroit Tigers sports coverage', async () => {
+    const { items } = await normalizeExternal(CONTEST_CORPUS, tlDeps);
+    const genuine = [WHO_WOULD_WIN, STRENGTH_COMPARISON].map((t) => items.find((i) => i.evidence.title === t)!);
+    const junk = ['Detroit Lions Sign New Quarterback in Free Agency Win', 'Detroit Tigers Fight for Playoff Spot'].map((t) => items.find((i) => i.evidence.title === t)!);
+    for (const g of genuine) for (const j of junk) expect(g.relevance).toBeGreaterThan(j.relevance);
+  });
+
+  it('does not promote a human fighter nicknamed "Tiger", or an unrelated conservation article, above the genuine comparison documents merely because they share one keyword', async () => {
+    const { items } = await normalizeExternal(CONTEST_CORPUS, tlDeps);
+    const genuine = [WHO_WOULD_WIN, STRENGTH_COMPARISON].map((t) => items.find((i) => i.evidence.title === t)!);
+    const boxer = items.find((i) => i.evidence.title.includes('Boxer'))!;
+    const conservation = items.find((i) => i.evidence.title.includes('Conservation Efforts'))!;
+    for (const g of genuine) {
+      expect(g.relevance).toBeGreaterThan(boxer.relevance);
+      expect(g.relevance).toBeGreaterThan(conservation.relevance);
+    }
+  });
+
+  it('places both genuine comparison documents at the top of the Council-selected, relevance-sorted evidence', async () => {
+    const { items } = await normalizeExternal(CONTEST_CORPUS, tlDeps);
+    const selected = selectEvidenceForCouncil(items);
+    const topTwoTitles = new Set(selected.slice(0, 2).map((i) => i.evidence.title));
+    expect(topTwoTitles).toEqual(new Set([WHO_WOULD_WIN, STRENGTH_COMPARISON]));
+  });
+
+  it('does not delete the keyword-collision documents outright: relevance is measured and reported, never used to exclude', async () => {
+    const { items } = await normalizeExternal(CONTEST_CORPUS, tlDeps);
+    expect(items.length).toBe(CONTEST_CORPUS.length);
+  });
+});
