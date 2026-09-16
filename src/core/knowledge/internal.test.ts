@@ -91,4 +91,21 @@ describe('internal knowledge retrieval', () => {
       for (const h of out.hits) expect(h.score <= 1).toBe(true);
     }
   });
+
+  it('does not let a generic outcome word ("wins") falsely match an unrelated freight pattern for a live tiger/lion contest question', async () => {
+    const plan = planResearch(routeQuestion('who wins in a fight tiger or lion ?'));
+    const out = await knowledge().search(plan.internal.queries);
+    // FFT-001 ("Double Brokering") is about re-tendering a load, not about animals; its text happens to
+    // say a carrier "wins" a load. Before this fix that incidental word was enough for a false 'ok' hit.
+    expect(out.status).toBe('empty');
+    if (out.status !== 'empty') return;
+    expect(out.reason.includes('not that nothing exists')).toBe(true);
+  });
+
+  it('still finds a real freight-domain hit when the question actually is about freight, proving the fix removed a filler word, not matching itself', async () => {
+    const out = await knowledge().search(['double brokering', 'unauthorised re-brokering']);
+    expect(out.status).toBe('ok');
+    if (out.status !== 'ok') return;
+    expect(out.hits.some((h) => h.record.ref === 'FFT-001')).toBe(true);
+  });
 });

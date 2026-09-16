@@ -237,3 +237,34 @@ describe('EVOLUTION 6.0 Phase 1.8: comparison subjects survive query constructio
     expect(routeQuestion(LIVE).query).toBe(LIVE);
   });
 });
+
+describe('EVOLUTION 6.0 Phase 1.9: internal-knowledge search terms exclude comparative/outcome filler, not just external ones', () => {
+  it('drops the bare comparative/outcome word from internal.queries for the live contest question, while keeping both subjects', () => {
+    const p = plan('who would win in a fight tiger or lion ?');
+    const lower = p.internal.queries.map((q) => q.toLowerCase());
+    expect(lower.some((q) => q === 'wins' || q === 'win')).toBe(false);
+    expect(lower.some((q) => q.includes('tiger'))).toBe(true);
+    expect(lower.some((q) => q.includes('lion'))).toBe(true);
+  });
+
+  it('generalises: no comparative/outcome word from COMPARATIVE_WORDS ever appears as its own internal-search term', () => {
+    for (const q of [
+      'who wins in a fight tiger or lion ?',
+      'who is stronger, a grizzly bear or a polar bear?',
+      'which is better BMW or Mercedes?',
+      'which planet is larger Jupiter or Mercury?',
+    ]) {
+      const p = plan(q);
+      const bare = new Set(p.internal.queries.map((s) => s.toLowerCase()));
+      for (const word of ['win', 'wins', 'won', 'winner', 'beat', 'beats', 'defeat', 'defeats', 'better', 'worse', 'larger', 'stronger']) {
+        expect(bare.has(word)).toBe(false);
+      }
+    }
+  });
+
+  it('does not touch internal search for a non-comparison question: filler removal only removes filler that is actually present', () => {
+    const p = plan('What causes thunderstorms?');
+    expect(p.internal.queries.length > 0).toBe(true);
+    expect(p.internal.queries.some((q) => q.toLowerCase().includes('thunderstorm'))).toBe(true);
+  });
+});

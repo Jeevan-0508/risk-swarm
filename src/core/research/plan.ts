@@ -271,8 +271,12 @@ export function planResearch(question: QuestionModel, options: PlanOptions = {})
     dimensions,
     internal: {
       search: question.requires_internal,
-      // Internal search uses the question's own words: the index is small and the match is reported with its score.
-      queries: [subject, ...question.keywords.slice(0, 6)].filter((q) => q.length > 1),
+      // Internal search uses the question's own words: the index is small and the match is reported with
+      // its score. A comparative or outcome word ("bigger", "wins", "better") is structural, not topical -
+      // it marks the question's shape rather than naming its subject - so it is excluded here exactly as
+      // it already is from `subject`, or a generic word shared with an unrelated internal record (a
+      // freight pattern that happens to say a carrier "wins" a load) can register as a false match.
+      queries: [subject, ...question.keywords.filter((k) => !COMPARISON_FILLER.has(k.toLowerCase())).slice(0, 6)].filter((q) => q.length > 1),
       rationale: 'Pinned knowledge is searched first so the run can tell the operator what it already held before it went outside.',
     },
     external: { required: question.requires_external, reachable, query_count: queries, call_count: calls, providers },
