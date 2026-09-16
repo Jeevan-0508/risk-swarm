@@ -9,6 +9,12 @@ import { buildPrompt, DEFAULT_REASONER_TIMEOUT_MS, estimateTokens, extractJson }
  *
  * The key still never appears in any returned or thrown string: every degrade path below is a static
  * reason, never the request URL (which contains the key) and never the raw provider error.
+ *
+ * `thinkingConfig.thinkingBudget: 0` is sent on every call (EVOLUTION 6.0 Phase 1.10): every Gemini
+ * generation from 2.5 onward defaults "thinking" on, which can spend the whole `maxOutputTokens`
+ * budget on invisible reasoning tokens before any visible answer - the same failure `registry.ts`
+ * already documents for ARES's free OpenRouter router. This adapter never opts in to reasoning,
+ * matching that same discipline, regardless of which model string the registry or a user supplies.
  */
 export interface GeminiReasonerOptions {
   model: string;
@@ -57,7 +63,11 @@ export function createGeminiReasoner(options: GeminiReasonerOptions): Reasoner {
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { temperature: 0, maxOutputTokens: options.maxOutputTokens ?? 800 },
+              generationConfig: {
+                temperature: 0,
+                maxOutputTokens: options.maxOutputTokens ?? 800,
+                thinkingConfig: { thinkingBudget: 0 },
+              },
             }),
             signal: controller.signal,
           });

@@ -34,6 +34,19 @@ const geminiResponse = (payload: unknown, ok = true, status = 200): typeof fetch
 describe('gemini reasoner', () => {
   const base = { model: 'gemini-1.5-flash', getApiKey: () => 'sk-test' };
 
+  it('sends thinkingConfig.thinkingBudget: 0 on every call, so a thinking-by-default model never spends its whole budget on invisible reasoning tokens (Phase 1.10)', async () => {
+    let sentBody: string | null = null;
+    const capture = (async (_url: string, init?: { body?: string }) => {
+      sentBody = init?.body ?? null;
+      return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify({ statement: 'ok', evidence: ['E-001'] }) }] } }] }) };
+    }) as unknown as typeof fetch;
+    const r = createGeminiReasoner({ ...base, fetchImpl: capture });
+    await r.propose(req());
+    expect(sentBody).not.toBe(null);
+    const parsed = JSON.parse(sentBody!);
+    expect(parsed.generationConfig.thinkingConfig).toEqual({ thinkingBudget: 0 });
+  });
+
   it('attaches the key as a query parameter and accepts a well-formed answer', async () => {
     const r = createGeminiReasoner({ ...base, fetchImpl: geminiResponse({ statement: 'Rephrased risk statement', evidence: ['E-001'] }) });
     const out = await r.propose(req());

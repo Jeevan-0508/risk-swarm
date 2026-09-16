@@ -46,6 +46,15 @@ describe('model registry', () => {
     expect(DEFAULT_REGISTRY_CONFIG.ARES.enabled).toBe(false); // still an explicit opt-in, unchanged
   });
 
+  it('ships HADES with a currently-live Gemini model, not the retired 1.5 generation (Phase 1.10)', () => {
+    // gemini-1.5-flash returned HTTP 404 on a live run: Google's own model list no longer lists the 1.5
+    // generation at all, and even 2.0 is marked "Shut down" there. gemini-2.5-flash is the oldest
+    // generation still listed as stable.
+    expect(DEFAULT_REGISTRY_CONFIG.HADES.provider).toBe('google');
+    expect(DEFAULT_REGISTRY_CONFIG.HADES.model).toBe('gemini-2.5-flash');
+    expect(DEFAULT_REGISTRY_CONFIG.HADES.enabled).toBe(false); // still an explicit opt-in, unchanged
+  });
+
   it('reports no diversity when nothing is configured', () => {
     const d = modelDiversity(DEFAULT_REGISTRY_CONFIG, { getApiKey: () => null });
     expect(d.label).toBe('none');

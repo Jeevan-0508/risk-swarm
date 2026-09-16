@@ -55,11 +55,23 @@ export type RegistryConfig = Record<OlympianAgent, ModelAssignment>;
  * — well suited to the short, single-JSON-value analytical positions Council agents produce, without
  * paying a deep-reasoning tax on every proposal. `openrouter/free` remains fully valid to type into
  * this same field; this only changes the suggestion a fresh, unopened Model Config screen starts with.
+ *
+ * HADES's suggestion (EVOLUTION 6.0 Phase 1.10 live-debug brief): a live run against `gemini-1.5-flash`
+ * came back HTTP 404 - checked against Google's own model list (ai.google.dev/gemini-api/docs/models,
+ * live on the day this was diagnosed), the 1.5 generation is gone entirely and even 2.0 is now marked
+ * "Shut down". `gemini-2.5-flash` is the oldest generation still listed as stable and is Google's own
+ * description of the price-performance choice for "low-latency, high-volume tasks that require
+ * reasoning" - closer to this Council's actual call shape than reaching for whatever is newest, which
+ * on this lineup's release cadence is also the soonest to be retired next. Every generation from 2.5
+ * onward defaults its "thinking" mode on, which is the exact same failure this comment already
+ * describes for ARES's free-model router - the whole output budget spent on invisible reasoning
+ * tokens before any visible answer - so `gemini.ts` explicitly sends `thinkingConfig.thinkingBudget: 0`
+ * on every call, the same "never opt in to reasoning" discipline already applied to the ARES adapter.
  */
 export const DEFAULT_REGISTRY_CONFIG: RegistryConfig = {
   ATHENA: { provider: 'openai', model: 'gpt-4o-mini', enabled: false },
   ARES: { provider: 'openrouter', model: 'google/gemma-4-31b-it:free', enabled: false },
-  HADES: { provider: 'google', model: 'gemini-1.5-flash', enabled: false },
+  HADES: { provider: 'google', model: 'gemini-2.5-flash', enabled: false },
   ZEUS: { provider: 'openai', model: 'gpt-4o-mini', enabled: false },
 };
 
