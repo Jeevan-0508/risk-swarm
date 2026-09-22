@@ -19,8 +19,8 @@
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![tests](https://img.shields.io/badge/tests-643_passing-22c55e?style=for-the-badge)
-![attacks](https://img.shields.io/badge/adversarial_attacks-16-ef4444?style=for-the-badge)
+![tests](https://img.shields.io/badge/tests-815_passing-22c55e?style=for-the-badge)
+![attacks](https://img.shields.io/badge/adversarial_attacks-30-ef4444?style=for-the-badge)
 ![Pages](https://img.shields.io/badge/GitHub%20Pages-LIVE-22c55e?style=for-the-badge&logo=github)
 ![MIT](https://img.shields.io/badge/Licence-MIT-38bdf8?style=for-the-badge)
 
@@ -103,7 +103,7 @@ bun run scripts/demo-run.ts     # the whole investigation, printed
 | Why the band is not higher | `decision.gates_failed` and `decision.caps_applied`, both printed |
 | What it cost and whether it was stopped | `result.spent` (agent calls / retrievals / tokens) and `result.attempts` |
 | Whether an agent was allowed to phrase something with a model | `degraded_reason` on the agent output; absent means deterministic wording |
-| That the behaviour is enforced, not described | `bun test` — 643 tests across 49 files, 30 of them adversarial attacks |
+| That the behaviour is enforced, not described | `bun test` — 815 tests across 60 files, 30 of them adversarial attacks (16 guard-layer + 14 council-layer) |
 
 The same record drives the UI. The browser build is a **pure renderer** over `RunResult`: no screen
 recomputes a number, because a figure computed twice is a figure that can disagree with itself.
@@ -324,7 +324,7 @@ added because the upstream feed matches news by OR'd keywords, so its own labels
 bun install
 bun run scripts/demo-run.ts        # the full investigation, no key, no network
 bun run dev                        # the fourteen screens at /risk-swarm/
-bun test                           # 643 tests, 49 files
+bun test                           # 815 tests, 60 files
 ./node_modules/.bin/tsc -b --noEmit # typecheck
 bun run snapshot:check              # verify snapshots against their recorded hashes
 ```
