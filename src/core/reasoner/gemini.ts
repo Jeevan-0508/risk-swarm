@@ -1,5 +1,5 @@
 import { assertNoFabricatedCitations, type ReasonRequest, type ReasonResult, type Reasoner } from './types';
-import { buildPrompt, DEFAULT_REASONER_TIMEOUT_MS, estimateTokens, extractJson } from './shared';
+import { buildPrompt, DEFAULT_REASONER_TIMEOUT_MS, estimateTokens, extractJson, sanitizeProviderMessage } from './shared';
 
 /**
  * Google Gemini reasoner, bring-your-own key. Same contract and the same failure discipline as
@@ -78,10 +78,16 @@ export function createGeminiReasoner(options: GeminiReasonerOptions): Reasoner {
           clearTimeout(timer);
         }
       } catch (err) {
-        return degrade(
-          err instanceof Error && err.name === 'AbortError' ? `provider timed out after ${(timeoutMs / 1000).toFixed(1)}s` : 'provider request failed',
-          est_tokens,
-        );
+        // Same fix as the sibling OpenAI/OpenRouter adapter (`llm.ts`): a thrown fetch used to
+        // degrade to a static, uninformative string regardless of cause. `sanitizeProviderMessage`
+        // redacts any header/key it could echo, so the real reason is safe to surface.
+        const reason =
+          err instanceof Error && err.name === 'AbortError'
+            ? `provider timed out after ${(timeoutMs / 1000).toFixed(1)}s`
+            : err instanceof Error
+              ? `provider request failed — ${sanitizeProviderMessage(err.message)}`
+              : 'provider request failed';
+        return degrade(reason, est_tokens);
       }
 
       if (!text.trim()) return degrade('empty response', est_tokens);

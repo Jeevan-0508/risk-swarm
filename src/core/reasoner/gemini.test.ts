@@ -84,13 +84,14 @@ describe('gemini reasoner', () => {
     expect(JSON.stringify(out)).not.toContain('sk-test');
   });
 
-  it('degrades on a network failure without echoing the error object', async () => {
+  it('degrades on a network failure, surfacing a sanitized reason without echoing the request', async () => {
     const boom = (async () => {
-      throw new Error('connect ECONNREFUSED for https://x?key=sk-test');
+      throw new Error('connect ECONNREFUSED for https://x?key=AIzaSyFAKEKEYFAKEKEYFAKEKEY1234');
     }) as unknown as typeof fetch;
     const out = await createGeminiReasoner({ ...base, fetchImpl: boom }).propose(req());
-    expect(out.degraded_reason).toBe('provider request failed');
-    expect(JSON.stringify(out)).not.toContain('sk-test');
+    expect(out.degraded_reason).toContain('provider request failed');
+    expect(out.degraded_reason).toContain('[redacted-key]');
+    expect(JSON.stringify(out)).not.toContain('AIzaSyFAKEKEYFAKEKEYFAKEKEY1234');
   });
 
   it('shares the 60s default timeout constant with the OpenRouter/OpenAI adapter', () => {

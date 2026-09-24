@@ -159,11 +159,20 @@ export function createLlmReasoner(options: LlmReasonerOptions): Reasoner {
           clearTimeout(timer);
         }
       } catch (err) {
-        // Deliberately not interpolating the error: provider errors can echo request headers.
-        return degrade(
-          err instanceof Error && err.name === 'AbortError' ? `provider timed out after ${(timeoutMs / 1000).toFixed(1)}s` : 'provider request failed',
-          est_tokens,
-        );
+        // A thrown fetch (network failure, CORS block, or a non-JSON `res.json()` parse) is the one
+        // failure mode in this file that used to stay a static, uninformative string no matter what
+        // actually happened, unlike every HTTP-error, empty-content and parse-failure path above,
+        // which all surface a real, sanitized reason. `sanitizeProviderMessage` already exists and is
+        // proven (see the test asserting a `connect ECONNREFUSED ... authorization: Bearer sk-test`
+        // network error never leaks the key) to redact exactly the header-echo case this used to be
+        // avoided over, so there is no longer a reason to throw away the detail instead of the secret.
+        const reason =
+          err instanceof Error && err.name === 'AbortError'
+            ? `provider timed out after ${(timeoutMs / 1000).toFixed(1)}s`
+            : err instanceof Error
+              ? `provider request failed — ${sanitizeProviderMessage(err.message)}`
+              : 'provider request failed';
+        return degrade(reason, est_tokens);
       }
 
       if (emptyReason) return degrade(emptyReason, est_tokens);

@@ -329,12 +329,13 @@ describe('llm reasoner', () => {
     expect(JSON.stringify(out)).not.toContain('sk-test');
   });
 
-  it('degrades on a network failure without echoing the error object', async () => {
+  it('degrades on a network failure, surfacing a sanitized reason without echoing the request', async () => {
     const boom = (async () => {
-      throw new Error('connect ECONNREFUSED with authorization: Bearer sk-test');
+      throw new Error('connect ECONNREFUSED with authorization: Bearer sk-test1234567890');
     }) as unknown as typeof fetch;
     const out = await createLlmReasoner({ ...base, fetchImpl: boom }).propose(req());
-    expect(out.degraded_reason).toBe('provider request failed');
+    expect(out.degraded_reason).toContain('provider request failed');
+    expect(out.degraded_reason).toContain('[redacted]');
     expect(JSON.stringify(out)).not.toContain('sk-test');
   });
 
