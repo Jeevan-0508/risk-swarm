@@ -14,6 +14,7 @@ import { useModelStore } from '@app/store/models';
 import { swarmDecisionPanelTitle } from '@app/lib/research-ownership';
 import { Link } from 'react-router-dom';
 import { CANDIDATE_MO_SCHEMA_SOURCE_REVISION, FraudWatchCandidateMO, type FraudWatchCandidateMO as FraudWatchCandidateMOValue } from '@core/integrations/fraud-watch-candidate';
+import { buildSwarmReplayCapture } from '@core/integrations/replay-capture';
 
 const toneFor = (status: ResearchOutcome['execution']['status']): 'support' | 'caution' | 'objection' =>
   status === 'ok' ? 'support' : status === 'search_failed' ? 'objection' : 'caution';
@@ -49,6 +50,7 @@ export function Research() {
   const candidateFileReadId = useRef(0);
   const [candidateIntake, setCandidateIntake] = useState<{ fileName: string; value: FraudWatchCandidateMOValue } | null>(null);
   const [candidateIntakeError, setCandidateIntakeError] = useState<string | null>(null);
+  const [includeCandidateContext, setIncludeCandidateContext] = useState(false);
 
   const assignments = useModelStore((s) => s.assignments);
   const keys = useModelStore((s) => s.keys);
@@ -68,6 +70,7 @@ export function Research() {
     const readId = ++candidateFileReadId.current;
     setCandidateIntake(null);
     setCandidateIntakeError(null);
+    setIncludeCandidateContext(false);
     if (!file) return;
     if (file.size === 0) {
       setCandidateIntakeError('The selected file is empty.');
@@ -99,6 +102,24 @@ export function Research() {
     candidateFileReadId.current++;
     setCandidateIntake(null);
     setCandidateIntakeError(null);
+    setIncludeCandidateContext(false);
+  };
+
+  const downloadReplayCapture = () => {
+    if (outcome === null) return;
+    const capture = buildSwarmReplayCapture({
+      outcome,
+      question: text,
+      capturedAt: new Date().toISOString(),
+      candidate: includeCandidateContext ? candidateIntake?.value ?? null : null,
+    });
+    const blob = new Blob([JSON.stringify(capture, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `risk-swarm-research-${outcome.run_id}.json`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   const text = question.trim();
@@ -363,6 +384,19 @@ export function Research() {
               <div className="grid gap-3 md:grid-cols-2">{answer.dimensions.map((d) => <div key={d.label} className="border-l-2 border-line-bright pl-4"><div className="label">{d.label}</div><div className="mt-1 text-lg text-fg">{d.winner}</div><p className="mt-1 text-xs leading-relaxed text-fg-dim">{d.reason}</p></div>)}</div>
             </Panel>
           )}
+
+          <Panel title="replay capture · local download" aside={<Tag tone="caution">REVIEW ONLY</Tag>}>
+            <p className="max-w-4xl text-xs leading-relaxed text-fg-mute">
+              Exports the operator-supplied question, retrieval status and externally retrieved source records for a later Risk Replay review. It excludes internal knowledge text, derived answers and Council/model conclusions. Source records show what a provider returned; fingerprints cover normalized excerpt text (or title) and do not prove authenticity, truth, independence or entailment. The file is not uploaded.
+            </p>
+            {candidateIntake !== null && (
+              <label className="mt-3 flex items-start gap-2 text-2xs leading-relaxed text-fg-dim">
+                <input type="checkbox" checked={includeCandidateContext} onChange={(event) => setIncludeCandidateContext(event.target.checked)} className="mt-0.5" />
+                <span>Include the imported Fraud Watch file in a separate <span className="num">synthetic_simulation / hypothesis_context_only</span> field. It is never added to source records.</span>
+              </label>
+            )}
+            <div className="mt-3"><Button onClick={downloadReplayCapture}>download replay capture JSON</Button></div>
+          </Panel>
 
           <Panel title="evidence actually used" aside={<span className="num text-2xs text-fg-mute">{answer.evidence_count} retained · {answer.source_count} source identities</span>} flush>
             <ul>{outcome.merged.items.map((item) => <li key={item.evidence.id} className="hair-b px-4 py-3 last:border-b-0"><div className="flex flex-wrap items-baseline gap-3"><Tag tone="signal">{item.provenance.provider}</Tag><span className="text-sm text-fg-dim">{item.evidence.title}</span><span className="num text-2xs text-fg-mute">{item.provenance.source_identity}</span></div><p className="mt-1 text-2xs leading-relaxed text-fg-mute">{item.evidence.excerpt_or_summary}</p>{item.evidence.url && <a className="mt-1 block text-2xs text-signal underline" href={item.evidence.url} target="_blank" rel="noreferrer">source</a>}</li>)}</ul>

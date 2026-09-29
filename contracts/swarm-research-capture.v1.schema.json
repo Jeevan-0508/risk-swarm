@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Jeevan-0508/risk-swarm/blob/main/contracts/swarm-research-capture.v1.schema.json",
+  "title": "RISK//SWARM research capture v1",
+  "description": "A manual, review-only snapshot of a SWARM retrieval pass. Captured source content is not independently verified; an optional Fraud Watch candidate is synthetic hypothesis context and is not evidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "kind", "captured_at", "source", "research", "hypothesis_context", "excluded_outputs", "integrity_note"],
+  "properties": {
+    "schema_version": { "const": "swarm-research-capture.v1" },
+    "kind": { "const": "risk_swarm_research_capture" },
+    "captured_at": { "type": "string", "format": "date-time" },
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["repository", "revision"],
+      "properties": {
+        "repository": { "const": "Jeevan-0508/risk-swarm" },
+        "revision": { "description": "Exact source revision when the running browser build can establish it; otherwise null.", "anyOf": [{ "type": "string", "pattern": "^[0-9a-f]{40}$" }, { "type": "null" }] }
+      }
+    },
+    "research": {
+      "type": "object", "additionalProperties": false,
+      "required": ["run_id", "question", "question_origin", "started_at", "retrieval_status", "attempts", "source_records", "dropped_sources", "internal_search"],
+      "properties": {
+        "run_id": { "type": "string", "minLength": 1 },
+        "question": { "type": "string", "description": "The operator-supplied research question. Its wording is not evidence." },
+        "question_origin": { "const": "operator_supplied" },
+        "started_at": { "type": "string", "format": "date-time" },
+        "retrieval_status": { "enum": ["ok", "partial", "search_failed", "limit_reached"] },
+        "attempts": { "type": "array", "items": { "$ref": "#/definitions/attempt" } },
+        "source_records": { "type": "array", "items": { "$ref": "#/definitions/source_record" } },
+        "dropped_sources": { "type": "array", "items": { "$ref": "#/definitions/dropped_source" } },
+        "internal_search": {
+          "type": "object", "additionalProperties": false,
+          "required": ["status", "hit_count", "content_exported"],
+          "properties": {
+            "status": { "enum": ["not_run", "ok", "empty", "unavailable"] },
+            "hit_count": { "type": "integer", "minimum": 0 },
+            "content_exported": { "const": false }
+          }
+        }
+      }
+    },
+    "hypothesis_context": {
+      "description": "Optional simulator candidate kept outside the source-record list. It remains a hypothesis/context and cannot validate itself.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["data_class", "role", "authenticity", "candidate"],
+          "properties": {
+            "data_class": { "const": "synthetic_simulation" },
+            "role": { "const": "hypothesis_context_only" },
+            "authenticity": { "const": "unverified_export" },
+            "candidate": { "$ref": "https://raw.githubusercontent.com/Jeevan-0508/freight-fraud-taxonomy/d8fa1399d849c125a91f9ea5128f1fbad40186d2/contracts/candidate-mo-v1.schema.json" }
+          }
+        }
+      ]
+    },
+    "excluded_outputs": {
+      "type": "object", "additionalProperties": false,
+      "required": ["model_conclusions", "internal_knowledge_content", "knowledge_promotion"],
+      "properties": {
+        "model_conclusions": { "const": true },
+        "internal_knowledge_content": { "const": true },
+        "knowledge_promotion": { "const": true }
+      }
+    },
+    "integrity_note": { "const": "Fingerprints cover normalized excerpt text (or title); the algorithm may be non-cryptographic. They do not establish source authenticity, factual truth, source independence, or claim entailment." }
+  },
+  "definitions": {
+    "attempt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["dimension", "provider", "query", "status", "reason", "returned", "retained", "ms"],
+      "properties": {
+        "dimension": { "type": "string" },
+        "provider": { "enum": ["wikipedia", "wikidata", "openalex", "crossref", "hackernews", "worldbank", "duckduckgo", "news_rss"] },
+        "query": { "type": "string" },
+        "status": { "enum": ["ok", "empty", "search_failed", "unavailable", "skipped_budget"] },
+        "reason": { "type": ["string", "null"] },
+        "returned": { "type": "integer", "minimum": 0 },
+        "retained": { "type": "integer", "minimum": 0 },
+        "ms": { "type": "number", "minimum": 0 }
+      }
+    },
+    "source_record": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidence_id", "data_class", "role", "provider", "source_identity", "source_type", "query", "url", "title", "excerpt", "content_hash", "content_hash_algorithm", "retrieved_at", "stated_date", "date_kind", "via_proxy", "caveats", "injection_suspected"],
+      "properties": {
+        "evidence_id": { "type": "string", "minLength": 1 },
+        "data_class": { "const": "external_source_content" },
+        "role": { "const": "retrieved_source_record" },
+        "provider": { "enum": ["wikipedia", "wikidata", "openalex", "crossref", "hackernews", "worldbank", "duckduckgo", "news_rss"] },
+        "source_identity": { "type": "string", "minLength": 1 },
+        "source_type": { "enum": ["regulator", "industry_body", "news", "portfolio_kb", "academic", "statistical_body", "reference_work"] },
+        "query": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "title": { "type": "string" },
+        "excerpt": { "type": "string" },
+        "content_hash": { "type": "string", "minLength": 1, "description": "Hash/fingerprint over normalized excerpt text (or title); algorithm depends on the browser runtime." },
+        "content_hash_algorithm": { "enum": ["sha256", "fnv1a"] },
+        "retrieved_at": { "type": "string", "format": "date-time" },
+        "stated_date": { "type": ["string", "null"] },
+        "date_kind": { "enum": ["published", "revised", "indexed", "observed", "unknown"] },
+        "via_proxy": { "type": "boolean" },
+        "caveats": { "type": "array", "items": { "type": "string" } },
+        "injection_suspected": { "type": "boolean" }
+      }
+    },
+    "dropped_source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["reason", "title", "detail"],
+      "properties": {
+        "reason": { "enum": ["no_location", "empty_text"] },
+        "title": { "type": "string" },
+        "detail": { "type": "string" }
+      }
+    }
+  }
+}
