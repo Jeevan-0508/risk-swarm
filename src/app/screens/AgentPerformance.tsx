@@ -32,8 +32,7 @@ export function AgentPerformance() {
     const cited = outs.reduce((n, o) => n + o!.evidence_cited.length, 0);
     const uncertainties = outs.reduce((n, o) => n + o!.uncertainties.length, 0);
     const degraded = outs.filter((o) => (o!.degraded_reason ?? null) !== null).length;
-    const confidence = outs.length === 0 ? 0 : outs.reduce((n, o) => n + o!.confidence, 0) / outs.length;
-    return { id, runs: outs.length, calls, ms, findings, created, cited, uncertainties, degraded, confidence };
+    return { id, runs: outs.length, calls, ms, findings, created, cited, uncertainties, degraded };
   });
   const maxMs = Math.max(...rows.map((r) => r.ms), 1);
   const totalMs = rows.reduce((n, r) => n + r.ms, 0);
@@ -59,7 +58,6 @@ export function AgentPerformance() {
                 </span>
                 <span className="num text-2xs text-fg-mute">{r.calls} call(s) · {r.ms} ms · {r.findings} finding(s)</span>
                 {r.degraded > 0 && <Tag tone="caution">degraded in {r.degraded} run(s)</Tag>}
-                <span className="num ml-auto text-xs text-fg-dim">mean confidence {r.confidence.toFixed(2)}</span>
               </div>
               <div className="mt-2"><Bar value={r.ms / maxMs} tone="signal" /></div>
               <p className="mt-1.5 text-xs leading-snug text-fg-mute">{AGENT_REMIT[r.id]}</p>

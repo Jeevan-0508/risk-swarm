@@ -36,7 +36,7 @@ export interface CommandContext {
 
 export const COMMAND_HELP: string[] = [
   'outcome            the deliberation outcome, and what it means',
-  'band               the recommended action band, severity, urgency, confidence',
+  'band               recommendation, severity, urgency, uncalibrated evidence-support index',
   'gates              every gate that failed and every cap applied, by name',
   'objections         unresolved objections, verbatim',
   'open               exchanges still carrying an unresolved status',
@@ -103,8 +103,8 @@ export function routeCommand(input: string, ctx: CommandContext): CommandResult 
         `${decision.action_band.replace(/_/g, ' ')} - ${decision.headline_risk}`,
         `severity ${decision.severity_band} (${decision.severity_score.toFixed(2)}) · urgency ${decision.urgency}`,
         decision.confidence === null
-          ? `confidence withheld: ${decision.confidence_blocked_reason ?? 'no reason recorded'}`
-          : `confidence ${decision.confidence.toFixed(2)}`,
+          ? `evidence-support index withheld: ${decision.confidence_blocked_reason ?? 'no reason recorded'}`
+          : `uncalibrated evidence-support index ${decision.confidence.toFixed(2)} (not a probability; agent agreement does not raise it)`,
         `owner ${decision.owner_role} · review by ${decision.review_by.slice(0, 10)}`,
       ]);
 
@@ -143,7 +143,7 @@ export function routeCommand(input: string, ctx: CommandContext): CommandResult 
         `cannot: ${COUNCIL_SEATS[id].cannot}`,
         position === undefined
           ? 'Casts no position in the score - it assembles the score rather than voting in it.'
-          : `recorded position: ${position.reasoning_status.replace(/_/g, ' ')} at ${position.confidence.toFixed(2)}`,
+          : `recorded position: ${position.reasoning_status.replace(/_/g, ' ')}; agent self-rating ${position.confidence.toFixed(2)} (uncalibrated, not evidence)`,
         `${out.findings.length} findings · ${out.evidence_cited.length} evidence cited · ${events.filter((e) => e.from_agent === id).length} exchanges spoken`,
       ]);
     }

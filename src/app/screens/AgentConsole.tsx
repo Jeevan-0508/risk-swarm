@@ -141,7 +141,7 @@ function AgentCard({ agent, index, state }: { agent: AgentId; index: number; sta
           <div className="hair-t pt-3 lg:border-l lg:border-t-0 lg:border-line lg:pl-6 lg:pt-0">
             {out !== null ? (
               <>
-                <Row k="confidence" v={<span className="num">{out.confidence.toFixed(2)}</span>} />
+                <Row k="agent self-rating (uncalibrated; not evidence)" v={<span className="num">{out.confidence.toFixed(2)}</span>} />
                 <Row k="evidence created" v={<span className="num">{out.evidence_created.length}</span>} />
                 <Row k="evidence cited" v={<span className="num">{out.evidence_cited.length}</span>} />
                 <Row k="agent calls" v={<span className="num">{out.cost.calls}</span>} />

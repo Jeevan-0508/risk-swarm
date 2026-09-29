@@ -25,7 +25,7 @@ export function renderBrief(result: RunResult, options: BriefOptions = {}): stri
   L.push('');
   L.push(`**Recommendation:** ${d.action_band}  `);
   L.push(`**Severity:** ${d.severity_band} (${d.severity_score.toFixed(3)})  `);
-  L.push(`**Confidence:** ${d.confidence === null ? `withheld — ${d.confidence_blocked_reason ?? 'reason not recorded'}` : d.confidence.toFixed(2)}  `);
+  L.push(`**Heuristic evidence-support index (uncalibrated; not a probability):** ${d.confidence === null ? `withheld — ${d.confidence_blocked_reason ?? 'reason not recorded'}` : d.confidence.toFixed(2)}  `);
   L.push(`**Urgency:** ${d.urgency}  `);
   L.push(`**Owner role:** ${d.owner_role}  `);
   L.push(`**Review by:** ${d.review_by}  `);

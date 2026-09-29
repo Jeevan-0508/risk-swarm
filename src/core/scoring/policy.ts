@@ -10,6 +10,7 @@ export interface ScoringPolicy {
   required_min_tier: Tier | null;
   /** Reference number of independent clusters that counts as a full evidence base. */
   evidence_reference_clusters: number;
+  /** Legacy field name; minimum uncalibrated evidence-support policy index, not a probability. */
   escalate_min_confidence: number;
   escalate_min_independent_sources: number;
   escalate_max_fp_risk: number;

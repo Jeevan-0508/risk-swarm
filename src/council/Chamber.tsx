@@ -269,7 +269,7 @@ function DecisionCore({ result }: { result: RunResult }) {
       <Label>decision core</Label>
       <div className="mt-3 text-3xl font-light leading-none tracking-tight">{d.action_band.replace(/_/g, ' ')}</div>
       <div className="num mt-2 text-xs text-fg-dim">
-        {d.severity_band} severity · urgency {d.urgency} · confidence{' '}
+        {d.severity_band} severity · urgency {d.urgency} · support index (uncalibrated; not a probability){' '}
         {d.confidence === null ? <span className="text-caution">withheld</span> : d.confidence.toFixed(2)}
       </div>
       {d.confidence === null && d.confidence_blocked_reason !== null && (
@@ -389,7 +389,7 @@ function AgentInspector({ result, seat, events, cursor }: {
             </p>
           ) : (
             <div className="num mt-1.5 text-sm text-fg">
-              {position.reasoning_status.replace(/_/g, ' ')} · {position.confidence.toFixed(2)}
+              {position.reasoning_status.replace(/_/g, ' ')} · self-rating {position.confidence.toFixed(2)}
             </div>
           )}
         </div>
@@ -406,7 +406,7 @@ function AgentInspector({ result, seat, events, cursor }: {
         <div>
           <Label>self-reported status</Label>
           <div className="num mt-1.5 text-sm text-fg">
-            {out.reasoning_status.replace(/_/g, ' ')} · {out.confidence.toFixed(2)}
+            {out.reasoning_status.replace(/_/g, ' ')} · self-rating {out.confidence.toFixed(2)} (uncalibrated; not evidence)
           </div>
         </div>
       </div>

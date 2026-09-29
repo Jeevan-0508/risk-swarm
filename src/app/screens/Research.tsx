@@ -305,16 +305,15 @@ export function Research() {
                 The Council below is a separate system from the research pass above, despite sharing two
                 names: HERMES/ATHENA/APOLLO/ARES/HEPHAESTUS (above) are this app's original deterministic
                 open-research agents — no model required, byte-for-byte reproducible. ATHENA/ARES/HADES/ZEUS
-                (below) are EVOLUTION 6.0's Olympian Council — real, independent, bring-your-own-key model
+                (below) are EVOLUTION 6.0's Olympian Council — separate bring-your-own-key model
                 calls over the same evidence, synthesized by Zeus. The name overlap (ATHENA, ARES) is
                 coincidental, not the same agent twice. With Council Mode on, the Council's verdict below is
-                the authoritative final decision; the panel above is the legacy pipeline's own analysis of
+                a model-generated position for human review; the panel above is the legacy pipeline's own analysis of
                 the same evidence, kept for context and provenance, not a competing answer.
               </p>
-              <Panel title="OLYMPIAN COUNCIL VERDICT" aside={<Tag tone={council.verdict.verdict.verdict_type === 'CONSENSUS' ? 'support' : council.verdict.verdict.verdict_type === 'UNRESOLVED' ? 'objection' : 'signal'}>{council.verdict.verdict.verdict_type}</Tag>}>
+              <Panel title="MODEL-GENERATED COUNCIL POSITION" aside={<Tag tone={council.verdict.verdict.verdict_type === 'CONSENSUS' ? 'support' : council.verdict.verdict.verdict_type === 'UNRESOLVED' ? 'objection' : 'signal'}>{council.verdict.verdict.verdict_type}</Tag>}>
                 <div className="flex items-baseline justify-between gap-4">
                   <div className="text-2xl font-light tracking-tight text-fg">{council.verdict.verdict.answer}</div>
-                  <div className="num text-sm text-fg-mute">{Math.round(council.verdict.verdict.confidence * 100)}% confidence</div>
                 </div>
                 <ul className="mt-3 space-y-1">{council.verdict.verdict.rationale.map((r, i) => <li key={i} className="text-xs leading-relaxed text-fg-dim">— {r}</li>)}</ul>
                 {council.verdict.verdict.minority_view !== null && (
@@ -324,6 +323,9 @@ export function Research() {
                   <p className="mt-3 border-l-2 border-objection pl-3 text-xs leading-relaxed text-fg-mute"><span className="label">unresolved</span><br />{council.verdict.verdict.unresolved.join(' ')}</p>
                 )}
                 <p className="mt-4 text-2xs text-fg-mute">
+                  The Council does not generate numeric confidence estimates. Agreement between models is not verification; check each claim against its cited evidence. Evidence IDs are checked, but citation relevance and entailment are not independently verified.
+                </p>
+                <p className="mt-2 text-2xs text-fg-mute">
                   {council.verdict.provider === 'deterministic'
                     ? 'ZEUS / DETERMINISTIC FALLBACK — LLM synthesis unavailable — deterministic fallback used.'
                     : `Zeus · ${council.verdict.provider}${council.verdict.degraded ? ` · degraded: ${council.verdict.degraded_reason}` : ''}`}
@@ -342,7 +344,6 @@ export function Research() {
                         </div>
                         <div className="mt-1 label">{p.provider}</div>
                         <div className="mt-3 text-lg text-fg">{p.position.stance}</div>
-                        <div className="num mt-1 text-2xs text-fg-mute">{Math.round(p.position.confidence * 100)}% confidence</div>
                         <p className="mt-2 text-2xs leading-relaxed text-fg-dim">{p.position.reasoning_summary}</p>
                         {p.degraded && <p className="mt-2 text-2xs text-objection">degraded: {p.degraded_reason}</p>}
                       </div>
@@ -350,6 +351,9 @@ export function Research() {
                   })}
                 </div>
                 <p className="mt-4 text-2xs leading-relaxed text-fg-mute">
+                  Council positions contain no numeric confidence. Agreement between models is not evidence that a claim is true.
+                </p>
+                <p className="mt-2 text-2xs leading-relaxed text-fg-mute">
                   {council.disagreement.independent_count === 0
                     ? NO_INDEPENDENT_POSITIONS_MESSAGE
                     : <>disagreement: {council.disagreement.agreement} across {council.disagreement.independent_count} independent position(s)

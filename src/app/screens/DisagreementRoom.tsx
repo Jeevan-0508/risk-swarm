@@ -52,8 +52,8 @@ export function DisagreementRoom() {
         <Metric label="disagreement index" value={di.value.toFixed(1)} tone={di.value > 50 ? 'objection' : 'neutral'}
           sub="0 = the agents agree · 100 = the finding is contested throughout" />
         <Metric label="open challenges" value={open.length} sub={`of ${challenges.length} raised`} tone={open.length > 0 ? 'objection' : 'support'} />
-        <Metric label="blocking" value={blocking.length} tone={blocking.length > 0 ? 'block' : 'support'} sub="severity that suppresses confidence" />
-        <Metric label="distinct positions" value={statuses.size} sub={`confidence spread ${spread.toFixed(2)}`} />
+        <Metric label="blocking" value={blocking.length} tone={blocking.length > 0 ? 'block' : 'support'} sub="blocking findings suppress the evidence-support index" />
+        <Metric label="distinct positions" value={statuses.size} sub={`spread of uncalibrated agent self-ratings: ${spread.toFixed(2)}`} />
       </div>
 
       <Panel title="how the index was computed" aside={<span className="num text-2xs text-fg-mute">{di.value.toFixed(1)} / 100</span>}>
@@ -82,7 +82,7 @@ export function DisagreementRoom() {
         </table>
       </Panel>
 
-      <Panel title="where each agent stood" aside={<span className="text-2xs text-fg-mute">positions are recorded before scoring, not reconciled after</span>} flush>
+      <Panel title="where each agent stood" aside={<span className="text-2xs text-fg-mute">self-ratings are uncalibrated and are not evidence or inputs to the support index</span>} flush>
         <ul className="divide-y divide-line">
           {positions.map((p) => (
             <li key={p.agent} className="flex flex-wrap items-center gap-4 px-4 py-3">
@@ -98,7 +98,7 @@ export function DisagreementRoom() {
               </span>
               <Tag tone={STATUS_TONE[p.reasoning_status] ?? 'neutral'}>{p.reasoning_status.replace(/_/g, ' ')}</Tag>
               <div className="min-w-32 flex-1">
-                <Bar value={p.confidence} tone={p.confidence >= 0.6 ? 'support' : p.confidence >= 0.35 ? 'caution' : 'objection'} />
+                <Bar value={p.confidence} tone="neutral" />
               </div>
               <span className="num w-12 shrink-0 text-right text-xs text-fg-dim">{p.confidence.toFixed(2)}</span>
             </li>

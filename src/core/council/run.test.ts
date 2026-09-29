@@ -29,13 +29,28 @@ const enabledConfig: RegistryConfig = {
 };
 
 describe('Council orchestration', () => {
+  it('abstains before making any model calls when no evidence records were supplied', async () => {
+    let calls = 0;
+    const result = await runCouncil('Is there a freight fraud pattern?', [], enabledConfig, {
+      getApiKey: () => 'sk-test',
+      fetchImpl: (async () => { calls += 1; return new Response('{}', { status: 200 }); }) as unknown as typeof fetch,
+    });
+
+    expect(calls).toBe(0);
+    expect(result.verdict.verdict.verdict_type).toBe('UNRESOLVED');
+    expect(result.verdict.verdict.answer).toBe('insufficient_evidence');
+    expect(result.disagreement.independent_count).toBe(0);
+    expect(result.model_diversity.active_agents).toBe(0);
+    expect(result.trace.some((event) => event.detail.includes('without contacting models'))).toBe(true);
+  });
+
   it('makes at most MAX_OLYMPIAN_CALLS model calls and every Olympian answers independently', async () => {
     let calls = 0;
     const countingFetch = fakeFetch({
-      'athena-model': { stance: 'tiger', confidence: 0.8, reasoning_summary: 'a', claims: [], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] },
-      'ares-model': { stance: 'tiger', confidence: 0.75, reasoning_summary: 'a', claims: [], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] },
-      'hades-model': { stance: 'tiger', confidence: 0.6, reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
-      'zeus-model': { verdict_type: 'CONSENSUS', answer: 'tiger', confidence: 0.75, rationale: ['all three agree'], minority_view: null, unresolved: [], cited_evidence_ids: ['EV-001'] },
+      'athena-model': { stance: 'tiger', reasoning_summary: 'a', claims: [], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] },
+      'ares-model': { stance: 'tiger', reasoning_summary: 'a', claims: [], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] },
+      'hades-model': { stance: 'tiger', reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+      'zeus-model': { verdict_type: 'CONSENSUS', answer: 'tiger', rationale: ['all three agree'], minority_view: null, unresolved: [], cited_evidence_ids: ['EV-001'] },
     });
     const wrapped: typeof fetch = (async (...args: Parameters<typeof fetch>) => { calls += 1; return countingFetch(...args); }) as typeof fetch;
 
@@ -52,10 +67,10 @@ describe('Council orchestration', () => {
 
   it('preserves genuine disagreement rather than manufacturing agreement', async () => {
     const fetchImpl = fakeFetch({
-      'athena-model': { stance: 'tiger', confidence: 0.8, reasoning_summary: 'evidence favors tiger', claims: [], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] },
-      'ares-model': { stance: 'tiger', confidence: 0.7, reasoning_summary: 'tiger wins the contest', claims: [], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] },
-      'hades-model': { stance: 'lion', confidence: 0.55, reasoning_summary: 'pride support changes the outcome', claims: [], evidence_ids: ['EV-002'], evidence_requests: [], assumptions: [] },
-      'zeus-model': { verdict_type: 'MAJORITY', answer: 'tiger', confidence: 0.6, rationale: ['two of three favor tiger'], minority_view: 'HADES argues pride support favors lion', unresolved: [], cited_evidence_ids: ['EV-001', 'EV-002'] },
+      'athena-model': { stance: 'tiger', reasoning_summary: 'evidence favors tiger', claims: [], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] },
+      'ares-model': { stance: 'tiger', reasoning_summary: 'tiger wins the contest', claims: [], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] },
+      'hades-model': { stance: 'lion', reasoning_summary: 'pride support changes the outcome', claims: [], evidence_ids: ['EV-002'], evidence_requests: [], assumptions: [] },
+      'zeus-model': { verdict_type: 'MAJORITY', answer: 'tiger', rationale: ['two of three favor tiger'], minority_view: 'HADES argues pride support favors lion', unresolved: [], cited_evidence_ids: ['EV-001', 'EV-002'] },
     });
     const result = await runCouncil('lion vs tiger?', evidence, enabledConfig, { getApiKey: () => 'sk-test', fetchImpl });
 
@@ -70,9 +85,9 @@ describe('Council orchestration', () => {
       const body = init?.body ? JSON.parse(init.body as string) : {};
       if (body.model === 'ares-model') return { ok: false, status: 429, json: async () => ({}) };
       return fakeFetch({
-        'athena-model': { stance: 'tiger', confidence: 0.8, reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
-        'hades-model': { stance: 'tiger', confidence: 0.65, reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
-        'zeus-model': { verdict_type: 'CONSENSUS', answer: 'tiger', confidence: 0.7, rationale: ['two independent agents agree; the third was unreachable'], minority_view: null, unresolved: [], cited_evidence_ids: [] },
+        'athena-model': { stance: 'tiger', reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+        'hades-model': { stance: 'tiger', reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+        'zeus-model': { verdict_type: 'CONSENSUS', answer: 'tiger', rationale: ['two independent agents agree; the third was unreachable'], minority_view: null, unresolved: [], cited_evidence_ids: [] },
       })(url, init);
     }) as unknown as typeof fetch;
 
@@ -87,10 +102,10 @@ describe('Council orchestration', () => {
 
   it('never leaks the api key into the trace or the result', async () => {
     const fetchImpl = fakeFetch({
-      'athena-model': { stance: 'tiger', confidence: 0.8, reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
-      'ares-model': { stance: 'tiger', confidence: 0.7, reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
-      'hades-model': { stance: 'tiger', confidence: 0.6, reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
-      'zeus-model': { verdict_type: 'CONSENSUS', answer: 'tiger', confidence: 0.7, rationale: [], minority_view: null, unresolved: [], cited_evidence_ids: [] },
+      'athena-model': { stance: 'tiger', reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+      'ares-model': { stance: 'tiger', reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+      'hades-model': { stance: 'tiger', reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+      'zeus-model': { verdict_type: 'CONSENSUS', answer: 'tiger', rationale: [], minority_view: null, unresolved: [], cited_evidence_ids: [] },
     });
     const result = await runCouncil('lion vs tiger?', evidence, enabledConfig, { getApiKey: () => 'sk-live-do-not-leak', fetchImpl });
     expect(JSON.stringify(result)).not.toContain('sk-live-do-not-leak');
@@ -124,7 +139,7 @@ describe('Council orchestration', () => {
     const fetchImpl: typeof fetch = (async (...args: Parameters<typeof fetch>) => {
       calls += 1;
       return fakeFetch({
-        'openrouter/free': { stance: 'tiger', confidence: 0.72, reasoning_summary: 'tiger wins a straight contest', claims: [], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] },
+        'openrouter/free': { stance: 'tiger', reasoning_summary: 'tiger wins a straight contest', claims: [], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] },
       })(...args);
     }) as unknown as typeof fetch;
 
@@ -182,10 +197,10 @@ describe('Council orchestration', () => {
    */
   it('records request-started and response-latency observability in the trace for a real model call', async () => {
     const fetchImpl = fakeFetch({
-      'athena-model': { stance: 'tiger', confidence: 0.8, reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
-      'ares-model': { stance: 'tiger', confidence: 0.7, reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
-      'hades-model': { stance: 'tiger', confidence: 0.6, reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
-      'zeus-model': { verdict_type: 'CONSENSUS', answer: 'tiger', confidence: 0.7, rationale: [], minority_view: null, unresolved: [], cited_evidence_ids: [] },
+      'athena-model': { stance: 'tiger', reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+      'ares-model': { stance: 'tiger', reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+      'hades-model': { stance: 'tiger', reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+      'zeus-model': { verdict_type: 'CONSENSUS', answer: 'tiger', rationale: [], minority_view: null, unresolved: [], cited_evidence_ids: [] },
     });
     const result = await runCouncil('lion vs tiger?', evidence, enabledConfig, { getApiKey: () => 'sk-test', fetchImpl });
 
@@ -195,7 +210,7 @@ describe('Council orchestration', () => {
     const oneAgentConfig: RegistryConfig = { ...DEFAULT_REGISTRY_CONFIG, ARES: { provider: 'openrouter', model: 'openrouter/free', enabled: true } };
     const partial = await runCouncil('lion vs tiger?', evidence, oneAgentConfig, {
       getApiKey: (p) => (p === 'openrouter' ? 'sk-test' : null),
-      fetchImpl: fakeFetch({ 'openrouter/free': { stance: 'tiger', confidence: 0.7, reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] } }),
+      fetchImpl: fakeFetch({ 'openrouter/free': { stance: 'tiger', reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] } }),
     });
     expect(partial.trace.some((e) => e.kind === 'position_ready' && e.agent === 'ATHENA' && e.detail.includes('provider response received in'))).toBe(false);
   });
@@ -218,8 +233,8 @@ describe('Council orchestration', () => {
       const raw = init?.body as string;
       sentBodies.push({ model: (JSON.parse(raw) as { model: string }).model, raw });
       return fakeFetch({
-        'gpt-4o-mini': { stance: 'jupiter', confidence: 0.85, reasoning_summary: 'evidence favors jupiter by diameter', claims: ['Jupiter is the largest planet'], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] },
-        'openrouter/free': { stance: 'jupiter', confidence: 0.72, reasoning_summary: 'contest goes to jupiter on raw size', claims: ['Jupiter wins on diameter'], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] },
+        'gpt-4o-mini': { stance: 'jupiter', reasoning_summary: 'evidence favors jupiter by diameter', claims: ['Jupiter is the largest planet'], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] },
+        'openrouter/free': { stance: 'jupiter', reasoning_summary: 'contest goes to jupiter on raw size', claims: ['Jupiter wins on diameter'], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] },
       })(url, init);
     }) as unknown as typeof fetch;
 
@@ -268,7 +283,7 @@ describe('Council orchestration', () => {
       const body = init?.body ? JSON.parse(init.body as string) : {};
       if (body.model === 'gpt-4o-mini') return { ok: false, status: 500, json: async () => ({ error: { message: 'internal error' } }) };
       return fakeFetch({
-        'openrouter/free': { stance: 'jupiter', confidence: 0.7, reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+        'openrouter/free': { stance: 'jupiter', reasoning_summary: 'a', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
       })(url, init);
     }) as unknown as typeof fetch;
 
@@ -292,7 +307,7 @@ describe('Council orchestration', () => {
       'which planet has the largest diameter, mercury or jupiter?',
       evidence,
       oneAgentConfig,
-      { getApiKey: (p) => (p === 'openai' ? 'sk-test' : null), fetchImpl: fakeFetch({ 'gpt-4o-mini': { stance: 'jupiter', confidence: 0.8, reasoning_summary: 'a', claims: [], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] } }) },
+      { getApiKey: (p) => (p === 'openai' ? 'sk-test' : null), fetchImpl: fakeFetch({ 'gpt-4o-mini': { stance: 'jupiter', reasoning_summary: 'a', claims: [], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: [] } }) },
     );
 
     expect(result.model_diversity.active_agents).toBe(1);

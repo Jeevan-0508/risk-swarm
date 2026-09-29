@@ -98,7 +98,7 @@ export const PANTHEON: God[] = [
     accent: '#e8d6a8',
     pose: 'working, not deliberating - the argument happened upstream',
     blurb: 'He does not have opinions. He has a calculator, a template, and everyone else\'s output.',
-    mechanism: 'Assembles the brief from the other six: score, band, urgency, owner, review date, named countermeasures. Every cap and every failed escalation gate is printed by name, and confidence is withheld outright when the evidence cannot carry it rather than estimated.',
+    mechanism: 'Assembles the brief from the other six: score, band, urgency, owner, review date, named countermeasures. Every cap and every failed escalation gate is printed by name, and the uncalibrated evidence-support index is withheld when a blocking finding stands.',
     beat: 'Hammer meets anvil and the sparks resolve into a sealed brief - stamped with the band from the last run actually stored in this browser, or with nothing at all if there is not one.',
   },
 ];

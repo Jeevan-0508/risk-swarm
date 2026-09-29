@@ -15,10 +15,10 @@ const run = () =>
   });
 
 describe('brief renderer', () => {
-  it('prints the withheld confidence and its reason rather than a number', async () => {
+  it('labels the uncalibrated support heuristic and prints its withheld reason rather than a number', async () => {
     const r = await run();
     const md = renderBrief(r);
-    expect(md).toContain('**Confidence:** withheld');
+    expect(md).toContain('**Heuristic evidence-support index (uncalibrated; not a probability):** withheld');
     expect(md).toContain(r.outputs.decision.decision.confidence_blocked_reason!);
   });
 

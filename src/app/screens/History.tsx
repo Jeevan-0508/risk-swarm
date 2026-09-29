@@ -41,7 +41,7 @@ export function History() {
                     <Tag tone={STATUS_TONE[r.status] ?? 'neutral'}>{r.status}</Tag>
                     {d !== null && <Tag tone={BAND_TONE[d.action_band] ?? 'neutral'}>{d.action_band.replace(/_/g, ' ')}</Tag>}
                     {d !== null && <Tag tone={SEVERITY_TONE[d.severity_band] ?? 'neutral'}>{d.severity_band} {d.severity_score.toFixed(3)}</Tag>}
-                    {d !== null && <Tag tone={d.confidence === null ? 'block' : 'support'}>{d.confidence === null ? 'confidence withheld' : `confidence ${d.confidence.toFixed(2)}`}</Tag>}
+                    {d !== null && <Tag tone={d.confidence === null ? 'block' : 'neutral'}>{d.confidence === null ? 'heuristic index withheld' : `heuristic index ${d.confidence.toFixed(2)}`}</Tag>}
                     {r.human !== null && <Tag tone={VERDICT_TONE[r.human.verdict] ?? 'neutral'}>human {r.human.verdict} → {r.human.band}</Tag>}
                     <span className="num ml-auto text-2xs text-fg-mute" title="asked at">{r.created_at.replace('T', ' ').slice(0, 16)}</span>
                     <span className="num text-2xs text-fg-mute" title="result at">

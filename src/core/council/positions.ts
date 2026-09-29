@@ -47,7 +47,7 @@ const PERSONA: Record<ReasoningAgent, Persona> = {
 };
 
 const SCHEMA_HINT =
-  '{ stance: string, confidence: number (0-1), reasoning_summary: string, claims: string[], evidence_ids: string[], evidence_requests: string[], assumptions: string[] }';
+  '{ stance: string, reasoning_summary: string, claims: string[], evidence_ids: string[], evidence_requests: string[], assumptions: string[] }';
 
 /**
  * Phase 1 live-debug brief (evidence-payload fix): a live ARES/OpenRouter call over 37 evidence items
@@ -82,7 +82,6 @@ function validateBody(raw: unknown): PositionBody {
   const r = raw as Partial<OlympianPosition>;
   if (
     !r || typeof r.stance !== 'string' || r.stance.trim().length === 0 ||
-    typeof r.confidence !== 'number' || !Number.isFinite(r.confidence) ||
     typeof r.reasoning_summary !== 'string' ||
     !Array.isArray(r.claims) || !Array.isArray(r.evidence_ids) || !Array.isArray(r.evidence_requests) || !Array.isArray(r.assumptions)
   ) {
@@ -90,7 +89,6 @@ function validateBody(raw: unknown): PositionBody {
   }
   return {
     stance: r.stance.trim(),
-    confidence: Math.min(1, Math.max(0, r.confidence)),
     reasoning_summary: r.reasoning_summary,
     claims: r.claims.map(String),
     evidence_ids: r.evidence_ids.map(String),
@@ -99,11 +97,10 @@ function validateBody(raw: unknown): PositionBody {
   };
 }
 
-/** The honest, zero-network answer: derived from nothing invented, low confidence, clearly marked degraded upstream. */
+/** The honest, zero-network answer: no model opinion was formed. */
 function fallbackBody(evidence: NormalizedEvidence[]): PositionBody {
   return {
     stance: 'insufficient_evidence',
-    confidence: 0.3,
     reasoning_summary: evidence.length === 0
       ? 'No model configured and no evidence retrieved; no position formed.'
       : `No model configured for this agent; ${evidence.length} evidence item(s) were retrieved but not independently reasoned over.`,
