@@ -81,7 +81,7 @@ export function agentLines(result: RunResult, id: AgentId): Line[] {
       const d = o.decision.decision;
       return [
         { tone: 'support', text: `recommendation assembled: ${d.action_band.replace(/_/g, ' ')}`, refs: [d.id] },
-        { tone: d.confidence === null ? 'block' : 'neutral', text: d.confidence === null ? 'confidence withheld while a blocking objection stands' : `confidence ${d.confidence.toFixed(2)}` },
+        { tone: d.confidence === null ? 'block' : 'neutral', text: d.confidence === null ? 'evidence-support index withheld while a blocking objection stands' : `evidence-support index ${d.confidence.toFixed(2)} (uncalibrated; not a probability)` },
         { tone: 'caution', text: `${d.gates_failed.length} escalation requirement(s) unmet` },
         { tone: 'neutral', text: `${o.decision.actions.length} action(s) proposed for a human to approve` },
       ];

@@ -150,7 +150,7 @@ export function CaseFile() {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-mono text-sm text-fg">{a.codename}</span>
                 <span className="text-2xs uppercase tracking-[0.12em] text-fg-mute">{a.label}</span>
-                {a.stance !== null && <Tag>{a.stance.reasoning_status.replace(/_/g, ' ')} · {a.stance.confidence.toFixed(2)}</Tag>}
+                {a.stance !== null && <Tag>{a.stance.reasoning_status.replace(/_/g, ' ')} · agent self-rating {a.stance.agent_self_rating_uncalibrated.toFixed(2)} (uncalibrated; not evidence)</Tag>}
                 <span className="num ml-auto text-2xs text-fg-mute">{a.ms} ms</span>
               </div>
               <p className="mt-1 text-xs leading-snug text-fg-mute">{a.remit}</p>
@@ -192,9 +192,9 @@ export function CaseFile() {
       <Panel title="final result">
         <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
           <Metric label="recommendation" value={file.final.action_band.replace(/_/g, ' ')} tone={BAND_TONE[file.final.action_band] ?? 'neutral'} mono={false} />
-          <Metric label="confidence" value={file.final.confidence === null ? 'withheld' : file.final.confidence.toFixed(2)}
-            tone={file.final.confidence === null ? 'block' : 'support'} mono={file.final.confidence !== null}
-            sub={file.final.confidence === null ? file.final.confidence_blocked_reason ?? 'reason not recorded' : undefined} />
+          <Metric label="evidence-support index" value={file.final.evidence_support_index === null ? 'withheld' : file.final.evidence_support_index.toFixed(2)}
+            tone={file.final.evidence_support_index === null ? 'block' : 'neutral'} mono={file.final.evidence_support_index !== null}
+            sub={file.final.evidence_support_index === null ? `${file.final.support_index_withheld_reason ?? 'reason not recorded'}; uncalibrated heuristic, not a probability` : 'uncalibrated policy heuristic; not a probability'} />
           <Metric label="urgency" value={file.final.urgency} mono={false} sub={`review by ${file.final.review_by.slice(0, 10)}`} />
           <Metric label="owner role" value={file.final.owner_role} mono={false} sub={`decided by ${file.final.decided_by.replace(/_/g, ' ')}`} />
         </div>

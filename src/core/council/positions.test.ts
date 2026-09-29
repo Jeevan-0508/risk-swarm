@@ -46,7 +46,7 @@ describe('Olympian position requests', () => {
   });
 
   it('accepts a well-formed independent position and stamps the correct agent', async () => {
-    const reasoner = stubReasoner({ stance: 'tiger', confidence: 0.8, reasoning_summary: 'Evidence favors tiger in combat.', claims: ['Tigers outweigh lions'], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: ['one-on-one, no pride support'] });
+    const reasoner = stubReasoner({ stance: 'tiger', reasoning_summary: 'Evidence favors tiger in combat.', claims: ['Tigers outweigh lions'], evidence_ids: ['EV-001'], evidence_requests: [], assumptions: ['one-on-one, no pride support'] });
     const out = await requestPosition('ARES', reasoner, 'lion vs tiger?', evidence);
     expect(out.degraded).toBe(false);
     expect(out.value.agent).toBe('ARES');
@@ -54,14 +54,15 @@ describe('Olympian position requests', () => {
   });
 
   it('rejects a position that cites an evidence id it was never given', async () => {
-    const reasoner = stubReasoner({ stance: 'tiger', confidence: 0.8, reasoning_summary: 'x', claims: ['x'], evidence_ids: ['EV-999'], evidence_requests: [], assumptions: [] });
+    const reasoner = stubReasoner({ stance: 'tiger', reasoning_summary: 'x', claims: ['x'], evidence_ids: ['EV-999'], evidence_requests: [], assumptions: [] });
     await expect(reasoner.propose(buildPositionRequest('HADES', 'lion vs tiger?', evidence))).rejects.toThrow(FabricatedCitationError);
   });
 
-  it('falls back to a low-confidence, non-fabricated position with no model configured', async () => {
+  it('does not produce numeric confidence when no model position was formed', async () => {
     const out = await requestPosition('ATHENA', createDeterministicReasoner(), 'lion vs tiger?', evidence);
     expect(out.value.stance).toBe('insufficient_evidence');
-    expect(out.value.confidence).toBeLessThan(0.5);
+    expect(out.value).not.toHaveProperty('confidence');
+    expect(out.value).not.toHaveProperty('model_reported_confidence');
     expect(out.value.claims).toEqual([]);
   });
 

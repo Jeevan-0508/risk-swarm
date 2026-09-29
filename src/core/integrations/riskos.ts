@@ -14,7 +14,6 @@ export type RiskOsCategory =
   | 'delivery' | 'technology' | 'vendor' | 'regulatory' | 'financial' | 'operational' | 'people' | 'security' | 'data' | 'reputational';
 export type RiskOsStrategy = 'mitigate' | 'transfer' | 'avoid' | 'accept';
 export type RiskOsStatus = 'open' | 'monitoring' | 'escalated' | 'closed' | 'accepted' | 'materialised';
-export type RiskOsEvidenceConfidence = 'anecdotal' | 'indicative' | 'measured' | 'verified';
 export type RiskOsLikert = 1 | 2 | 3 | 4 | 5;
 
 export interface RiskOsRiskCandidate {
@@ -33,7 +32,6 @@ export interface RiskOsRiskCandidate {
     dateIdentified: string;
     reviewDate: string;
     inherentImpact: RiskOsLikert;
-    evidenceConfidence: RiskOsEvidenceConfidence;
     tags: string[];
     ownerId: null;
     workstreamId: null;
@@ -60,21 +58,10 @@ const STRATEGY_OF_BAND: Record<Decision['action_band'], RiskOsStrategy> = {
   ESCALATE: 'mitigate',
 };
 
-/**
- * Confidence maps to evidence confidence conservatively: this system observes external reporting, so
- * it can reach 'indicative' or 'measured' but never claims 'verified' about another organisation.
- */
-export function evidenceConfidenceOf(confidence: number | null, independentSources: number): RiskOsEvidenceConfidence {
-  if (confidence === null || independentSources < 2) return 'anecdotal';
-  if (confidence >= 0.6 && independentSources >= 3) return 'measured';
-  return 'indicative';
-}
-
 export interface ExportInput {
   decision: Decision;
   actions: Array<{ text: string; owner_role: string; due: string; class: string }>;
   evidence: Array<{ id: string; source: string; tier: number; url: string | null; claim: string }>;
-  independent_sources: number;
   category?: RiskOsCategory;
   now?: string;
 }
@@ -85,7 +72,7 @@ export interface RiskRegisterSink {
 
 export function createRiskOsSink(): RiskRegisterSink {
   return {
-    exportRisk({ decision, actions, evidence, independent_sources, category = 'vendor', now }) {
+    exportRisk({ decision, actions, evidence, category = 'vendor', now }) {
       const exported_at = now ?? new Date().toISOString();
       return {
         schema: 'riskos.risk-candidate',
@@ -103,7 +90,6 @@ export function createRiskOsSink(): RiskRegisterSink {
           dateIdentified: decision.created_at,
           reviewDate: decision.review_by,
           inherentImpact: IMPACT_OF_BAND[decision.severity_band],
-          evidenceConfidence: evidenceConfidenceOf(decision.confidence, independent_sources),
           tags: ['risk-swarm', ...decision.hypothesis_ids],
           ownerId: null,
           workstreamId: null,
@@ -113,6 +99,7 @@ export function createRiskOsSink(): RiskRegisterSink {
         unresolved_objections: decision.unresolved_objections,
         import_instructions: [
           'Map ownerId to a real RISK//OS owner and workstreamId to a real workstream before import.',
+          'Evidence confidence is intentionally omitted: the internal support index is an uncalibrated policy heuristic, not a probability or a validated evidence-quality classification. Set any receiving-system confidence only after human review.',
           'RISK//OS JSON import replaces a programme rather than merging, so add this risk through the register UI rather than importing this file wholesale.',
           'Probability is intentionally absent: this investigation measured evidence and coverage, not likelihood.',
         ],

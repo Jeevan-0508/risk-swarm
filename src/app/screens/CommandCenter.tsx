@@ -85,7 +85,7 @@ export function CommandCenter() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="hair-b text-left">
-                    {['question', 'status', 'severity', 'confidence', 'disagreement', 'evidence', 'decision', 'when'].map((h) => (
+                    {['question', 'status', 'severity', 'support index', 'disagreement', 'evidence', 'decision', 'when'].map((h) => (
                       <th key={h} className="label whitespace-nowrap px-4 py-2 font-normal">{h}</th>
                     ))}
                   </tr>
@@ -106,8 +106,8 @@ export function CommandCenter() {
                         </td>
                         <td className="whitespace-nowrap px-4 py-2.5">
                           {d === null ? <span className="text-fg-mute">—</span>
-                            : d.confidence === null ? <Tag tone="block">withheld</Tag>
-                            : <span className="num text-xs">{d.confidence.toFixed(2)}</span>}
+                            : d.confidence === null ? <span className="label text-caution" title="Uncalibrated policy heuristic; not a probability.">withheld</span>
+                            : <span className="num text-xs" title="Uncalibrated policy heuristic; not a probability.">{d.confidence.toFixed(2)}</span>}
                         </td>
                         <td className="w-28 px-4 py-2.5">
                           {score ? <div className="flex items-center gap-2"><span className="num text-xs">{score.disagreement_index.value.toFixed(1)}</span><Bar value={score.disagreement_index.value / 100} tone="objection" /></div> : <span className="text-fg-mute">—</span>}

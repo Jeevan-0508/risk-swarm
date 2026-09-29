@@ -59,9 +59,10 @@ describe('the Council chamber, rendered over the real reference run', () => {
     expect(html.includes(result.outputs.decision.decision.action_band.replace(/_/g, ' '))).toBe(true);
   });
 
-  it('withholds confidence in the markup when the engine withheld it, instead of printing a number', async () => {
+  it('labels the support index as uncalibrated and withholds it when the engine did', async () => {
     const result = await reference();
     const html = draw(result);
+    expect(html.includes('support index (uncalibrated; not a probability)')).toBe(true);
     if (result.outputs.decision.decision.confidence === null) {
       expect(html.includes('withheld')).toBe(true);
       expect(html.includes(result.outputs.decision.decision.confidence_blocked_reason ?? '\u0000')).toBe(true);

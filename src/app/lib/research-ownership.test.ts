@@ -7,7 +7,6 @@ function fixtureCouncilResult(): CouncilResult {
     position: {
       agent: 'ATHENA' as const,
       stance: 'jupiter',
-      confidence: 0.9,
       reasoning_summary: 'test fixture',
       claims: [],
       evidence_ids: [],
@@ -27,14 +26,12 @@ function fixtureCouncilResult(): CouncilResult {
       independent_count: 0,
       stances: { ATHENA: 'jupiter', ARES: 'jupiter', HADES: 'jupiter' },
       distinct_stances: ['jupiter'],
-      confidence_variance: 0,
       agreement: 'strong_consensus',
     },
     verdict: {
       verdict: {
         verdict_type: 'UNRESOLVED',
         answer: 'unresolved',
-        confidence: 0,
         rationale: [],
         minority_view: null,
         unresolved: ['no configured Zeus model'],
@@ -67,7 +64,6 @@ describe('decision ownership between the legacy research pass and the Olympian C
   test('the reframing holds regardless of what the Council actually concluded — ownership is structural, not a function of agreement or confidence', () => {
     const consensus = fixtureCouncilResult();
     consensus.verdict.verdict.verdict_type = 'CONSENSUS';
-    consensus.verdict.verdict.confidence = 0.99;
     expect(swarmDecisionPanelTitle(consensus)).toBe(swarmDecisionPanelTitle(fixtureCouncilResult()));
   });
 });

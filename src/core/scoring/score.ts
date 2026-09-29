@@ -2,8 +2,8 @@
  * The scorer. Ten factors, three published results, every number traceable to its inputs.
  *
  * Two rules hold everywhere in this file:
- *   - confidence is computed over evidence clusters and source tiers, never over how many agents
- *     agree, so repetition cannot manufacture certainty;
+ *   - the evidence-support index is an uncalibrated policy heuristic, not a probability or confidence
+ *     estimate; only evidence-derived factors affect it, never agent or model agreement;
  *   - a gate failure is named in the output, so the brief can print why a band was not reached.
  */
 import { TIER_WEIGHT, type ActionBand, type FindingSeverity, type ReasoningStatus, type SeverityBand, type Tier, type Urgency } from '../domain/model';
@@ -74,6 +74,7 @@ export interface ScoreResult {
   factors: Record<FactorKey, Factor>;
   disagreement_index: DisagreementIndex;
   independent_evidence_count: number;
+  /** Legacy field name for the uncalibrated evidence-support policy index. */
   confidence: number | null;
   confidence_blocked_reason: string | null;
   confidence_raw: number;
@@ -122,7 +123,7 @@ export function computeDisagreementIndex(input: ScoringInput): DisagreementIndex
   const terms = [
     { key: 'conflicting_findings', weight: 30, normalised: clamp01(conflicting / 4), explanation: `${conflicting} open material or blocking findings / 4` },
     { key: 'evidence_conflicts', weight: 25, normalised: clamp01(input.evidence_conflicts / 3), explanation: `${input.evidence_conflicts} evidence conflicts / 3` },
-    { key: 'confidence_variance', weight: 25, normalised: clamp01(variance / 0.35), explanation: `stdev of ${input.agent_positions.length} agent confidences = ${round(variance)} / 0.35` },
+    { key: 'confidence_variance', weight: 25, normalised: clamp01(variance / 0.35), explanation: `spread of ${input.agent_positions.length} uncalibrated agent self-ratings (not evidence) = ${round(variance)} / 0.35` },
     { key: 'unresolved_objections', weight: 20, normalised: clamp01(unresolvedWeight / 4), explanation: `weighted open objections ${unresolvedWeight} / 4 (blocking counts double)` },
   ].map((t) => ({ ...t, contribution: round(t.weight * t.normalised, 2) }));
 
@@ -228,7 +229,7 @@ export function computeScore(input: ScoringInput): ScoreResult {
       key: 'agent_agreement',
       label: 'Agent agreement',
       value: round(agent_agreement),
-      explanation: `${supporting} of ${input.agent_positions.length} agent position(s) support the lead hypothesis; agreement never raises confidence on its own`,
+      explanation: `${supporting} of ${input.agent_positions.length} agent position(s) support the lead hypothesis; descriptive only, excluded from the evidence-support index and escalation gate`,
     },
     agent_disagreement: {
       key: 'agent_disagreement',
@@ -245,9 +246,11 @@ export function computeScore(input: ScoringInput): ScoreResult {
   };
 
   // ---- composites
-  const confidence_raw =
-    0.34 * evidence_strength + 0.22 * source_reliability + 0.18 * signal_recurrence + 0.16 * independence_norm + 0.1 * agent_agreement;
-  let confidence: number | null = clamp01(confidence_raw * (1 - 0.5 * false_positive_risk) * (1 - 0.4 * uncertainty));
+  // Keep the policy index grounded only in evidence-derived inputs. Agent agreement remains visible
+  // as a descriptive factor, but cannot raise the index or help satisfy an escalation gate.
+  const support_index_raw =
+    (0.34 * evidence_strength + 0.22 * source_reliability + 0.18 * signal_recurrence + 0.16 * independence_norm) / 0.9;
+  let support_index: number | null = clamp01(support_index_raw * (1 - 0.5 * false_positive_risk) * (1 - 0.4 * uncertainty));
 
   const caps_applied: string[] = [];
   const gates_failed: string[] = [];
@@ -258,26 +261,26 @@ export function computeScore(input: ScoringInput): ScoreResult {
   const blocking = [...input.challenges, ...input.red_team].filter((o) => o.severity === 'blocking' && o.resolution === 'open');
 
   if (independent_evidence_count < policy.min_independent_sources) {
-    confidence = Math.min(confidence, 0.35);
-    caps_applied.push(`confidence capped at 0.35: ${independent_evidence_count} independent source(s), policy requires ${policy.min_independent_sources}`);
+    support_index = Math.min(support_index, 0.35);
+    caps_applied.push(`evidence-support index capped at 0.35: ${independent_evidence_count} independent source(s), policy requires ${policy.min_independent_sources}`);
   }
   if (allTierFive) {
-    confidence = 0;
-    caps_applied.push('confidence set to 0: every supporting item is tier-5 model reasoning, which is not evidence');
+    support_index = 0;
+    caps_applied.push('evidence-support index set to 0: every supporting item is tier-5 model reasoning, which is not evidence');
   }
   if (onlyPortfolioKb) {
-    confidence = Math.min(confidence, 0.45);
-    caps_applied.push('confidence capped at 0.45: the incident claim rests only on tier-4 knowledge base structure, which is not an incident');
+    support_index = Math.min(support_index, 0.45);
+    caps_applied.push('evidence-support index capped at 0.45: the incident claim rests only on tier-4 knowledge base structure, which is not an incident');
   }
   if (policy.required_min_tier !== null && !perCluster.some((e) => e.tier <= (policy.required_min_tier as number))) {
-    confidence = Math.min(confidence, 0.35);
-    caps_applied.push(`confidence capped at 0.35: a lesson requires at least one tier-${policy.required_min_tier} source and none is present`);
+    support_index = Math.min(support_index, 0.35);
+    caps_applied.push(`evidence-support index capped at 0.35: a lesson requires at least one tier-${policy.required_min_tier} source and none is present`);
   }
 
   let confidence_blocked_reason: string | null = null;
   if (blocking.length > 0) {
-    confidence_blocked_reason = `${blocking.length} unresolved blocking finding(s): no confidence figure is published while the investigation is contested`;
-    confidence = null;
+    confidence_blocked_reason = `${blocking.length} unresolved blocking finding(s): the evidence-support index is withheld while the investigation is contested`;
+    support_index = null;
   }
 
   const severity_score = round(potential_impact);
@@ -297,8 +300,8 @@ export function computeScore(input: ScoringInput): ScoreResult {
   const bestIncidentTier = incidentEvidence.length === 0 ? null : Math.min(...incidentEvidence.map((e) => e.tier));
 
   const escalateRequirements: Array<[boolean, string]> = [
-    [confidence !== null, 'unresolved blocking finding(s): escalation withheld'],
-    [confidence !== null && confidence >= policy.escalate_min_confidence, `confidence ${confidence === null ? 'withheld' : round(confidence, 2)} below ${policy.escalate_min_confidence}`],
+    [support_index !== null, 'unresolved blocking finding(s): escalation withheld'],
+    [support_index !== null && support_index >= policy.escalate_min_confidence, `evidence-support index ${support_index === null ? 'withheld' : round(support_index, 2)} below policy threshold ${policy.escalate_min_confidence}`],
     [independent_evidence_count >= policy.escalate_min_independent_sources, `${independent_evidence_count} independent source(s), ${policy.escalate_min_independent_sources} required to escalate`],
     [false_positive_risk < policy.escalate_max_fp_risk, `false-positive risk ${round(false_positive_risk, 2)} at or above ${policy.escalate_max_fp_risk}`],
     // The tier gate is judged on incident evidence only. A regulator citation is tier 1 and belongs in
@@ -326,9 +329,9 @@ export function computeScore(input: ScoringInput): ScoreResult {
     factors,
     disagreement_index,
     independent_evidence_count,
-    confidence: confidence === null ? null : round(confidence),
+    confidence: support_index === null ? null : round(support_index),
     confidence_blocked_reason,
-    confidence_raw: round(confidence_raw),
+    confidence_raw: round(support_index_raw),
     severity_score,
     severity_band,
     urgency,

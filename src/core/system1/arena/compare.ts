@@ -15,7 +15,7 @@ import { ACTION_LADDER, type ActionBand } from '../../domain/model';
 
 const FULL_AGREEMENT_SCORE = 0.9;
 const DISAGREEMENT_SCORE = 0.15;
-/** Same-stance confidence gap above which two "agreeing" models still count as a CONFIDENCE
+/** Same-stance self-reported score gap above which two "agreeing" models still count as a CONFIDENCE
  * disagreement (directive §7 lists CONFIDENCE as first-class, distinct from a stance split). */
 const CONFIDENCE_GAP_THRESHOLD = 0.35;
 
@@ -31,7 +31,7 @@ function classifyDisagreement(args: { layaResult: System1Result; jevResult: Syst
   if (layaResult.decision === jevResult.decision) {
     return {
       type: 'CONFIDENCE',
-      detail: `Both models chose "${layaResult.decision}" but confidence differs by ${Math.abs(layaResult.confidence - jevResult.confidence).toFixed(3)} (>${CONFIDENCE_GAP_THRESHOLD}).`,
+      detail: `Both models chose "${layaResult.decision}" but their self-reported scores differ by ${Math.abs(layaResult.confidence - jevResult.confidence).toFixed(3)} (>${CONFIDENCE_GAP_THRESHOLD}); this is a score disagreement, not a calibration finding.`,
     };
   }
   const rungGap = actionLadderRungGap(layaResult.decision, jevResult.decision);
@@ -43,7 +43,7 @@ function classifyDisagreement(args: { layaResult: System1Result; jevResult: Syst
   }
   return {
     type: 'CLASSIFICATION',
-    detail: `Laya chose "${layaResult.decision}" (confidence ${layaResult.confidence.toFixed(3)}); Jev chose "${jevResult.decision}" (confidence ${jevResult.confidence.toFixed(3)}).`,
+    detail: `Laya proposed "${layaResult.decision}" (self-reported score ${layaResult.confidence.toFixed(3)}); Jev proposed "${jevResult.decision}" (self-reported score ${jevResult.confidence.toFixed(3)}).`,
   };
 }
 

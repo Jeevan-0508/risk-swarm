@@ -13,7 +13,6 @@ export interface OlympianPosition {
   agent: ReasoningAgent;
   /** A short answer/side, e.g. "tiger", "AWS Security Specialty", "insufficient_evidence". Never empty. */
   stance: string;
-  confidence: number;
   /** Displayable summary of the reasoning. Not chain-of-thought; a few sentences at most. */
   reasoning_summary: string;
   claims: string[];
@@ -28,7 +27,6 @@ export type VerdictType = 'CONSENSUS' | 'MAJORITY' | 'MINORITY_PRESERVED' | 'UNR
 export interface CouncilVerdict {
   verdict_type: VerdictType;
   answer: string;
-  confidence: number;
   rationale: string[];
   minority_view: string | null;
   unresolved: string[];
@@ -41,7 +39,6 @@ export interface DisagreementAssessment {
   independent_count: number;
   stances: Record<ReasoningAgent, string>;
   distinct_stances: string[];
-  confidence_variance: number;
   agreement: 'strong_consensus' | 'majority' | 'split' | 'inconclusive';
 }
 

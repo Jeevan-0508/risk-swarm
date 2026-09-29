@@ -45,7 +45,7 @@ export function RedTeam() {
         <Metric label="verdict" value={rt.verdict.replace(/_/g, ' ')} tone={VERDICT_TONE[rt.verdict]} sub={VERDICT_TEXT[rt.verdict]} mono={false} />
         <Metric label="checks run" value={rt.checks_run} sub={`${RED_TEAM_CHECKS.length} standing checks, named below`} />
         <Metric label="findings" value={rt.findings.length} tone={rt.findings.length > 0 ? 'objection' : 'support'} />
-        <Metric label="blocking" value={blocking.length} tone={blocking.length > 0 ? 'block' : 'support'} sub="each one forces rework or suppresses confidence" />
+        <Metric label="blocking" value={blocking.length} tone={blocking.length > 0 ? 'block' : 'support'} sub="each one forces rework or withholds the evidence-support index" />
       </div>
 
       {rt.rework_reason !== null && (

@@ -3,7 +3,7 @@
  * asked and when, what the swarm actually did, what each agent said in turn, who disagreed with whom, and
  * what was recommended in the end.
  *
- * It is a projection, not a second opinion. Every judgement - band, severity, confidence, disagreement
+ * It is a projection, not a second opinion. Every judgement - band, severity, support index, disagreement
  * index - is copied from the run, never recomputed. The only arithmetic here is over the run's own clock:
  * the wall-clock wait, the total of the per-phase timings, and the per-agent rollup of a log that can hold
  * more than one row per agent after rework. Agent naming is passed in as a roster rather than known here,
@@ -62,7 +62,7 @@ export interface AgentTurn {
   statements: string[];
   uncertainties: string[];
   /** The stance the scorer recorded before reconciliation, when this agent declared one. */
-  stance: { reasoning_status: string; confidence: number } | null;
+  stance: { reasoning_status: string; agent_self_rating_uncalibrated: number } | null;
   ms: number;
   findings: number;
 }
@@ -104,8 +104,8 @@ export interface CaseFile {
     action_band: string;
     severity_band: string;
     severity_score: number;
-    confidence: number | null;
-    confidence_blocked_reason: string | null;
+    evidence_support_index: number | null;
+    support_index_withheld_reason: string | null;
     urgency: string;
     owner_role: string;
     review_by: string;
@@ -155,7 +155,7 @@ export function buildCaseFile(result: RunResult, meta: CaseFileMeta): CaseFile {
       remit: r.remit,
       statements: r.statements,
       uncertainties: r.uncertainties,
-      stance: p === undefined ? null : { reasoning_status: String(p.reasoning_status), confidence: p.confidence },
+      stance: p === undefined ? null : { reasoning_status: String(p.reasoning_status), agent_self_rating_uncalibrated: p.confidence },
       ms: phaseOf.get(r.id)?.ms ?? 0,
       findings: phaseOf.get(r.id)?.findings ?? 0,
     };
@@ -208,8 +208,8 @@ export function buildCaseFile(result: RunResult, meta: CaseFileMeta): CaseFile {
       action_band: d.action_band,
       severity_band: d.severity_band,
       severity_score: d.severity_score,
-      confidence: d.confidence,
-      confidence_blocked_reason: d.confidence_blocked_reason,
+      evidence_support_index: d.confidence,
+      support_index_withheld_reason: d.confidence_blocked_reason,
       urgency: d.urgency,
       owner_role: d.owner_role,
       review_by: d.review_by,
@@ -311,7 +311,7 @@ export function caseFileHtml(file: CaseFile): string {
     H.push(`<p class="empty">${esc(a.remit)}</p>`);
     H.push(list(a.statements, 'Published nothing on this run.'));
     if (a.stance !== null) {
-      H.push(`<p class="mono">stance: ${esc(a.stance.reasoning_status)} · confidence ${a.stance.confidence.toFixed(2)}</p>`);
+      H.push(`<p class="mono">stance: ${esc(a.stance.reasoning_status)} · agent self-rating ${a.stance.agent_self_rating_uncalibrated.toFixed(2)} (uncalibrated; not evidence)</p>`);
     }
     if (a.uncertainties.length > 0) {
       H.push('<p class="mono">declared uncertainties</p>');
@@ -343,7 +343,7 @@ export function caseFileHtml(file: CaseFile): string {
   H.push('<table>');
   H.push(row('recommendation', file.final.action_band));
   H.push(row('severity', `${file.final.severity_band} (${file.final.severity_score.toFixed(3)})`));
-  H.push(row('confidence', file.final.confidence === null ? `withheld — ${file.final.confidence_blocked_reason ?? 'reason not recorded'}` : file.final.confidence.toFixed(2)));
+  H.push(row('evidence-support index (uncalibrated; not a probability)', file.final.evidence_support_index === null ? `withheld — ${file.final.support_index_withheld_reason ?? 'reason not recorded'}` : file.final.evidence_support_index.toFixed(2)));
   H.push(row('urgency', file.final.urgency));
   H.push(row('owner role', file.final.owner_role));
   H.push(row('review by', file.final.review_by));
