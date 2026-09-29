@@ -11,7 +11,8 @@ import { createOlympianReasoners, modelDiversity, type RegistryConfig, type Regi
 import { assessDisagreement, NO_INDEPENDENT_POSITIONS_MESSAGE } from './deliberate';
 import { requestVerdict } from './deliberate';
 import { requestPosition } from './positions';
-import { REASONING_AGENTS, type CouncilResult, type CouncilTraceEvent, type ReasoningAgent } from './types';
+import { REASONING_AGENTS, type CouncilResult, type CouncilTraceEvent, type CouncilVerdict, type OlympianPosition, type ReasoningAgent } from './types';
+import type { ReasonResult } from '../reasoner/types';
 
 export const MAX_OLYMPIAN_CALLS = 4;
 
@@ -29,6 +30,61 @@ export async function runCouncil(
     trace.push(event);
     onEvent?.(event);
   };
+
+  if (evidence.length === 0) {
+    const noEvidenceReason = 'No evidence records were supplied; no model was called and no position was formed.';
+    const positionResults = {} as Record<ReasoningAgent, ReasonResult<OlympianPosition>>;
+    const positions = {} as CouncilResult['positions'];
+    for (const agent of REASONING_AGENTS) {
+      positionResults[agent] = {
+        value: {
+          agent,
+          stance: 'insufficient_evidence',
+          reasoning_summary: noEvidenceReason,
+          claims: [],
+          evidence_ids: [],
+          evidence_requests: ['Provide source records with provenance before analysis.'],
+          assumptions: [],
+        },
+        provider: 'deterministic',
+        degraded: false,
+        degraded_reason: null,
+        est_tokens: 0,
+        ms: 0,
+      };
+      positions[agent] = {
+        position: positionResults[agent].value,
+        provider: 'deterministic',
+        degraded: false,
+        degraded_reason: null,
+        ms: 0,
+        est_tokens: 0,
+      };
+    }
+    const disagreement = assessDisagreement(positionResults);
+    const verdict: CouncilVerdict = {
+      verdict_type: 'UNRESOLVED',
+      answer: 'insufficient_evidence',
+      rationale: [],
+      minority_view: null,
+      unresolved: [noEvidenceReason],
+      cited_evidence_ids: [],
+    };
+    const trace: CouncilTraceEvent[] = [
+      { at: now(), kind: 'summoned', detail: `No evidence records supplied for: "${question}". Abstaining without contacting models.` },
+      { at: now(), kind: 'disagreement_assessed', detail: NO_INDEPENDENT_POSITIONS_MESSAGE },
+      { at: now(), kind: 'verdict_ready', agent: 'ZEUS', detail: 'UNRESOLVED: insufficient_evidence (no model called)' },
+    ];
+    for (const event of trace) onEvent?.(event);
+    return {
+      question,
+      positions,
+      disagreement,
+      verdict: { verdict, provider: 'deterministic', degraded: false, degraded_reason: null },
+      trace,
+      model_diversity: { active_agents: 0, providers: 0, label: 'none — abstained before model calls' },
+    };
+  }
 
   const reasoners = createOlympianReasoners(config, deps);
   push({ kind: 'summoned', detail: `${REASONING_AGENTS.length} Olympians summoned for: "${question}"` });
@@ -67,7 +123,7 @@ export async function runCouncil(
         : {
             kind: 'position_ready',
             agent,
-            detail: `${agent} → "${result.value.stance}" (${Math.round(result.value.confidence * 100)}% confidence, ${result.provider})${wasNetworkCall ? ` — provider response received in ${elapsedS}s` : ''}`,
+            detail: `${agent} → "${result.value.stance}" (${result.provider})${wasNetworkCall ? ` — provider response received in ${elapsedS}s` : ''}`,
           },
     );
   }
@@ -89,7 +145,7 @@ export async function runCouncil(
       : 'Zeus has no model configured — synthesizing a verdict mechanically from the structured positions and the disagreement assessment, not an independent model judgment',
   });
   const zeus = await requestVerdict(reasoners.ZEUS, question, positionsForDeliberation, disagreement);
-  push({ kind: 'verdict_ready', agent: 'ZEUS', detail: `${zeus.value.verdict_type}: "${zeus.value.answer}" (${Math.round(zeus.value.confidence * 100)}%)` });
+  push({ kind: 'verdict_ready', agent: 'ZEUS', detail: `${zeus.value.verdict_type}: "${zeus.value.answer}"` });
 
   return {
     question,

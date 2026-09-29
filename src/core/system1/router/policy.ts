@@ -1,15 +1,14 @@
 /**
- * The System-1 router's deterministic policy (directive §8, §9) — pure decision logic only, no
+ * The System-1 router's deterministic policy — pure decision logic only, no
  * model calls. Two decision points, matching the directive's own lazy cascade (§32's diagram:
  * LAYA -> confident? -> JEV -> agree?/disagree -> SWARM), which is deliberately *not* the same thing
  * as `arena/run.ts`'s eager "call both, always" - that one exists for evaluation/benchmarking
  * (directive §21), where every case needs both opinions to score Laya-alone vs Laya+Jev vs SWARM.
  * A real production case should not pay for a Jev call it does not need (directive §23).
  *
- * Every branch is a named directive §8 rule, kept as an ordered if-chain rather than a scored
- * function - directive §8's own closing line is explicit: "Never allow confidence alone to override
- * risk policy." A weighted score would let a high enough confidence buy its way past a risk gate;
- * an ordered chain with `risk_hint` checked first cannot.
+ * System-1 cases currently have no source-evidence manifest. Laya/Jev outputs are therefore
+ * proposals only: a non-empty state string, a model-reported score, or model agreement cannot
+ * establish that a claim is supported. Route every usable proposal to SWARM for evidence review.
  */
 import type { System1ArenaResult } from '../arena/types';
 import type { System1Case, System1Result } from '../types';
@@ -23,28 +22,15 @@ export type EscalationTrigger =
   | null;
 
 export interface AfterLayaDecision {
-  action: 'ACCEPT_SYSTEM1' | 'CALL_JEV' | 'ESCALATE_SWARM' | 'ABSTAIN';
+  action: 'CALL_JEV' | 'ESCALATE_SWARM' | 'ABSTAIN';
   reason: string;
   escalation_trigger: EscalationTrigger;
 }
 
 export interface AfterJevDecision {
-  action: 'ACCEPT_SYSTEM1' | 'ESCALATE_SWARM';
+  action: 'ESCALATE_SWARM';
   reason: string;
   escalation_trigger: EscalationTrigger;
-}
-
-/** `ASSUMED` scaffolding (directive §8's own numbers are unspecified: "confident", "sufficient
- * evidence") - same placeholder-ordering convention `core/scoring/policy.ts` already uses
- * elsewhere in this repo, not a value fit to any measured outcome yet (directive §19). */
-export const LAYA_CONFIDENT_THRESHOLD = 0.65;
-
-function hasSufficientEvidence(input: System1Case): boolean {
-  // System1Case carries no evidence list of its own today (directive Step 2/3 scope) - `state`
-  // being non-empty is the only signal available. A real evidence-sufficiency gate needs SWARM's
-  // own evidence model (`core/domain/model.ts`'s Evidence nodes), wired in a later slice -
-  // documented here rather than faked with an invented threshold.
-  return input.state.trim().length > 0;
 }
 
 /** First decision point: after Laya answers, before Jev is ever called. */
@@ -57,17 +43,17 @@ export function decideAfterLaya(input: System1Case, layaResult: System1Result): 
     return { action: 'ESCALATE_SWARM', reason: 'Case is caller-flagged high-risk; System-1 speed is never traded for risk policy.', escalation_trigger: 'HIGH_RISK' };
   }
 
-  if (!hasSufficientEvidence(input)) {
-    return { action: 'ESCALATE_SWARM', reason: 'Case state carries no usable context for a fast call.', escalation_trigger: 'INSUFFICIENT_EVIDENCE' };
+  if (input.state.trim().length === 0) {
+    return { action: 'ESCALATE_SWARM', reason: 'Case state is empty; no model proposal can be reviewed.', escalation_trigger: 'INSUFFICIENT_EVIDENCE' };
   }
 
-  const layaConfident = layaResult.confidence >= LAYA_CONFIDENT_THRESHOLD;
-
-  if (layaConfident && input.risk_hint !== 'medium') {
-    return { action: 'ACCEPT_SYSTEM1', reason: `Laya is confident (${layaResult.confidence.toFixed(2)}) on a low-risk case with no contradiction on record.`, escalation_trigger: null };
-  }
-
-  return { action: 'CALL_JEV', reason: input.risk_hint === 'medium' ? 'Medium-risk case: a single model is never sufficient alone, regardless of confidence.' : `Laya is not confident enough to accept alone (${layaResult.confidence.toFixed(2)} < ${LAYA_CONFIDENT_THRESHOLD}).`, escalation_trigger: null };
+  return {
+    action: 'CALL_JEV',
+    reason: input.risk_hint === 'medium'
+      ? 'Medium-risk case: obtain a second model proposal, then route both through evidence review.'
+      : `Laya returned a model proposal (self-reported score ${layaResult.confidence.toFixed(2)}); this score is not calibrated evidence, so obtain a second proposal and route both for evidence review.`,
+    escalation_trigger: null,
+  };
 }
 
 /** Second decision point: after Jev was actually called (or found unreachable). Reuses the Arena's
@@ -81,7 +67,7 @@ export function decideAfterJev(arena: System1ArenaResult): AfterJevDecision {
   }
 
   if (arena.agreement) {
-    return { action: 'ACCEPT_SYSTEM1', reason: 'Laya and Jev independently agree, with sufficient evidence.', escalation_trigger: null };
+    return { action: 'ESCALATE_SWARM', reason: 'Laya and Jev agree on a proposal, but model agreement is not verification and this case has no source-evidence manifest. Send it for evidence-backed review.', escalation_trigger: 'INSUFFICIENT_EVIDENCE' };
   }
 
   return { action: 'ESCALATE_SWARM', reason: `Laya and Jev disagree (${arena.disagreement?.disagreement_type ?? 'unclassified'}); SWARM must diagnose it.`, escalation_trigger: 'DISAGREEMENT' };

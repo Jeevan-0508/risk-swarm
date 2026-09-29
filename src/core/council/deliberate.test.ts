@@ -5,9 +5,9 @@ import { assertNoFabricatedCitations, type Reasoner } from '../reasoner/types';
 import type { OlympianPosition, ReasoningAgent } from './types';
 import type { ReasonResult } from '../reasoner/types';
 
-function position(agent: ReasoningAgent, stance: string, confidence: number, degraded = false): ReasonResult<OlympianPosition> {
+function position(agent: ReasoningAgent, stance: string, _confidence: number, degraded = false): ReasonResult<OlympianPosition> {
   return {
-    value: { agent, stance, confidence, reasoning_summary: `${agent} reasons ${stance}`, claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+    value: { agent, stance, reasoning_summary: `${agent} reasons ${stance}`, claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
     provider: degraded ? 'deterministic' : `llm:${agent.toLowerCase()}-model`,
     degraded,
     degraded_reason: degraded ? 'no api key configured' : null,
@@ -25,7 +25,7 @@ function positions(rows: Array<[ReasoningAgent, string, number, boolean?]>): Rec
 /** What a genuinely disabled agent actually returns: `degraded: false` (nothing failed) but `provider: 'deterministic'` — it never called a model at all. */
 function deterministicFallbackPosition(agent: ReasoningAgent, stance: string): ReasonResult<OlympianPosition> {
   return {
-    value: { agent, stance, confidence: 0, reasoning_summary: `${agent} deterministic fallback`, claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+    value: { agent, stance, reasoning_summary: `${agent} deterministic fallback`, claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
     provider: 'deterministic',
     degraded: false,
     degraded_reason: null,
@@ -118,11 +118,11 @@ describe('Zeus verdict', () => {
   it('is explicit that Zeus never really adjudicated when every position was deterministic fallback or degraded', async () => {
     const rows: Record<ReasoningAgent, ReasonResult<OlympianPosition>> = {
       ATHENA: {
-        value: { agent: 'ATHENA', stance: 'insufficient_evidence', confidence: 0, reasoning_summary: 'x', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+        value: { agent: 'ATHENA', stance: 'insufficient_evidence', reasoning_summary: 'x', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
         provider: 'deterministic', degraded: false, degraded_reason: null, est_tokens: 0, ms: 1,
       },
       HADES: {
-        value: { agent: 'HADES', stance: 'insufficient_evidence', confidence: 0, reasoning_summary: 'x', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
+        value: { agent: 'HADES', stance: 'insufficient_evidence', reasoning_summary: 'x', claims: [], evidence_ids: [], evidence_requests: [], assumptions: [] },
         provider: 'deterministic', degraded: false, degraded_reason: null, est_tokens: 0, ms: 1,
       },
       ARES: position('ARES', 'tiger', 0.7, true),
@@ -141,7 +141,7 @@ describe('Zeus verdict', () => {
     const stub: Reasoner = {
       id: 'stub', uses_network: true,
       async propose(req) {
-        const value = req.validate({ verdict_type: 'CONSENSUS', answer: 'tiger', confidence: 0.8, rationale: ['fabricated'], minority_view: null, unresolved: [], cited_evidence_ids: ['EV-404'] });
+        const value = req.validate({ verdict_type: 'CONSENSUS', answer: 'tiger', rationale: ['fabricated'], minority_view: null, unresolved: [], cited_evidence_ids: ['EV-404'] });
         assertNoFabricatedCitations(value, req.allowed_evidence_ids);
         return { value, provider: 'stub', degraded: false, degraded_reason: null, est_tokens: 5, ms: 1 };
       },

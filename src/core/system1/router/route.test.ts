@@ -19,21 +19,22 @@ const confidentFixture = (): LayaRuntimeResult => ({
 });
 
 describe('routeSystem1Case (lazy production cascade)', () => {
-  it('accepts System-1 without ever calling Jev when Laya is confident on a low-risk case (directive Step 23: no unnecessary cost)', async () => {
+  it('treats Laya and Jev as proposals even on a low-risk case', async () => {
     let jevCalled = false;
     const runner = (_i: LayaInferenceInput) => confidentFixture();
-    const fetchImpl = async () => { jevCalled = true; return new Response('{}', { status: 200 }); };
+    const fetchImpl = async () => { jevCalled = true; return new Response(JSON.stringify({ decision: 'MONITOR', confidence: 0.9 }), { status: 200 }); };
 
     const result = await routeSystem1Case({ ...CASE, risk_hint: 'low' }, {
       layaDeps: { runner }, jevDeps: { apiKey: 'k', fetchImpl },
     });
 
-    expect(result.jev_called).toBe(false);
-    expect(jevCalled).toBe(false);
-    expect(result.decision.action).toBe('ACCEPT_SYSTEM1');
+    expect(result.jev_called).toBe(true);
+    expect(jevCalled).toBe(true);
+    expect(result.decision.action).toBe('ESCALATE_SWARM');
+    expect(result.decision.escalation_trigger).toBe('INSUFFICIENT_EVIDENCE');
   });
 
-  it('calls Jev when Laya is uncertain, and accepts System-1 when they then agree', async () => {
+  it('calls Jev when Laya is uncertain, but agreement remains a proposal for review', async () => {
     const runner = (_i: LayaInferenceInput) => typedFixture as LayaRuntimeResult; // MONITOR, confidence 0.0418, well under threshold
     // Same stance, close confidence -> a real agreement, not just a same-label coincidence with a
     // large confidence gap (which compare.ts correctly treats as a CONFIDENCE disagreement instead).
@@ -44,7 +45,8 @@ describe('routeSystem1Case (lazy production cascade)', () => {
     });
 
     expect(result.jev_called).toBe(true);
-    expect(result.decision.action).toBe('ACCEPT_SYSTEM1');
+    expect(result.decision.action).toBe('ESCALATE_SWARM');
+    expect(result.decision.escalation_trigger).toBe('INSUFFICIENT_EVIDENCE');
     expect(result.arena.agreement).toBe(true);
   });
 

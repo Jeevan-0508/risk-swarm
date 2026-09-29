@@ -38,9 +38,9 @@ export function buildDiagnosticQuestion(caseInput: System1Case, route: System1Ro
     caseInput.question,
     '',
     '--- System-1 context for SWARM to diagnose, not to adopt as fact ---',
-    `Laya (${laya.model_id}): "${laya.decision}" at confidence ${laya.confidence.toFixed(3)}, status ${laya.status}.`,
+    `Laya (${laya.model_id}) proposed "${laya.decision}" (self-reported score ${laya.confidence.toFixed(3)}; status ${laya.status}).`,
     jev
-      ? `Jev: "${jev.decision}" at confidence ${jev.confidence.toFixed(3)}, status ${jev.status}.`
+      ? `Jev proposed "${jev.decision}" (self-reported score ${jev.confidence.toFixed(3)}; status ${jev.status}).`
       : 'Jev: not called for this case.',
     `Escalation reason: ${route.decision.reason}`,
     route.arena.disagreement

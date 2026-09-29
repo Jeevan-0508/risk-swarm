@@ -1,8 +1,8 @@
 /**
- * `routeSystem1Case()` — the real, lazy LAYA -> confident? -> JEV -> agree?/disagree -> SWARM
- * cascade (directive §32). Calls Laya first; only calls Jev if `decideAfterLaya` says so; only ever
- * asks the caller to escalate to SWARM, never runs SWARM itself (that stays `final/decision.ts`'s
- * job, keeping this module about routing, not investigation).
+ * `routeSystem1Case()` — the lazy LAYA proposal -> JEV proposal -> SWARM evidence-review cascade.
+ * Calls Laya first and calls Jev when the case can proceed. Model scores and agreement never accept
+ * an action; this case schema has no verifiable source-evidence manifest. The router asks the caller
+ * to escalate to SWARM and never runs SWARM itself.
  */
 import { callLaya } from '../laya/client';
 import type { LayaCallDeps } from '../laya/client';
