@@ -43,8 +43,15 @@ const input = (over: Partial<ScoringInput> = {}): ScoringInput => ({
 
 describe('scoring: the well-evidenced case', () => {
   it('escalates only when every gate is satisfied', () => {
-    const r = computeScore(input());
-    expect(r.independent_evidence_count).toBe(4);
+    const r = computeScore(input({
+      evidence: [ev('E-1', 1, 'bag.de'), ev('E-2', 1, 'gov.de'), ev('E-3', 2, 'tapa.org'), ev('E-4', 2, 'iru.org'), ev('E-5', 3, 'trans.info')],
+      cluster_count: 5,
+      recurrence_buckets: 6,
+      window_buckets: 6,
+      pattern: { severity: 'critical', unknown_share: 0 },
+      declared_uncertainties: 0,
+    }));
+    expect(r.independent_evidence_count).toBe(5);
     expect(r.confidence).toBeGreaterThanOrEqual(0.6);
     expect(r.action_band).toBe('ESCALATE');
     expect(r.gates_failed).toEqual([]);
@@ -136,6 +143,14 @@ describe('scoring: the hard caps', () => {
     expect(['NOTE', 'MONITOR']).toContain(r.action_band);
   });
 
+  it('does not let agent agreement increase the evidence-support index', () => {
+    const agreed = computeScore(input());
+    const disagreed = computeScore(input({ agent_positions: [] }));
+    expect(agreed.factors.agent_agreement.value).toBeGreaterThan(disagreed.factors.agent_agreement.value);
+    expect(agreed.confidence).toBe(disagreed.confidence);
+    expect(agreed.action_band).toBe(disagreed.action_band);
+  });
+
   it('does not count duplicates inside one cluster as extra evidence', () => {
     const shared = { cluster_id: 'CL-1' };
     const one = computeScore(input({ evidence: [ev('E-1', 3, 'trans.info', shared)], cluster_count: 1 }));
@@ -217,13 +232,13 @@ describe('learning policy', () => {
   });
 
   it('makes a tightened policy visibly harder to escalate', () => {
-    // Four independent publishers, best source is tier 2: enough to escalate under the default policy.
-    const evidence = [ev('E-1', 2, 'tapa.org'), ev('E-2', 2, 'iru.org'), ev('E-3', 3, 'trans.info'), ev('E-4', 3, 'dvz.de')];
-    const before = computeScore(input({ evidence, cluster_count: 4 }));
+    // Five independent publishers with strong source tiers and complete recurrence coverage.
+    const evidence = [ev('E-1', 2, 'tapa.org'), ev('E-2', 2, 'iru.org'), ev('E-3', 2, 'trade.de'), ev('E-4', 2, 'supply.net'), ev('E-5', 3, 'trans.info')];
+    const before = computeScore(input({ evidence, cluster_count: 5, recurrence_buckets: 6, window_buckets: 6, pattern: { severity: 'critical', unknown_share: 0 }, declared_uncertainties: 0 }));
     expect(before.action_band).toBe('ESCALATE');
 
     const tightened = applyPolicyDelta(DEFAULT_POLICY, { pattern_key: 'FFT-002|DE', min_independent_sources: 4, required_min_tier: 1 });
-    const after = computeScore(input({ evidence, cluster_count: 4, policy: { ...tightened, escalate_min_independent_sources: 4 } }));
+    const after = computeScore(input({ evidence, cluster_count: 5, recurrence_buckets: 6, window_buckets: 6, pattern: { severity: 'critical', unknown_share: 0 }, declared_uncertainties: 0, policy: { ...tightened, escalate_min_independent_sources: 4 } }));
     expect(after.action_band).not.toBe('ESCALATE');
     expect(after.caps_applied.join(' ')).toContain('tier-1');
     expect(after.confidence).toBeLessThan(before.confidence as number);

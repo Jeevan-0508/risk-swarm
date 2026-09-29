@@ -29,7 +29,7 @@ export type Seal =
       question: string;
       action_band: string;
       severity_band: string;
-      /** null is a real published value here - the engine withholds confidence rather than estimating it. */
+      /** Legacy schema field containing the uncalibrated evidence-support index, not probability. */
       confidence: number | null;
     }
   | { kind: 'none'; reason: string };

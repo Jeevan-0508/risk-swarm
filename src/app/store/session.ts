@@ -1,6 +1,6 @@
 /**
  * Session state. Deliberately thin: it holds runs and the human's verdicts, and it delegates every
- * judgement to the engine. Nothing here derives a severity, a confidence or a band.
+ * judgement to the engine. Nothing here derives a severity, evidence-support index or band.
  */
 import { create } from 'zustand';
 import type { PhaseLogEntry, RunResult } from '@core/orchestrator/run';

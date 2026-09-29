@@ -33,7 +33,7 @@ describe('Council orchestration', () => {
     let calls = 0;
     const result = await runCouncil('Is there a freight fraud pattern?', [], enabledConfig, {
       getApiKey: () => 'sk-test',
-      fetchImpl: async () => { calls += 1; return new Response('{}', { status: 200 }); },
+      fetchImpl: (async () => { calls += 1; return new Response('{}', { status: 200 }); }) as unknown as typeof fetch,
     });
 
     expect(calls).toBe(0);

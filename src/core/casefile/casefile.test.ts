@@ -87,7 +87,7 @@ describe('case file', () => {
     const positions = r.outputs.decision.scoring_input.agent_positions;
     for (const p of positions) {
       const turn = file.agents.find((a) => a.agent === p.agent);
-      expect(turn?.stance?.confidence).toBe(p.confidence);
+      expect(turn?.stance?.agent_self_rating_uncalibrated).toBe(p.confidence);
     }
   });
 
@@ -109,7 +109,14 @@ describe('case file', () => {
     const file = buildCaseFile(r, meta(r));
     expect(file.final.action_band).toBe(d.action_band);
     expect(file.final.severity_score).toBe(d.severity_score);
-    expect(file.final.confidence).toBe(d.confidence);
+    expect(file.final.evidence_support_index).toBe(d.confidence);
+    expect(file.final).not.toHaveProperty('confidence');
+    expect(file.final).not.toHaveProperty('confidence_blocked_reason');
+    const agent = file.agents.find((a) => a.stance !== null);
+    if (agent?.stance !== null && agent?.stance !== undefined) {
+      expect(agent.stance).not.toHaveProperty('confidence');
+      expect(agent.stance).toHaveProperty('agent_self_rating_uncalibrated');
+    }
     expect(file.disagreement_index.value).toBe(r.outputs.decision.score.disagreement_index.value);
     expect(file.brief).toContain(d.headline_risk);
   });
@@ -123,6 +130,8 @@ describe('case file', () => {
     expect(html).toContain('What each agent said');
     expect(html).toContain('Disagreements');
     expect(html).toContain('Final result');
+    expect(html).toContain('evidence-support index (uncalibrated; not a probability)');
+    expect(html).toContain('agent self-rating');
     expect(html).toContain(r.run_id);
     expect(html).not.toContain('undefined');
     expect(html).not.toContain('NaN');

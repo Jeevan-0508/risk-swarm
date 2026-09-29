@@ -152,7 +152,7 @@ export async function runDecision(ctx: AgentContext, input: DecisionInput): Prom
   const actions = lead ? await buildActions(ctx, input, decision, lead, score.action_band, owner_role) : [];
 
   const uncertainties: string[] = [];
-  if (score.confidence === null) uncertainties.push(`Confidence is withheld: ${score.confidence_blocked_reason}`);
+  if (score.confidence === null) uncertainties.push(`Evidence-support index is withheld: ${score.confidence_blocked_reason}`);
   for (const cap of score.caps_applied) uncertainties.push(`Cap applied: ${cap}`);
   for (const gate of score.gates_failed) uncertainties.push(`Gate not met: ${gate}`);
   if (actions.length === 0) uncertainties.push('No countermeasure was attached, so this recommendation is not yet actionable.');

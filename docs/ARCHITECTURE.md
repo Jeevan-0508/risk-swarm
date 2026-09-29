@@ -94,7 +94,7 @@ gives the rejection message that the red team prints.
                 |
         blocking findings? --yes--> REWORK (max 2 loops) --> back to SCOUT/ANALYST
                 |no
-        DECISION ENGINE  -> severity / confidence / urgency / action / owner / review
+        DECISION ENGINE  -> severity / evidence-support index / urgency / action / owner / review
                 |
         EXECUTIVE BRIEF -> HUMAN GATE (accept / override / reject) -> OUTCOME -> LESSON
 ```

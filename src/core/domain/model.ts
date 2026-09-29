@@ -289,6 +289,10 @@ export const Decision = z.object({
   headline_risk: z.string(),
   severity_band: SeverityBand,
   severity_score: unit,
+  /**
+   * Legacy field name: this is an uncalibrated evidence-support policy index, not probability,
+   * factual confidence, or a model-reported estimate. Agent agreement never raises it.
+   */
   confidence: unit.nullable(),
   confidence_blocked_reason: z.string().nullable().default(null),
   urgency: Urgency,

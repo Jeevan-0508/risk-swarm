@@ -126,7 +126,7 @@ export function nodeRows(n: GraphNode): [string, string][] {
     case 'decision':
       rows.push(['Band', n.action_band]);
       rows.push(['Severity', `${n.severity_band} ${n.severity_score.toFixed(3)}`]);
-      rows.push(['Confidence', n.confidence === null ? `withheld — ${n.confidence_blocked_reason ?? 'reason not recorded'}` : n.confidence.toFixed(2)]);
+      rows.push(['Evidence-support index (uncalibrated; not a probability)', n.confidence === null ? `withheld — ${n.confidence_blocked_reason ?? 'reason not recorded'}` : n.confidence.toFixed(2)]);
       rows.push(['Urgency', n.urgency]);
       rows.push(['Owner', n.owner_role]);
       rows.push(['Review by', n.review_by]);
