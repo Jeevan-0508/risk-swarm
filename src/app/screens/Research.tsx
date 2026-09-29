@@ -13,6 +13,7 @@ import type { CouncilResult, CouncilTraceEvent } from '@core/council/types';
 import { useModelStore } from '@app/store/models';
 import { swarmDecisionPanelTitle } from '@app/lib/research-ownership';
 import { Link } from 'react-router-dom';
+import { CANDIDATE_MO_SCHEMA_SOURCE_REVISION, FraudWatchCandidateMO, type FraudWatchCandidateMO as FraudWatchCandidateMOValue } from '@core/integrations/fraud-watch-candidate';
 
 const toneFor = (status: ResearchOutcome['execution']['status']): 'support' | 'caution' | 'objection' =>
   status === 'ok' ? 'support' : status === 'search_failed' ? 'objection' : 'caution';
@@ -45,6 +46,9 @@ export function Research() {
   const [council, setCouncil] = useState<CouncilResult | null>(null);
   const [councilTrace, setCouncilTrace] = useState<CouncilTraceEvent[]>([]);
   const autoStarted = useRef(false);
+  const candidateFileReadId = useRef(0);
+  const [candidateIntake, setCandidateIntake] = useState<{ fileName: string; value: FraudWatchCandidateMOValue } | null>(null);
+  const [candidateIntakeError, setCandidateIntakeError] = useState<string | null>(null);
 
   const assignments = useModelStore((s) => s.assignments);
   const keys = useModelStore((s) => s.keys);
@@ -59,6 +63,43 @@ export function Research() {
    */
   const diversity = useMemo(() => diversityFn(), [assignments, keys, diversityFn]);
   const councilAvailable = diversity.active_agents > 0;
+
+  const readCandidateFile = async (file: File | null) => {
+    const readId = ++candidateFileReadId.current;
+    setCandidateIntake(null);
+    setCandidateIntakeError(null);
+    if (!file) return;
+    if (file.size === 0) {
+      setCandidateIntakeError('The selected file is empty.');
+      return;
+    }
+    if (file.size > 1_000_000) {
+      setCandidateIntakeError('File exceeds the 1 MB local review limit.');
+      return;
+    }
+    try {
+      const parsed: unknown = JSON.parse(await file.text());
+      if (readId !== candidateFileReadId.current) return;
+      const result = FraudWatchCandidateMO.safeParse(parsed);
+      if (!result.success) {
+        const details = result.error.issues.slice(0, 4)
+          .map((issue) => `${issue.path.join('.') || 'document'}: ${issue.message}`)
+          .join(' · ');
+        setCandidateIntakeError(`Candidate file rejected by candidate-mo.v1 validation: ${details}`);
+        return;
+      }
+      setCandidateIntake({ fileName: file.name, value: result.data });
+    } catch (e) {
+      if (readId !== candidateFileReadId.current) return;
+      setCandidateIntakeError(e instanceof Error ? `Could not read candidate JSON: ${e.message}` : 'Could not read candidate JSON.');
+    }
+  };
+
+  const clearCandidateFile = () => {
+    candidateFileReadId.current++;
+    setCandidateIntake(null);
+    setCandidateIntakeError(null);
+  };
 
   const text = question.trim();
   const routed = useMemo(() => text.length > 12 ? routeQuestion(text) : null, [text]);
@@ -108,6 +149,62 @@ export function Research() {
           required for an open-domain question.
         </p>
       </div>
+
+      <Panel title="synthetic candidate intake" aside={<Tag tone={candidateIntake === null ? 'neutral' : 'caution'}>LOCAL FILE ONLY</Tag>}>
+        <p className="max-w-4xl text-xs leading-relaxed text-fg-mute">
+          Fraud Watch candidate files are synthetic and their export authenticity is unverified. This local review panel preserves that status; imported data stays in this browser session and is excluded from research, evidence, Council, scoring and decisions.
+        </p>
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <label className="block min-w-64 flex-1 text-2xs text-fg-dim">
+            Select a candidate-mo.v1 JSON file (maximum 1 MB)
+            <input
+              type="file"
+              accept=".json,application/json"
+              className={`${inputClass} mt-1 block w-full`}
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0] ?? null;
+                event.currentTarget.value = '';
+                void readCandidateFile(file);
+              }}
+            />
+          </label>
+          {candidateIntake !== null && <Button onClick={clearCandidateFile}>clear local file</Button>}
+        </div>
+        {candidateIntakeError !== null && <p role="alert" className="mt-3 text-xs leading-relaxed text-objection">{candidateIntakeError}</p>}
+        {candidateIntake !== null && (() => {
+          const { value } = candidateIntake;
+          return (
+            <div className="mt-4 space-y-3 hair-t pt-3">
+              <p className="text-2xs text-fg-mute">Loaded from {candidateIntake.fileName}. Parser schema source: <span className="num">freight-fraud-taxonomy@{CANDIDATE_MO_SCHEMA_SOURCE_REVISION}</span>.</p>
+              <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+                <Row k="candidate signature" v={<span className="num break-all text-xs">{value.candidate.signature}</span>} />
+                <Row k="simulator lifecycle" v={<span className="num text-xs">{value.candidate.lifecycle_state}</span>} />
+                <Row k="data class / authenticity" v={<span className="num text-xs">{value.data_class} · {value.source.authenticity}</span>} />
+                <Row k="simulator source revision" v={<span className="num break-all text-xs">{value.source.revision ?? 'unknown — not embedded in the running build'}</span>} />
+                <Row k="taxonomy version" v={<span className="num text-xs">{value.taxonomy.version}</span>} />
+                <Row k="taxonomy snapshot SHA-256" v={<span className="num break-all text-xs">{value.taxonomy.snapshot_sha256 ?? 'unknown — digest unavailable'}</span>} />
+                <Row k="simulation seed / time" v={<span className="num text-xs">{value.simulation.seed} / {value.simulation.sim_time_seconds_from_genesis} seconds from genesis</span>} />
+                <Row k="candidate time basis" v={<span className="num text-xs">{value.candidate.time_basis}</span>} />
+              </div>
+              <div className="space-y-2">
+                <div className="label">supporting cases supplied with the export · {value.candidate.supporting_cases.length}</div>
+                {value.candidate.supporting_cases.map((support) => (
+                  <div key={support.case_id} className="border border-line p-3">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <span className="num text-xs text-fg">{support.case_id}</span>
+                      <span className="num text-2xs text-fg-mute">classification at record: {support.classification} · current: {support.current_classification ?? 'not supplied'}</span>
+                    </div>
+                    <p className="mt-2 text-2xs leading-relaxed text-fg-dim">Current classification reason: {support.classification_reason ?? 'not provided'}</p>
+                    <p className="mt-1 text-2xs leading-relaxed text-fg-mute">Case open {support.case_opened_at}; first observed {support.first_observed_at}; provenance recorded {support.recorded_at} simulator seconds from genesis.</p>
+                    <p className="mt-1 text-2xs leading-relaxed text-fg-mute">Signal types: {support.signal_types.join(', ')}. Simulator correlation index: {support.correlation_index}/100; this field is not a probability.</p>
+                    <p className="mt-1 text-2xs leading-relaxed text-fg-mute">Taxonomy resemblance reference: {support.related_pattern_id ?? 'none supplied'}; the reference is carried as exported and is not independently verified by this intake.</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+      </Panel>
 
       <Panel title="question">
         <Field label="ask anything" hint="The exact question is preserved and used as the research seed.">
