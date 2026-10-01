@@ -13,7 +13,7 @@ const SourceRecord = z.object({
   source_identity: z.string().min(1),
   source_type: z.enum(['regulator', 'industry_body', 'news', 'portfolio_kb', 'academic', 'statistical_body', 'reference_work']),
   query: z.string(),
-  url: z.string().url(),
+  url: z.string().url().refine((value) => /^https?:\/\//i.test(value), 'HTTP(S) source URL required'),
   title: z.string(),
   excerpt: z.string(),
   content_hash: z.string().min(1),
@@ -79,12 +79,18 @@ export const SwarmReplayCapture = z.object({
   }).strict(),
   integrity_note: z.literal('Fingerprints cover normalized excerpt text (or title); the algorithm may be non-cryptographic. They do not establish source authenticity, factual truth, source independence, or claim entailment.'),
 }).strict().superRefine((capture, ctx) => {
+  if (Date.parse(capture.captured_at) < Date.parse(capture.research.started_at)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['captured_at'], message: 'capture cannot precede research start' });
+  }
   const ids = new Set<string>();
   capture.research.source_records.forEach((record, index) => {
     if (ids.has(record.evidence_id)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['research', 'source_records', index, 'evidence_id'], message: 'source evidence ids must be unique' });
     }
     ids.add(record.evidence_id);
+    if (Date.parse(record.retrieved_at) > Date.parse(capture.captured_at)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['research', 'source_records', index, 'retrieved_at'], message: 'retrieval cannot follow capture' });
+    }
   });
   for (const [index, attempt] of capture.research.attempts.entries()) {
     if (attempt.retained > attempt.returned) {

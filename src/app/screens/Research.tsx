@@ -15,6 +15,8 @@ import { swarmDecisionPanelTitle } from '@app/lib/research-ownership';
 import { Link } from 'react-router-dom';
 import { CANDIDATE_MO_SCHEMA_SOURCE_REVISION, FraudWatchCandidateMO, type FraudWatchCandidateMO as FraudWatchCandidateMOValue } from '@core/integrations/fraud-watch-candidate';
 import { buildSwarmReplayCapture } from '@core/integrations/replay-capture';
+import { buildInvestigationSnapshot, candidateInvestigationQuestion } from '@core/integrations/investigation-snapshot';
+import type { InvestigationSnapshot } from '../../../contracts/investigation-v1.mjs';
 
 const toneFor = (status: ResearchOutcome['execution']['status']): 'support' | 'caution' | 'objection' =>
   status === 'ok' ? 'support' : status === 'search_failed' ? 'objection' : 'caution';
@@ -51,6 +53,9 @@ export function Research() {
   const [candidateIntake, setCandidateIntake] = useState<{ fileName: string; value: FraudWatchCandidateMOValue } | null>(null);
   const [candidateIntakeError, setCandidateIntakeError] = useState<string | null>(null);
   const [includeCandidateContext, setIncludeCandidateContext] = useState(false);
+  const [investigateCandidate, setInvestigateCandidate] = useState(false);
+  const [completedQuestion, setCompletedQuestion] = useState('');
+  const [investigationSnapshot, setInvestigationSnapshot] = useState<InvestigationSnapshot | null>(null);
 
   const assignments = useModelStore((s) => s.assignments);
   const keys = useModelStore((s) => s.keys);
@@ -71,6 +76,7 @@ export function Research() {
     setCandidateIntake(null);
     setCandidateIntakeError(null);
     setIncludeCandidateContext(false);
+    setInvestigateCandidate(false);
     if (!file) return;
     if (file.size === 0) {
       setCandidateIntakeError('The selected file is empty.');
@@ -103,13 +109,14 @@ export function Research() {
     setCandidateIntake(null);
     setCandidateIntakeError(null);
     setIncludeCandidateContext(false);
+    setInvestigateCandidate(false);
   };
 
   const downloadReplayCapture = () => {
     if (outcome === null) return;
     const capture = buildSwarmReplayCapture({
       outcome,
-      question: text,
+      question: completedQuestion,
       capturedAt: new Date().toISOString(),
       candidate: includeCandidateContext ? candidateIntake?.value ?? null : null,
     });
@@ -118,6 +125,16 @@ export function Research() {
     const link = document.createElement('a');
     link.href = url;
     link.download = `risk-swarm-research-${outcome.run_id}.json`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+
+  const downloadInvestigation = () => {
+    if (!investigationSnapshot) return;
+    const url = URL.createObjectURL(new Blob([JSON.stringify(investigationSnapshot, null, 2)], { type: 'application/json' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `risk-swarm-investigation-${investigationSnapshot.capture.research.run_id}.json`;
     link.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
   };
@@ -135,14 +152,22 @@ export function Research() {
     setAnswer(null);
     setCouncil(null);
     setCouncilTrace([]);
+    setInvestigationSnapshot(null);
     try {
       const result = await runResearch({ question: text, proxyEnabled }, (event) => setEvents((all) => [...all, event]));
       setOutcome(result);
+      setCompletedQuestion(text);
       setAnswer(deliberateOpenResearch(text, result));
-      if (councilMode && councilAvailable && result.merged.items.length > 0) {
-        const councilResult = await runCouncil(text, selectEvidenceForCouncil(result.merged.items), assignments, { getApiKey }, (event) => setCouncilTrace((all) => [...all, event]));
+      let councilResult: CouncilResult | null = null;
+      if (councilMode && councilAvailable) {
+        // A synthetic hypothesis must be investigated against independently retrieved public records.
+        const evidence = investigateCandidate ? result.external?.items ?? [] : result.merged.items;
+        councilResult = await runCouncil(text, selectEvidenceForCouncil(evidence), assignments, { getApiKey }, (event) => setCouncilTrace((all) => [...all, event]));
         setCouncil(councilResult);
       }
+      setInvestigationSnapshot(buildInvestigationSnapshot({ outcome: result, question: text,
+        capturedAt: new Date().toISOString(), council: councilResult,
+        candidate: investigateCandidate ? candidateIntake?.value ?? null : null }));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -173,7 +198,7 @@ export function Research() {
 
       <Panel title="synthetic candidate intake" aside={<Tag tone={candidateIntake === null ? 'neutral' : 'caution'}>LOCAL FILE ONLY</Tag>}>
         <p className="max-w-4xl text-xs leading-relaxed text-fg-mute">
-          Fraud Watch candidate files are synthetic and their export authenticity is unverified. This local review panel preserves that status; imported data stays in this browser session and is excluded from research, evidence, Council, scoring and decisions.
+          Fraud Watch candidate files are synthetic and their export authenticity is unverified. You can draft an investigation question from their signal names. Running that question sends it to retrieval and configured model providers as hypothesis context only; the candidate never enters evidence or establishes real-world novelty.
         </p>
         <div className="mt-3 flex flex-wrap items-end gap-3">
           <label className="block min-w-64 flex-1 text-2xs text-fg-dim">
@@ -190,6 +215,10 @@ export function Research() {
             />
           </label>
           {candidateIntake !== null && <Button onClick={clearCandidateFile}>clear local file</Button>}
+          {candidateIntake !== null && <Button disabled={running} onClick={() => {
+            setQuestion(candidateInvestigationQuestion(candidateIntake.value));
+            setInvestigateCandidate(true);
+          }}>draft candidate investigation question</Button>}
         </div>
         {candidateIntakeError !== null && <p role="alert" className="mt-3 text-xs leading-relaxed text-objection">{candidateIntakeError}</p>}
         {candidateIntake !== null && (() => {
@@ -400,6 +429,10 @@ export function Research() {
               </label>
             )}
             <div className="mt-3"><Button onClick={downloadReplayCapture}>download replay capture JSON</Button></div>
+            {investigationSnapshot && <div className="mt-4 border-t border-line pt-3">
+              <p className="mb-3 text-xs text-fg-mute">The investigation snapshot preserves the question and model configuration from this completed run, independent positions, typed unverified claims, challenges, disagreement, proposed rationale and unknown outcome. Later edits cannot rewrite it. Replay reconstructs these recorded statements without calling providers.</p>
+              <Button onClick={downloadInvestigation}>download frozen investigation JSON</Button>
+            </div>}
           </Panel>
 
           <Panel title="evidence actually used" aside={<span className="num text-2xs text-fg-mute">{answer.evidence_count} retained · {answer.source_count} source identities</span>} flush>

@@ -24,6 +24,10 @@ export async function runCouncil(
   onEvent?: (event: CouncilTraceEvent) => void,
   now: () => string = () => new Date().toISOString(),
 ): Promise<CouncilResult> {
+  const recorded_context = {
+    selected_evidence_ids: evidence.map((item) => item.evidence.id),
+    assignments: structuredClone(config),
+  };
   const trace: CouncilTraceEvent[] = [];
   const push = (e: Omit<CouncilTraceEvent, 'at'>) => {
     const event = { ...e, at: now() };
@@ -78,6 +82,7 @@ export async function runCouncil(
     for (const event of trace) onEvent?.(event);
     return {
       question,
+      recorded_context,
       positions,
       disagreement,
       verdict: { verdict, provider: 'deterministic', degraded: false, degraded_reason: null },
@@ -149,6 +154,7 @@ export async function runCouncil(
 
   return {
     question,
+    recorded_context,
     positions,
     disagreement,
     verdict: { verdict: zeus.value, provider: zeus.provider, degraded: zeus.degraded, degraded_reason: zeus.degraded_reason },
