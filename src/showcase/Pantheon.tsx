@@ -110,7 +110,7 @@ function Seal() {
           <>
             <div className="mt-4 text-4xl font-light tracking-tight text-fg">{seal.action_band.replace(/_/g, ' ')}</div>
             <div className="num mt-3 text-xs text-fg-dim">
-              {seal.severity_band} severity · confidence{' '}
+              {seal.severity_band} severity · support index (uncalibrated; not a probability){' '}
               {seal.confidence === null ? <span className="text-caution">withheld</span> : seal.confidence}
             </div>
             <p className="mx-auto mt-5 max-w-xl text-xs leading-relaxed text-fg-mute">

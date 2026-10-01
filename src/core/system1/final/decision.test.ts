@@ -22,16 +22,23 @@ const unconfident = (): LayaRuntimeResult => ({
 });
 
 describe('runSystem1ThenSwarm', () => {
-  it('SYSTEM1 path: Laya confident + low-risk -> accepted with no SWARM call and no council result', async () => {
+  it('model agreement without source evidence abstains instead of becoming a final decision', async () => {
     const { final, council } = await runSystem1ThenSwarm({ ...CASE, risk_hint: 'low' }, {
-      route: { layaDeps: { runner: () => confident() } },
+      route: {
+        layaDeps: { runner: () => confident() },
+        jevDeps: { apiKey: 'k', fetchImpl: async () => new Response(JSON.stringify({ decision: 'MONITOR', confidence: 0.9 }), { status: 200 }) },
+      },
+      swarm: { evidence: [], config: DEFAULT_REGISTRY_CONFIG, deps: { getApiKey: () => null } },
     });
 
-    expect(final.source).toBe('SYSTEM1');
-    expect(final.escalation.escalated).toBe(false);
-    expect(final.final).toBe('MONITOR');
+    expect(final.source).toBe('SWARM');
+    expect(final.escalation.escalated).toBe(true);
+    expect(final.escalation.trigger).toBe('INSUFFICIENT_EVIDENCE');
+    expect(final.final).toBe('INSUFFICIENT_EVIDENCE');
+    expect(final.confidence).toBeNull();
+    expect(final.confidence_note).toMatch(/agreement is not verification/);
     expect(final.replay).toBe('NOT_RUN');
-    expect(council).toBeNull();
+    expect(council?.verdict.verdict.answer).toBe('insufficient_evidence');
   });
 
   it('ABSTAINED path: Laya failure -> abstains honestly rather than guessing, with no SWARM call', async () => {
@@ -42,10 +49,12 @@ describe('runSystem1ThenSwarm', () => {
 
     expect(final.source).toBe('ABSTAINED');
     expect(final.final).toBe('INSUFFICIENT_EVIDENCE');
+    expect(final.confidence).toBeNull();
+    expect(final.confidence_note).toMatch(/abstained/);
     expect(council).toBeNull();
   });
 
-  it('SWARM path: high-risk case escalates and returns a real CouncilResult with cited evidence', async () => {
+  it('SWARM path: high-risk case escalates and abstains when no source evidence is supplied', async () => {
     const { final, council } = await runSystem1ThenSwarm({ ...CASE, risk_hint: 'high' }, {
       route: { layaDeps: { runner: () => confident() } },
       swarm: { evidence: [], config: DEFAULT_REGISTRY_CONFIG, deps: { getApiKey: () => null } },
@@ -57,6 +66,8 @@ describe('runSystem1ThenSwarm', () => {
     expect(final.disagreement).toBeNull();
     expect(council).not.toBeNull();
     expect(final.evidence_ids).toEqual(council!.verdict.verdict.cited_evidence_ids);
+    expect(final.confidence).toBeNull();
+    expect(final.confidence_note).toMatch(/agreement is not verification/);
   });
 
   it('SWARM path via disagreement: Laya and Jev split -> escalates with the real disagreement attached to the final decision', async () => {

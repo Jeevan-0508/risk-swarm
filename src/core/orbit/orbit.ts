@@ -155,7 +155,7 @@ const DIFF_FIELDS: DiffFieldSpec[] = [
   { key: 'action_band', label: 'action band', material: true, read: (r) => r.outputs.decision.decision.action_band },
   { key: 'severity_band', label: 'severity band', material: true, read: (r) => r.outputs.decision.decision.severity_band },
   { key: 'urgency', label: 'urgency', material: true, read: (r) => r.outputs.decision.decision.urgency },
-  { key: 'confidence', label: 'confidence', material: true, read: (r) => (r.outputs.decision.decision.confidence === null ? 'withheld' : String(r.outputs.decision.decision.confidence)) },
+  { key: 'confidence', label: 'evidence-support index (uncalibrated)', material: true, read: (r) => (r.outputs.decision.decision.confidence === null ? 'withheld' : String(r.outputs.decision.decision.confidence)) },
   { key: 'independent_evidence_count', label: 'independent sources', material: true, read: (r) => String(r.outputs.decision.score.independent_evidence_count) },
   { key: 'disagreement_index', label: 'disagreement index', material: false, read: (r) => String(r.outputs.decision.score.disagreement_index.value) },
   { key: 'gates_failed', label: 'gates failed', material: false, read: (r) => String(r.outputs.decision.decision.gates_failed.length) },

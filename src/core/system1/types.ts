@@ -2,7 +2,7 @@
  * System-1 / System-2 evolution — shared contract (SYSTEM-1 directive §5, §6, §20).
  *
  * Laya and Jev are typed-decision models: they return a stance from a fixed candidate set plus a
- * confidence, never generated prose. This is a different shape from `core/reasoner/types.ts`'s
+ * model-reported score, never generated prose. This is a different shape from `core/reasoner/types.ts`'s
  * `Reasoner` (which produces free-text-shaped JSON from an LLM) on purpose — forcing a typed-decision
  * model through the LLM reasoning seam would mean fabricating a `reasoning_summary` neither model
  * actually produced. System-1 gets its own, narrower contract instead.
@@ -42,6 +42,7 @@ export const System1Result = z.object({
   model_id: z.string(),
   model_version: z.string().nullable(),
   decision: z.string(),
+  /** A provider-reported score only; not calibrated and never treated as evidence of correctness. */
   confidence: z.number().min(0).max(1),
   /** Normalized Shannon entropy in [0,1] of a real probability distribution, or null when the model
    * exposes none. Never derived from `confidence` — that would just be confidence twice. */

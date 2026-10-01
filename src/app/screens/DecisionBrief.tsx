@@ -54,9 +54,9 @@ export function DecisionBrief() {
         <p className="mt-2 text-sm leading-relaxed text-fg-mute">{result.question}</p>
         <div className="mt-6 grid grid-cols-2 gap-6 md:grid-cols-4">
           <Metric label="severity" value={d.severity_band} tone={SEVERITY_TONE[d.severity_band] ?? 'neutral'} sub={d.severity_score.toFixed(3)} mono={false} />
-          <Metric label="confidence" value={d.confidence === null ? 'withheld' : d.confidence.toFixed(2)}
-            tone={d.confidence === null ? 'block' : 'support'} mono={d.confidence !== null}
-            sub={d.confidence === null ? d.confidence_blocked_reason ?? 'reason not recorded' : 'published because nothing blocking stands'} />
+          <Metric label="evidence-support index" value={d.confidence === null ? 'withheld' : d.confidence.toFixed(2)}
+            tone={d.confidence === null ? 'block' : 'neutral'} mono={d.confidence !== null}
+            sub={d.confidence === null ? `${d.confidence_blocked_reason ?? 'reason not recorded'}; uncalibrated heuristic, not a probability` : 'uncalibrated policy heuristic; not a probability'} />
           <Metric label="urgency" value={d.urgency} mono={false} sub={`review by ${d.review_by.slice(0, 10)}`} />
           <Metric label="owner" value={d.owner_role} mono={false} sub="a role, never a person — this system has no org data" />
         </div>

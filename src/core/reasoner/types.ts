@@ -54,7 +54,16 @@ export function citedIds(value: unknown, pattern = /^[A-Z]{1,2}-\d{2,}$/): strin
       v.forEach(walk);
       return;
     }
-    if (v && typeof v === 'object') Object.values(v).forEach(walk);
+    if (v && typeof v === 'object') {
+      for (const [key, item] of Object.entries(v)) {
+        // Explicit citation fields are checked regardless of ID spelling. The legacy regex alone
+        // missed IDs such as E-EXT-1 and fraud-watch:SIG-001.
+        if ((key === 'evidence_ids' || key === 'cited_evidence_ids') && Array.isArray(item)) {
+          for (const id of item) if (typeof id === 'string') out.add(id);
+        }
+        walk(item);
+      }
+    }
   };
   walk(value);
   return [...out].sort();

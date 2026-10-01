@@ -60,8 +60,8 @@ pushed; Phase C (PULSE) is next.
 2 hypotheses (FFT-002 phantom carrier, FFT-008 GPS spoofing), 13 challenges, 5 red-team findings
 (verdict `fail`), 64 graph nodes / 97 edges, no cycles.
 
-**MONITOR, severity HIGH 0.525, urgency ELEVATED, confidence withheld** — 3 unresolved blocking
-findings. Four escalation requirements unmet: blocking findings open, confidence withheld,
+**MONITOR, severity HIGH 0.525, urgency ELEVATED, evidence-support index withheld** — 3 unresolved blocking
+findings. Four escalation requirements unmet: blocking findings open, evidence-support index withheld,
 false-positive risk 0.41, and no tier-1/2 source behind the incident claim. This is the honest answer
 and the README must keep it: the demo proves the system's point instead of flattering it.
 

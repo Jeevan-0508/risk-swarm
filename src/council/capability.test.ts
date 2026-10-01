@@ -70,7 +70,7 @@ describe('every answer is a projection of this run\'s own stored output', () => 
     expect(text.includes(`${c.result.deliberation.rounds_used} rounds`)).toBe(true);
   });
 
-  it('reports the band and withholds confidence exactly as the engine did', async () => {
+  it('reports the band and withholds the evidence-support index exactly as the engine did', async () => {
     const c = await ctx();
     const d = c.result.outputs.decision.decision;
     const out = routeCommand('band', c);
@@ -79,8 +79,8 @@ describe('every answer is a projection of this run\'s own stored output', () => 
     expect(text.includes(d.action_band.replace(/_/g, ' '))).toBe(true);
     expect(text.includes(d.headline_risk)).toBe(true);
     if (d.confidence === null) {
-      expect(text.includes('confidence withheld')).toBe(true);
-      expect(/confidence 0\./.test(text)).toBe(false);
+      expect(text.includes('evidence-support index withheld')).toBe(true);
+      expect(/evidence-support index 0\./.test(text)).toBe(false);
     } else {
       expect(text.includes(d.confidence.toFixed(2))).toBe(true);
     }

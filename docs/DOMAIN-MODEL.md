@@ -45,7 +45,7 @@ interface Evidence {
   injection_suspected: boolean;
 }
 ```
-Tier 5 (`llm_reasoning`) evidence is legal to create but **cannot raise confidence**: the scorer
+Tier 5 (`llm_reasoning`) evidence is legal to create but **cannot raise the evidence-support index**: the scorer
 gives it weight 0 and the brief renders it as *hypothesis*, visually distinct from fact.
 
 ### SIGNAL
@@ -76,6 +76,8 @@ that is itself recorded as a node.
 `Decision { id, hypothesis_ids[], severity, confidence, urgency, action_band, owner_role,
 review_by, rationale, unresolved_objections[], decided_by: 'system_recommendation'|'human',
 human_note? }`
+The legacy `confidence` property stores an uncalibrated evidence-support policy index. It is not a
+probability, factual confidence estimate, or model-reported score; agent agreement cannot raise it.
 `Action { id, decision_id, text, owner_role, due, source: countermeasure_id? }`
 `Outcome { id, decision_id, what_happened, verdict: 'correct'|'false_positive'|'false_negative'|
 'partially_correct', useful_evidence_ids[], misleading_evidence_ids[], agent_scorecard }`

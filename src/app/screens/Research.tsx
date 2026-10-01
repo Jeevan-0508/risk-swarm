@@ -13,6 +13,10 @@ import type { CouncilResult, CouncilTraceEvent } from '@core/council/types';
 import { useModelStore } from '@app/store/models';
 import { swarmDecisionPanelTitle } from '@app/lib/research-ownership';
 import { Link } from 'react-router-dom';
+import { CANDIDATE_MO_SCHEMA_SOURCE_REVISION, FraudWatchCandidateMO, type FraudWatchCandidateMO as FraudWatchCandidateMOValue } from '@core/integrations/fraud-watch-candidate';
+import { buildSwarmReplayCapture } from '@core/integrations/replay-capture';
+import { buildInvestigationSnapshot, candidateInvestigationQuestion } from '@core/integrations/investigation-snapshot';
+import type { InvestigationSnapshot } from '../../../contracts/investigation-v1.mjs';
 
 const toneFor = (status: ResearchOutcome['execution']['status']): 'support' | 'caution' | 'objection' =>
   status === 'ok' ? 'support' : status === 'search_failed' ? 'objection' : 'caution';
@@ -45,6 +49,13 @@ export function Research() {
   const [council, setCouncil] = useState<CouncilResult | null>(null);
   const [councilTrace, setCouncilTrace] = useState<CouncilTraceEvent[]>([]);
   const autoStarted = useRef(false);
+  const candidateFileReadId = useRef(0);
+  const [candidateIntake, setCandidateIntake] = useState<{ fileName: string; value: FraudWatchCandidateMOValue } | null>(null);
+  const [candidateIntakeError, setCandidateIntakeError] = useState<string | null>(null);
+  const [includeCandidateContext, setIncludeCandidateContext] = useState(false);
+  const [investigateCandidate, setInvestigateCandidate] = useState(false);
+  const [completedQuestion, setCompletedQuestion] = useState('');
+  const [investigationSnapshot, setInvestigationSnapshot] = useState<InvestigationSnapshot | null>(null);
 
   const assignments = useModelStore((s) => s.assignments);
   const keys = useModelStore((s) => s.keys);
@@ -60,6 +71,74 @@ export function Research() {
   const diversity = useMemo(() => diversityFn(), [assignments, keys, diversityFn]);
   const councilAvailable = diversity.active_agents > 0;
 
+  const readCandidateFile = async (file: File | null) => {
+    const readId = ++candidateFileReadId.current;
+    setCandidateIntake(null);
+    setCandidateIntakeError(null);
+    setIncludeCandidateContext(false);
+    setInvestigateCandidate(false);
+    if (!file) return;
+    if (file.size === 0) {
+      setCandidateIntakeError('The selected file is empty.');
+      return;
+    }
+    if (file.size > 1_000_000) {
+      setCandidateIntakeError('File exceeds the 1 MB local review limit.');
+      return;
+    }
+    try {
+      const parsed: unknown = JSON.parse(await file.text());
+      if (readId !== candidateFileReadId.current) return;
+      const result = FraudWatchCandidateMO.safeParse(parsed);
+      if (!result.success) {
+        const details = result.error.issues.slice(0, 4)
+          .map((issue) => `${issue.path.join('.') || 'document'}: ${issue.message}`)
+          .join(' · ');
+        setCandidateIntakeError(`Candidate file rejected by candidate-mo.v1 validation: ${details}`);
+        return;
+      }
+      setCandidateIntake({ fileName: file.name, value: result.data });
+    } catch (e) {
+      if (readId !== candidateFileReadId.current) return;
+      setCandidateIntakeError(e instanceof Error ? `Could not read candidate JSON: ${e.message}` : 'Could not read candidate JSON.');
+    }
+  };
+
+  const clearCandidateFile = () => {
+    candidateFileReadId.current++;
+    setCandidateIntake(null);
+    setCandidateIntakeError(null);
+    setIncludeCandidateContext(false);
+    setInvestigateCandidate(false);
+  };
+
+  const downloadReplayCapture = () => {
+    if (outcome === null) return;
+    const capture = buildSwarmReplayCapture({
+      outcome,
+      question: completedQuestion,
+      capturedAt: new Date().toISOString(),
+      candidate: includeCandidateContext ? candidateIntake?.value ?? null : null,
+    });
+    const blob = new Blob([JSON.stringify(capture, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `risk-swarm-research-${outcome.run_id}.json`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+
+  const downloadInvestigation = () => {
+    if (!investigationSnapshot) return;
+    const url = URL.createObjectURL(new Blob([JSON.stringify(investigationSnapshot, null, 2)], { type: 'application/json' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `risk-swarm-investigation-${investigationSnapshot.capture.research.run_id}.json`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+
   const text = question.trim();
   const routed = useMemo(() => text.length > 12 ? routeQuestion(text) : null, [text]);
   const preview = useMemo(() => routed === null ? null : planResearch(routed, { proxyEnabled }), [routed, proxyEnabled]);
@@ -73,14 +152,22 @@ export function Research() {
     setAnswer(null);
     setCouncil(null);
     setCouncilTrace([]);
+    setInvestigationSnapshot(null);
     try {
       const result = await runResearch({ question: text, proxyEnabled }, (event) => setEvents((all) => [...all, event]));
       setOutcome(result);
+      setCompletedQuestion(text);
       setAnswer(deliberateOpenResearch(text, result));
-      if (councilMode && councilAvailable && result.merged.items.length > 0) {
-        const councilResult = await runCouncil(text, selectEvidenceForCouncil(result.merged.items), assignments, { getApiKey }, (event) => setCouncilTrace((all) => [...all, event]));
+      let councilResult: CouncilResult | null = null;
+      if (councilMode && councilAvailable) {
+        // A synthetic hypothesis must be investigated against independently retrieved public records.
+        const evidence = investigateCandidate ? result.external?.items ?? [] : result.merged.items;
+        councilResult = await runCouncil(text, selectEvidenceForCouncil(evidence), assignments, { getApiKey }, (event) => setCouncilTrace((all) => [...all, event]));
         setCouncil(councilResult);
       }
+      setInvestigationSnapshot(buildInvestigationSnapshot({ outcome: result, question: text,
+        capturedAt: new Date().toISOString(), council: councilResult,
+        candidate: investigateCandidate ? candidateIntake?.value ?? null : null }));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -108,6 +195,66 @@ export function Research() {
           required for an open-domain question.
         </p>
       </div>
+
+      <Panel title="synthetic candidate intake" aside={<Tag tone={candidateIntake === null ? 'neutral' : 'caution'}>LOCAL FILE ONLY</Tag>}>
+        <p className="max-w-4xl text-xs leading-relaxed text-fg-mute">
+          Fraud Watch candidate files are synthetic and their export authenticity is unverified. You can draft an investigation question from their signal names. Running that question sends it to retrieval and configured model providers as hypothesis context only; the candidate never enters evidence or establishes real-world novelty.
+        </p>
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <label className="block min-w-64 flex-1 text-2xs text-fg-dim">
+            Select a candidate-mo.v1 JSON file (maximum 1 MB)
+            <input
+              type="file"
+              accept=".json,application/json"
+              className={`${inputClass} mt-1 block w-full`}
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0] ?? null;
+                event.currentTarget.value = '';
+                void readCandidateFile(file);
+              }}
+            />
+          </label>
+          {candidateIntake !== null && <Button onClick={clearCandidateFile}>clear local file</Button>}
+          {candidateIntake !== null && <Button disabled={running} onClick={() => {
+            setQuestion(candidateInvestigationQuestion(candidateIntake.value));
+            setInvestigateCandidate(true);
+          }}>draft candidate investigation question</Button>}
+        </div>
+        {candidateIntakeError !== null && <p role="alert" className="mt-3 text-xs leading-relaxed text-objection">{candidateIntakeError}</p>}
+        {candidateIntake !== null && (() => {
+          const { value } = candidateIntake;
+          return (
+            <div className="mt-4 space-y-3 hair-t pt-3">
+              <p className="text-2xs text-fg-mute">Loaded from {candidateIntake.fileName}. Parser schema source: <span className="num">freight-fraud-taxonomy@{CANDIDATE_MO_SCHEMA_SOURCE_REVISION}</span>.</p>
+              <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+                <Row k="candidate signature" v={<span className="num break-all text-xs">{value.candidate.signature}</span>} />
+                <Row k="simulator lifecycle" v={<span className="num text-xs">{value.candidate.lifecycle_state}</span>} />
+                <Row k="data class / authenticity" v={<span className="num text-xs">{value.data_class} · {value.source.authenticity}</span>} />
+                <Row k="simulator source revision" v={<span className="num break-all text-xs">{value.source.revision ?? 'unknown — not embedded in the running build'}</span>} />
+                <Row k="taxonomy version" v={<span className="num text-xs">{value.taxonomy.version}</span>} />
+                <Row k="taxonomy snapshot SHA-256" v={<span className="num break-all text-xs">{value.taxonomy.snapshot_sha256 ?? 'unknown — digest unavailable'}</span>} />
+                <Row k="simulation seed / time" v={<span className="num text-xs">{value.simulation.seed} / {value.simulation.sim_time_seconds_from_genesis} seconds from genesis</span>} />
+                <Row k="candidate time basis" v={<span className="num text-xs">{value.candidate.time_basis}</span>} />
+              </div>
+              <div className="space-y-2">
+                <div className="label">supporting cases supplied with the export · {value.candidate.supporting_cases.length}</div>
+                {value.candidate.supporting_cases.map((support) => (
+                  <div key={support.case_id} className="border border-line p-3">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <span className="num text-xs text-fg">{support.case_id}</span>
+                      <span className="num text-2xs text-fg-mute">classification at record: {support.classification} · current: {support.current_classification ?? 'not supplied'}</span>
+                    </div>
+                    <p className="mt-2 text-2xs leading-relaxed text-fg-dim">Current classification reason: {support.classification_reason ?? 'not provided'}</p>
+                    <p className="mt-1 text-2xs leading-relaxed text-fg-mute">Case open {support.case_opened_at}; first observed {support.first_observed_at}; provenance recorded {support.recorded_at} simulator seconds from genesis.</p>
+                    <p className="mt-1 text-2xs leading-relaxed text-fg-mute">Signal types: {support.signal_types.join(', ')}. Simulator correlation index: {support.correlation_index}/100; this field is not a probability.</p>
+                    <p className="mt-1 text-2xs leading-relaxed text-fg-mute">Taxonomy resemblance reference: {support.related_pattern_id ?? 'none supplied'}; the reference is carried as exported and is not independently verified by this intake.</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+      </Panel>
 
       <Panel title="question">
         <Field label="ask anything" hint="The exact question is preserved and used as the research seed.">
@@ -187,16 +334,15 @@ export function Research() {
                 The Council below is a separate system from the research pass above, despite sharing two
                 names: HERMES/ATHENA/APOLLO/ARES/HEPHAESTUS (above) are this app's original deterministic
                 open-research agents — no model required, byte-for-byte reproducible. ATHENA/ARES/HADES/ZEUS
-                (below) are EVOLUTION 6.0's Olympian Council — real, independent, bring-your-own-key model
+                (below) are EVOLUTION 6.0's Olympian Council — separate bring-your-own-key model
                 calls over the same evidence, synthesized by Zeus. The name overlap (ATHENA, ARES) is
                 coincidental, not the same agent twice. With Council Mode on, the Council's verdict below is
-                the authoritative final decision; the panel above is the legacy pipeline's own analysis of
+                a model-generated position for human review; the panel above is the legacy pipeline's own analysis of
                 the same evidence, kept for context and provenance, not a competing answer.
               </p>
-              <Panel title="OLYMPIAN COUNCIL VERDICT" aside={<Tag tone={council.verdict.verdict.verdict_type === 'CONSENSUS' ? 'support' : council.verdict.verdict.verdict_type === 'UNRESOLVED' ? 'objection' : 'signal'}>{council.verdict.verdict.verdict_type}</Tag>}>
+              <Panel title="MODEL-GENERATED COUNCIL POSITION" aside={<Tag tone={council.verdict.verdict.verdict_type === 'CONSENSUS' ? 'support' : council.verdict.verdict.verdict_type === 'UNRESOLVED' ? 'objection' : 'signal'}>{council.verdict.verdict.verdict_type}</Tag>}>
                 <div className="flex items-baseline justify-between gap-4">
                   <div className="text-2xl font-light tracking-tight text-fg">{council.verdict.verdict.answer}</div>
-                  <div className="num text-sm text-fg-mute">{Math.round(council.verdict.verdict.confidence * 100)}% confidence</div>
                 </div>
                 <ul className="mt-3 space-y-1">{council.verdict.verdict.rationale.map((r, i) => <li key={i} className="text-xs leading-relaxed text-fg-dim">— {r}</li>)}</ul>
                 {council.verdict.verdict.minority_view !== null && (
@@ -206,6 +352,9 @@ export function Research() {
                   <p className="mt-3 border-l-2 border-objection pl-3 text-xs leading-relaxed text-fg-mute"><span className="label">unresolved</span><br />{council.verdict.verdict.unresolved.join(' ')}</p>
                 )}
                 <p className="mt-4 text-2xs text-fg-mute">
+                  The Council does not generate numeric confidence estimates. Agreement between models is not verification; check each claim against its cited evidence. Evidence IDs are checked, but citation relevance and entailment are not independently verified.
+                </p>
+                <p className="mt-2 text-2xs text-fg-mute">
                   {council.verdict.provider === 'deterministic'
                     ? 'ZEUS / DETERMINISTIC FALLBACK — LLM synthesis unavailable — deterministic fallback used.'
                     : `Zeus · ${council.verdict.provider}${council.verdict.degraded ? ` · degraded: ${council.verdict.degraded_reason}` : ''}`}
@@ -224,7 +373,6 @@ export function Research() {
                         </div>
                         <div className="mt-1 label">{p.provider}</div>
                         <div className="mt-3 text-lg text-fg">{p.position.stance}</div>
-                        <div className="num mt-1 text-2xs text-fg-mute">{Math.round(p.position.confidence * 100)}% confidence</div>
                         <p className="mt-2 text-2xs leading-relaxed text-fg-dim">{p.position.reasoning_summary}</p>
                         {p.degraded && <p className="mt-2 text-2xs text-objection">degraded: {p.degraded_reason}</p>}
                       </div>
@@ -232,6 +380,9 @@ export function Research() {
                   })}
                 </div>
                 <p className="mt-4 text-2xs leading-relaxed text-fg-mute">
+                  Council positions contain no numeric confidence. Agreement between models is not evidence that a claim is true.
+                </p>
+                <p className="mt-2 text-2xs leading-relaxed text-fg-mute">
                   {council.disagreement.independent_count === 0
                     ? NO_INDEPENDENT_POSITIONS_MESSAGE
                     : <>disagreement: {council.disagreement.agreement} across {council.disagreement.independent_count} independent position(s)
@@ -266,6 +417,23 @@ export function Research() {
               <div className="grid gap-3 md:grid-cols-2">{answer.dimensions.map((d) => <div key={d.label} className="border-l-2 border-line-bright pl-4"><div className="label">{d.label}</div><div className="mt-1 text-lg text-fg">{d.winner}</div><p className="mt-1 text-xs leading-relaxed text-fg-dim">{d.reason}</p></div>)}</div>
             </Panel>
           )}
+
+          <Panel title="replay capture · local download" aside={<Tag tone="caution">REVIEW ONLY</Tag>}>
+            <p className="max-w-4xl text-xs leading-relaxed text-fg-mute">
+              Exports the operator-supplied question, retrieval status and externally retrieved source records for a later Risk Replay review. It excludes internal knowledge text, derived answers and Council/model conclusions. Source records show what a provider returned; fingerprints cover normalized excerpt text (or title) and do not prove authenticity, truth, independence or entailment. The file is not uploaded.
+            </p>
+            {candidateIntake !== null && (
+              <label className="mt-3 flex items-start gap-2 text-2xs leading-relaxed text-fg-dim">
+                <input type="checkbox" checked={includeCandidateContext} onChange={(event) => setIncludeCandidateContext(event.target.checked)} className="mt-0.5" />
+                <span>Include the imported Fraud Watch file in a separate <span className="num">synthetic_simulation / hypothesis_context_only</span> field. It is never added to source records.</span>
+              </label>
+            )}
+            <div className="mt-3"><Button onClick={downloadReplayCapture}>download replay capture JSON</Button></div>
+            {investigationSnapshot && <div className="mt-4 border-t border-line pt-3">
+              <p className="mb-3 text-xs text-fg-mute">The investigation snapshot preserves the question and model configuration from this completed run, independent positions, typed unverified claims, challenges, disagreement, proposed rationale and unknown outcome. Later edits cannot rewrite it. Replay reconstructs these recorded statements without calling providers.</p>
+              <Button onClick={downloadInvestigation}>download frozen investigation JSON</Button>
+            </div>}
+          </Panel>
 
           <Panel title="evidence actually used" aside={<span className="num text-2xs text-fg-mute">{answer.evidence_count} retained · {answer.source_count} source identities</span>} flush>
             <ul>{outcome.merged.items.map((item) => <li key={item.evidence.id} className="hair-b px-4 py-3 last:border-b-0"><div className="flex flex-wrap items-baseline gap-3"><Tag tone="signal">{item.provenance.provider}</Tag><span className="text-sm text-fg-dim">{item.evidence.title}</span><span className="num text-2xs text-fg-mute">{item.provenance.source_identity}</span></div><p className="mt-1 text-2xs leading-relaxed text-fg-mute">{item.evidence.excerpt_or_summary}</p>{item.evidence.url && <a className="mt-1 block text-2xs text-signal underline" href={item.evidence.url} target="_blank" rel="noreferrer">source</a>}</li>)}</ul>

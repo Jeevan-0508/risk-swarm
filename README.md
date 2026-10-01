@@ -60,7 +60,7 @@ Captured from the live demo, DEMO mode, one reproducible run of the reference DA
 | | |
 |---|---|
 | ![Command Center](docs/command-center.png) | ![New Investigation](docs/new-investigation.png) |
-| **Command Center** — seven agents, one complete run. Disagreement index 79.4, red team **fail**, exposure MONITOR, confidence **withheld**. PULSE health checks below. | **New Investigation** — the question, geography and date bounds, evidence depth, budget. Reaching a limit stops the run; it does not silently continue. |
+| **Command Center** — seven agents, one complete run. Disagreement index 79.4, red team **fail**, exposure MONITOR, evidence-support index **withheld**. PULSE health checks below. | **New Investigation** — the question, geography and date bounds, evidence depth, budget. Reaching a limit stops the run; it does not silently continue. |
 | ![Agent Console](docs/agent-console.png) | ![Disagreement Room](docs/disagreement-room.png) |
 | **Agent Console**, mid-run — phase 2 of 7, budget ledger counting calls and retrievals, and each agent's constraint printed beside it. | **Disagreement Room** — the index computed term by term, and where each agent stood. APOLLO held at *hypothesis only* while five others supported. |
 | ![Red Team](docs/red-team.png) | ![Scenario Room](docs/scenario-room.png) |
@@ -138,8 +138,8 @@ A 24-month DACH road-freight window over 874 real signals:
 Are we exposed to phantom-carrier fraud in the DACH road network?
 
 recommendation         MONITOR  (severity HIGH 0.525, urgency ELEVATED)
-confidence             withheld - 3 unresolved blocking finding(s): no confidence figure is
-                       published while the investigation is contested
+evidence-support index withheld - 3 unresolved blocking finding(s): withheld while the investigation
+                       is contested; any published value is an uncalibrated heuristic, not a probability
 disagreement index     79.4
 graph                  64 nodes, 97 edges, intact true, cycles 0
 agents                 discover:12 deduplicate:8 analyse:2 govern:7 challenge:13 red_team:5 decide:1
@@ -157,7 +157,7 @@ why:
 
 unmet escalation requirements:
   - unresolved blocking finding(s): escalation withheld
-  - confidence withheld below 0.6
+  - evidence-support index withheld below policy threshold 0.6
   - false-positive risk 0.41 at or above 0.4
   - no tier-1 or tier-2 source supports the incident claim
 ```
@@ -175,9 +175,9 @@ itself, and you would learn to ignore it by the third false alarm.
 These are enforced in code and covered by tests, not stated as intentions.
 
 - **Reasoning is not evidence.** Source tiers weigh 1.0 / 0.8 / 0.55 / 0.7 and **tier 5 (model
-  reasoning) weighs 0.00**. An all-tier-5 chain scores zero confidence.
-- **Repetition cannot manufacture certainty.** Confidence is computed over evidence *clusters* and
-  source tiers, never over how many agents agree. Ten articles about one event count once.
+  reasoning) weighs 0.00**. An all-tier-5 chain scores zero on the evidence-support index.
+- **Repetition cannot manufacture knowledge.** The uncalibrated evidence-support policy index uses
+  evidence *clusters* and source tiers; agent agreement cannot raise it. Ten articles about one event count once.
 - **Independence means independent *incident* reporting.** A regulator citation is tier 1 and belongs in
   the record, but it can never make an event independently reported — otherwise the governance officer
   could satisfy the escalation gate by citing more law.
@@ -187,7 +187,7 @@ These are enforced in code and covered by tests, not stated as intentions.
 - **Near-duplicates that fall short of the merge threshold are published, not merged.** Silently merging
   destroys real corroboration; failing to merge inflates independence. So the ambiguous pairs are printed
   and the red team may challenge the count.
-- **Confidence is withheld, not lowered, while a blocking objection stands.** No number is published on a
+- **The evidence-support index is withheld while a blocking objection stands.** No number is published on a
   contested investigation.
 - **A lesson may only tighten.** The learning loop's policy deltas throw `PolicyDeltaRejected` on any
   attempt to lower a gate, so a bad outcome cannot be used to poison the scorer.

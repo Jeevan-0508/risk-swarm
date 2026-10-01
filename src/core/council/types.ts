@@ -13,10 +13,11 @@ export interface OlympianPosition {
   agent: ReasoningAgent;
   /** A short answer/side, e.g. "tiger", "AWS Security Specialty", "insufficient_evidence". Never empty. */
   stance: string;
-  confidence: number;
   /** Displayable summary of the reasoning. Not chain-of-thought; a few sentences at most. */
   reasoning_summary: string;
   claims: string[];
+  /** Model-declared epistemic types remain unverified assertions, including a declaration of FACT. */
+  typed_claims?: Array<{ type: 'FACT' | 'INFERENCE' | 'HYPOTHESIS' | 'UNKNOWN'; text: string; evidence_ids: string[] }>;
   /** Ids from the evidence this agent was given, cited in support of `claims`. Citing an id never supplied is rejected by `assertNoFabricatedCitations`, the same fence every existing agent uses. */
   evidence_ids: string[];
   evidence_requests: string[];
@@ -28,7 +29,6 @@ export type VerdictType = 'CONSENSUS' | 'MAJORITY' | 'MINORITY_PRESERVED' | 'UNR
 export interface CouncilVerdict {
   verdict_type: VerdictType;
   answer: string;
-  confidence: number;
   rationale: string[];
   minority_view: string | null;
   unresolved: string[];
@@ -41,7 +41,6 @@ export interface DisagreementAssessment {
   independent_count: number;
   stances: Record<ReasoningAgent, string>;
   distinct_stances: string[];
-  confidence_variance: number;
   agreement: 'strong_consensus' | 'majority' | 'split' | 'inconclusive';
 }
 
@@ -61,4 +60,9 @@ export interface CouncilResult {
   verdict: { verdict: CouncilVerdict; provider: string; degraded: boolean; degraded_reason: string | null };
   trace: CouncilTraceEvent[];
   model_diversity: { active_agents: number; providers: number; label: string };
+  /** Copied at execution time; credentials and mutable settings are never exported. */
+  recorded_context?: {
+    selected_evidence_ids: string[];
+    assignments: Record<OlympianAgent, { provider: string; model: string; enabled: boolean }>;
+  };
 }

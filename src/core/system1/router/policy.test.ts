@@ -1,5 +1,5 @@
 import { describe, expect, it } from '../../test/bdd';
-import { decideAfterLaya, decideAfterJev, LAYA_CONFIDENT_THRESHOLD } from './policy';
+import { decideAfterLaya, decideAfterJev } from './policy';
 import type { System1ArenaResult } from '../arena/types';
 import type { System1Case, System1Result } from '../types';
 
@@ -28,13 +28,14 @@ const LAYA = (over: Partial<System1Result> = {}): System1Result => ({
 });
 
 describe('decideAfterLaya', () => {
-  it('ACCEPT_SYSTEM1: Laya confident + low-risk + no contradiction', () => {
+  it('CALL_JEV: even a high Laya score is only a model proposal, not evidence', () => {
     const d = decideAfterLaya(CASE({ risk_hint: 'low' }), LAYA({ confidence: 0.9 }));
-    expect(d.action).toBe('ACCEPT_SYSTEM1');
+    expect(d.action).toBe('CALL_JEV');
+    expect(d.reason).toMatch(/not calibrated evidence/);
   });
 
-  it('CALL_JEV: Laya uncertain', () => {
-    const d = decideAfterLaya(CASE(), LAYA({ confidence: LAYA_CONFIDENT_THRESHOLD - 0.1 }));
+  it('CALL_JEV: a low score still gets a second proposal for evidence review', () => {
+    const d = decideAfterLaya(CASE(), LAYA({ confidence: 0.1 }));
     expect(d.action).toBe('CALL_JEV');
   });
 
@@ -49,7 +50,7 @@ describe('decideAfterLaya', () => {
     expect(d.action).toBe('CALL_JEV');
   });
 
-  it('ESCALATE_SWARM (INSUFFICIENT_EVIDENCE): missing evidence routes to escalation, not a guess', () => {
+  it('ESCALATE_SWARM (INSUFFICIENT_EVIDENCE): empty case context routes to review, not a guess', () => {
     const d = decideAfterLaya(CASE({ state: '   ' }), LAYA({ confidence: 0.99 }));
     expect(d.action).toBe('ESCALATE_SWARM');
     expect(d.escalation_trigger).toBe('INSUFFICIENT_EVIDENCE');
@@ -78,9 +79,11 @@ const arena = (over: Partial<System1ArenaResult> = {}): System1ArenaResult => ({
 describe('decideAfterJev', () => {
   const jevUsable: System1Result = { ...LAYA(), model_id: 'jev', model_version: null, status: 'LIVE' };
 
-  it('ACCEPT_SYSTEM1: Laya + Jev agree with sufficient evidence', () => {
+  it('ESCALATE_SWARM (INSUFFICIENT_EVIDENCE): agreement alone does not verify a proposal', () => {
     const d = decideAfterJev(arena({ agreement: true, jev_result: jevUsable }));
-    expect(d.action).toBe('ACCEPT_SYSTEM1');
+    expect(d.action).toBe('ESCALATE_SWARM');
+    expect(d.escalation_trigger).toBe('INSUFFICIENT_EVIDENCE');
+    expect(d.reason).toMatch(/agreement is not verification/);
   });
 
   it('ESCALATE_SWARM (DISAGREEMENT): Laya + Jev disagree', () => {

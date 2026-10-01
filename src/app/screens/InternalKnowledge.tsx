@@ -33,7 +33,7 @@ const KIND_TONE: Record<KnowledgeRecord['source_kind'], 'signal' | 'support' | '
 
 const EXAMPLES = [
   'phantom carrier fraud',
-  'how is confidence gated',
+  'how is the evidence-support index gated',
   'append-only graph',
   'prompt injection',
 ];
