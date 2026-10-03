@@ -1,7 +1,7 @@
 {
  "schema_version": "1",
- "built_at": "2026-10-03T08:38:50.636Z",
- "content_hash": "675ff4aa1905aa49a1cde66cfaed0b26c4f3bf813f1a3ed25e8762b0af410dde",
+ "built_at": "2026-10-03T08:53:08.619Z",
+ "content_hash": "bc8202ad28f01168fd85d68f522619913a5ca9d000f277c9564df4d02e7031ab",
  "record_count": 185,
  "sources": [
   "Freight & Carrier Fraud Risk Taxonomy",
@@ -836,12 +836,12 @@
    "path": "README.md",
    "ref": "WHERE AI AGENTS DISAGREE BEFORE HUMANS DECIDE",
    "title": "README · WHERE AI AGENTS DISAGREE BEFORE HUMANS DECIDE",
-   "text": "Seven agents investigate, challenge each other, and hand a traceable recommendation to a human ![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white) ![tests](https://img.shields.io/badge/tests-815_passing-22c55e?style=for-the-badge) ![attacks](https://img.shields.io/badge/adversarial_attacks-30-ef4444?style=for-the-badge) ![Pages](https://img.shields.io/badge/GitHub%20Pages-LIVE-22c55e?style=for-the-badge&logo=github) ![MIT](https://img.shields.io/badge/Licence-MIT-38bdf8?style=for-the-badge) <table <tr <td align=\"center\" 🧠</td <td align=\"center\" 🏛️</td <td align=\"center\" ⚔️</td <td align=\"center\" 👁️</td </tr <tr <td align=\"center\" <a href=\"https://jeevan-0508.github.io/risk-swarm/\" <b LIVE DEMO</b </a </td <td align=\"center\" <a href=\"#the-seven-agents\" <b THE SEVEN AGENTS</b </a </td <td align=\"center\" <a href=\"#the-adversarial-suite\" <b ADVERSARIAL SUITE</b </a </td <td align=\"center\" <a href=\"#where-to-watch-the-agents-work\" <b WATCH THEM WORK</b </a </td </tr <tr <td align=\"center\" Run an investigation</td <td align=\"center\" Who does what</td <td align=\"center\" 30 attacks</td <td align=\"center\" Screen by screen</td </…",
+   "text": "Seven agents investigate, challenge each other, and hand a traceable recommendation to a human ![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white) ![tests](https://img.shields.io/badge/tests-863_declared%20%7C%20native%20suite%20not%20verified-64748b?style=for-the-badge) ![attacks](https://img.shields.io/badge/adversarial_attacks-30-ef4444?style=for-the-badge) ![Pages](https://img.shields.io/badge/GitHub%20Pages-LIVE-22c55e?style=for-the-badge&logo=github) ![MIT](https://img.shields.io/badge/Licence-MIT-38bdf8?style=for-the-badge) <table <tr <td align=\"center\" 🧠</td <td align=\"center\" 🏛️</td <td align=\"center\" ⚔️</td <td align=\"center\" 👁️</td </tr <tr <td align=\"center\" <a href=\"https://jeevan-0508.github.io/risk-swarm/\" <b LIVE DEMO</b </a </td <td align=\"center\" <a href=\"#the-seven-agents\" <b THE SEVEN AGENTS</b </a </td <td align=\"center\" <a href=\"#the-adversarial-suite\" <b ADVERSARIAL SUITE</b </a </td <td align=\"center\" <a href=\"#where-to-watch-the-agents-work\" <b WATCH THEM WORK</b </a </td </tr <tr <td align=\"center\" Run an investigation</td <td align=\"center\" Who does what</td <td align=\"center\" 30 attacks</td <…",
    "updated_at": null,
    "facets": {},
    "truncated": true,
    "bytes": 1417,
-   "sha256": "104940bf17986bcb21aa39a51cadc9ac3fca3cb09d2b9e56a4ad376d43d3b5b0"
+   "sha256": "1353f885106c81fef1f2871fcb7a03c5f6d1ab377eb758be9f9a57b19dd526b5"
   },
   {
    "id": "KN-DOC-README-03",
@@ -878,12 +878,12 @@
    "path": "README.md",
    "ref": "Where to watch the agents work",
    "title": "README · Where to watch the agents work",
-   "text": "Everything each agent did is inspectable, not hidden behind a chat log. bun run scripts/demo-run.ts # the whole investigation, printed What you want to see Where it is --- --- Which agent ran, in what order, how long, how many findings result.log — one PhaseLogEntry per phase, printed as the agents line Everything one agent produced, including what it was unsure about result.outputs.<agent — findings , uncertainties , reasoning_status , cost Who created any given node every node carries created_by , and result.graph.toJSON() dumps all of them What the recommendation actually rests on result.graph.evidenceChain(decisionId) — the only sanctioned way to ask Why the band is not higher decision.gates_failed and decision.caps_applied , both printed What it cost and whether it was stopped result.spent (agent calls / retrievals / tokens) and result.attempts Whether an agent was allowed to phrase something with a model degraded_reason on the agent output; absent means deterministic wording That the behaviour is enforced, not described bun test — 815 tests across 60 files, 30 of them adversarial attacks (16 guard-layer + 14 council-layer) The same record drives the UI. The browser build is a pure renderer over RunResult : no screen recomputes a number, because a figure computed twice is a figure that can disagree with itself. Screen What it is for --- --- 01 Command Center The last run's…",
+   "text": "Everything each agent did is inspectable, not hidden behind a chat log. bun run scripts/demo-run.ts # the whole investigation, printed What you want to see Where it is --- --- Which agent ran, in what order, how long, how many findings result.log — one PhaseLogEntry per phase, printed as the agents line Everything one agent produced, including what it was unsure about result.outputs.<agent — findings , uncertainties , reasoning_status , cost Who created any given node every node carries created_by , and result.graph.toJSON() dumps all of them What the recommendation actually rests on result.graph.evidenceChain(decisionId) — the only sanctioned way to ask Why the band is not higher decision.gates_failed and decision.caps_applied , both printed What it cost and whether it was stopped result.spent (agent calls / retrievals / tokens) and result.attempts Whether an agent was allowed to phrase something with a model degraded_reason on the agent output; absent means deterministic wording That the behaviour is enforced, not described bun test — 863 declared cases across the current test files, 30 adversarial attacks (16 guard-layer + 14 council-layer); native passing status is not claimed when Bun is unavailable The same record drives the UI. The browser build is a pure renderer over RunResult : no screen recomputes a number, because a figure computed twice is a figure that can disagre…",
    "updated_at": null,
    "facets": {},
    "truncated": true,
    "bytes": 1411,
-   "sha256": "2d3c30494440092bc2a19987064d2a080d7be781c54f10a9654f2b802638c111"
+   "sha256": "cce435c79e62975c92e47a603fa80b3a0ec28a2b71dbbf917e3c43ee71b89340"
   },
   {
    "id": "KN-DOC-README-06",
@@ -990,12 +990,12 @@
    "path": "README.md",
    "ref": "Run it",
    "title": "README · Run it",
-   "text": "bun install bun run scripts/demo-run.ts # the full investigation, no key, no network bun run dev # the fourteen screens at /risk-swarm/ bun test # 815 tests, 60 files ./node_modules/.bin/tsc -b --noEmit # typecheck bun run snapshot:check # verify snapshots against their recorded hashes Requires [bun](https://bun.sh). There is no backend and no database: the engine is framework-free TypeScript with zod as the single source of truth for every node shape.",
+   "text": "bun install bun run scripts/demo-run.ts # the full investigation, no key, no network bun run dev # the fourteen screens at /risk-swarm/ bun test # 863 declared cases; run in a Bun-enabled environment ./node_modules/.bin/tsc -b --noEmit # typecheck bun run snapshot:check # verify snapshots against their recorded hashes Requires [bun](https://bun.sh). There is no backend and no database: the engine is framework-free TypeScript with zod as the single source of truth for every node shape.",
    "updated_at": null,
    "facets": {},
    "truncated": false,
-   "bytes": 456,
-   "sha256": "5808248b88ed5d78e7bc897cdc7d1d4aa04f311eb63c92cd034ab8ab2bbbc812"
+   "bytes": 489,
+   "sha256": "92932996d9a839b0eaf0da07acea4199dc3198c9bf86efd8c9d5f56ab7329344"
   },
   {
    "id": "KN-DOC-README-14",
