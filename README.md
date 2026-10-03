@@ -301,11 +301,14 @@ deliberation budgets exhausted individually, and a narration asked to move the b
 
 The agents do not browse. They read **pinned, hash-verified snapshots** (3 sources, 4 files) of my own
 repositories, so a run is reproducible and provenance is checkable. A fourth repo is the export target.
+The figures in this table describe the pinned snapshot synced on **2026-09-12**, not a live pull of
+the current upstream repositories. See `public/snapshots/provenance.json` for the upstream commits
+and hashes.
 
 | Source | What it provides | Verified counts |
 |---|---|---|
 | [FOMO](https://github.com/Jeevan-0508/FOMO) | The signal feed SCOUT retrieves from | 874 signals |
-| [freight-risk-atlas](https://github.com/Jeevan-0508/freight-risk-atlas) / [freight-fraud-taxonomy](https://github.com/Jeevan-0508/freight-fraud-taxonomy) | The RISK ANALYST's pattern base | 12 patterns, 77 indicators, 31 documented false positives, 137 countermeasures |
+| [freight-risk-atlas](https://github.com/Jeevan-0508/freight-risk-atlas) / [freight-fraud-taxonomy](https://github.com/Jeevan-0508/freight-fraud-taxonomy) | The RISK ANALYST's pattern base | pinned snapshot: 12 patterns, 77 indicators, 31 documented false positives, 137 countermeasures |
 | [ai-governance-control-room](https://github.com/Jeevan-0508/ai-governance-control-room) | The GOVERNANCE OFFICER's frameworks | 4 frameworks, 56 requirements, 29 controls |
 | [risk-os](https://github.com/Jeevan-0508/risk-os) | Export sink — a decision leaves as an import-shaped risk candidate | no snapshot needed |
 

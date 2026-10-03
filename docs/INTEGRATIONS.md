@@ -46,9 +46,10 @@ interface PatternMatcher {
   regulatoryHooks(id: string): RegulatoryHook[];
 }
 ```
-Real upstream model: 12 patterns, 8 categories, 77 indicators (`phase`, `signal`, `observable_in`,
-`weight`, `notes`), 31 `false_positives` (`looks_like` / `actually` / `how_to_rule_out`), 137
-countermeasures, `regulatory_hooks`, `related`.
+Pinned model snapshot synced 2026-09-12 from upstream commit `fc1a66d`: 12 patterns, 8 categories,
+77 indicators (`phase`, `signal`, `observable_in`, `weight`, `notes`), 31 `false_positives`
+(`looks_like` / `actually` / `how_to_rule_out`), 137 countermeasures, `regulatory_hooks`, `related`.
+These counts are snapshot facts, not a live upstream claim.
 
 Invariants asserted in tests: coverage % is recomputed independently; `Unknown` never counts as
 `Absent`; a match with ungated false positives can never reach `ESCALATE`; recommended actions are

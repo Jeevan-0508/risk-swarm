@@ -18,7 +18,7 @@ Updated after every slice. Read this first, then `git log --oneline`.
 | Untrusted-input boundary, injection flags, source identity | `src/core/ingest/sanitize.ts` | 11 |
 | Deterministic clustering, possible-duplicate reporting, recurrence buckets | `src/core/intel/cluster.ts` | 13 |
 | FOMO adapter (874 real signals, category distrust, aggregator handling) | `src/core/integrations/fomo.ts` | 15 |
-| Atlas adapter (12 patterns / 77 indicators / 31 gates, coverage maths) | `src/core/integrations/atlas.ts` | 10 |
+| Atlas adapter (pinned 2026-09-12 snapshot: 12 patterns / 77 indicators / 31 gates, coverage maths) | `src/core/integrations/atlas.ts` | 10 |
 | Control Room adapter (4 frameworks / 56 requirements, citation gate) | `src/core/integrations/governance.ts` | 8 |
 | RISK//OS export sink (import-shaped candidate risk) | `src/core/integrations/riskos.ts` | via decision tests |
 | Scoring: ten factors, disagreement index, hard caps, action ladder | `src/core/scoring/score.ts` | 18 |

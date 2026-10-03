@@ -2,8 +2,10 @@
 
 > "Where AI agents disagree before humans decide."
 
-Status: **proposal, pre-implementation** (per development process step 1–10). No application code
-has been written yet. Nothing in the four existing portfolio repos is modified or copied.
+Status: **implemented and deployed**. This document preserves the original design rationale; the
+current implementation is in `src/core`, `src/app`, and `src/council`, with CI and GitHub Pages
+deployment in `.github/workflows/`. The browser demo is a static TypeScript application over
+deterministic or explicitly provider-backed paths; it is not a live backend service.
 
 ## 1. What this system is
 
@@ -20,7 +22,7 @@ evidence"** — and that conclusion is produced by deterministic code, not by a 
 | Repo | Role in RISK//SWARM | Real content found |
 |---|---|---|
 | `FOMO` | SCOUT signal source | `data/signals.json` — **874 signals**, 32 scan runs, fields `category,title,link,source,pub_date,severity,found_at`, 6 categories |
-| `freight-fraud-taxonomy` | RISK ANALYST pattern base | 12 patterns, 8 categories, **77 phase-tagged weighted indicators**, 31 `false_positives` blocks (`looks_like/actually/how_to_rule_out`), 137 countermeasures, `regulatory_hooks`, `related` |
+| `freight-fraud-taxonomy` | RISK ANALYST pattern base | pinned 2026-09-12 snapshot: 12 patterns, 8 categories, **77 phase-tagged weighted indicators**, 31 `false_positives` blocks (`looks_like/actually/how_to_rule_out`), 137 countermeasures, `regulatory_hooks`, `related` |
 | `freight-risk-atlas` | RISK ANALYST scoring discipline | coverage-not-probability assessment model, false-positive gates, stage filtering |
 | `ai-governance-control-room` | GOVERNANCE OFFICER source | 4 frameworks / **56 requirements** with `citation`,`url`,`ref`,`applies`; 29 controls, 84 evidence artefacts |
 | `riskos` | Decision / register sink + UI precedent | React 18 + TS + Vite + Tailwind + zustand + recharts + vitest, 325 tests, reusable `src/ui` primitives, seeded `lib/random.ts` |
@@ -81,7 +83,7 @@ gives the rejection message that the red team prints.
         |               |
         +-------+-------+
                 |
-          RISK ANALYST  <- taxonomy: 12 patterns / 77 indicators / 31 FP gates
+          RISK ANALYST  <- pinned 2026-09-12 snapshot: 12 patterns / 77 indicators / 31 FP gates
                 |
         GOVERNANCE OFFICER <- control room: 56 cited requirements / 29 controls
                 |
