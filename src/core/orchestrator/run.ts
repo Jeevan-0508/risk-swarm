@@ -33,6 +33,7 @@ import { freightPack } from '../packs/registry';
 import { packSummary, type KnowledgePack } from '../packs/types';
 import { decideParticipation, type ParticipationDecision } from './participation';
 import { emptyCost } from '../agents/types';
+import type { SpecialistRun } from '../specialists/execution';
 
 /** Defects in how the investigation was built. Re-running the chain can actually fix these. */
 const REWORKABLE: ReadonlySet<RedTeamClass> = new Set<RedTeamClass>(['hallucination', 'unsupported_claim', 'circular_reasoning', 'duplicate_evidence']);
@@ -110,6 +111,8 @@ export interface RunResult {
   pack: { id: string; label: string; summary: string };
   /** Who was asked to speak and why. An agent may be present and abstaining. */
   participation: ParticipationDecision[];
+  /** Optional post-analysis specialist results. The deterministic spine remains valid when empty. */
+  specialists: SpecialistRun[];
   analysis_status: 'COMPLETE';
   publication: PublicationStatus;
 }
@@ -367,6 +370,7 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
     deliberation,
     pack: { id: pack.id, label: pack.label, summary: packSummary(pack) },
     participation,
+    specialists: [],
     analysis_status: 'COMPLETE',
     publication,
   };

@@ -140,6 +140,14 @@ describe('run persistence', () => {
     expect(missing).toEqual([]);
   });
 
+  it('keeps a Phase-1 stored run readable when the optional specialists collection is absent', async () => {
+    const record = serializeRun(await run(), ENVELOPE) as Record<string, unknown>;
+    delete record.specialists;
+    const back = deserializeRun(record);
+    expect(back).not.toBeNull();
+    expect(back?.result.specialists).toEqual([]);
+  });
+
   it('drops a corrupt row from web storage without taking the good ones with it', async () => {
     const r = await run();
     const storage = new FakeStorage();

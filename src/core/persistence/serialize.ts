@@ -44,6 +44,8 @@ const StoredRunSchema = z.object({
    */
   pack: z.object({ id: z.string().min(1), label: z.string().min(1), summary: z.string() }),
   participation: z.array(z.object({ agent: z.string().min(1), participating: z.boolean(), reason: z.string().min(1) })),
+  /** Optional post-analysis specialist records. Default keeps Phase-1 records readable. */
+  specialists: z.array(z.unknown()).default([]),
   publication: z.object({
     analysis_status: z.literal('COMPLETE'),
     publishability: z.enum(['PUBLISHABLE', 'BLOCKED', 'UNAVAILABLE']),
@@ -90,6 +92,7 @@ export function serializeRun(result: RunResult, envelope: RunEnvelope): StoredRu
     deliberation: result.deliberation as unknown as Record<string, unknown>,
     pack: result.pack,
     participation: result.participation,
+    specialists: result.specialists,
     publication: result.publication,
     request: envelope.request,
     human: envelope.human,
@@ -128,6 +131,7 @@ export function deserializeRun(raw: unknown): RehydratedRun | null {
     deliberation: record.deliberation,
     pack: record.pack,
     participation: record.participation,
+    specialists: record.specialists,
     analysis_status: record.publication.analysis_status,
     publication: record.publication,
   } as unknown as RunResult;
