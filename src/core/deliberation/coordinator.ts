@@ -1,5 +1,6 @@
 /**
- * The Council's deliberation coordinator. Answers one question over an already-completed
+ * DETERMINISTIC_DELIBERATION. This is the post-run transcript coordinator, not the model-backed
+ * MODEL_COUNCIL in `core/council`. It answers one question over an already-completed
  * `RunResult`: what did the seven agents actually ask, challenge, answer and object to, said
  * explicitly, in order, with every claim pointing at a real node?
  *

@@ -1,5 +1,5 @@
 /**
- * DETERMINISTIC REPLAY. A pure function over a stored transcript, and nothing else.
+ * COUNCIL_REPLAY. Deterministic replay: a pure function over a stored transcript, and nothing else.
  *
  * The hard constraint, from the spec and enforced by `replay.test.ts`: replay may not re-run
  * `investigate()` and may not re-run the coordinator. It has no access to either - this module imports

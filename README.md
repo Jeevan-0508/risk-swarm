@@ -19,7 +19,7 @@
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![tests](https://img.shields.io/badge/tests-863_declared%20%7C%20native%20suite%20not%20verified-64748b?style=for-the-badge)
+![tests](https://img.shields.io/badge/tests-873_declared%20%7C%20Bun_1.3.14_verified-22c55e?style=for-the-badge)
 ![attacks](https://img.shields.io/badge/adversarial_attacks-30-ef4444?style=for-the-badge)
 ![Pages](https://img.shields.io/badge/GitHub%20Pages-LIVE-22c55e?style=for-the-badge&logo=github)
 ![MIT](https://img.shields.io/badge/Licence-MIT-38bdf8?style=for-the-badge)
@@ -103,7 +103,7 @@ bun run scripts/demo-run.ts     # the whole investigation, printed
 | Why the band is not higher | `decision.gates_failed` and `decision.caps_applied`, both printed |
 | What it cost and whether it was stopped | `result.spent` (agent calls / retrievals / tokens) and `result.attempts` |
 | Whether an agent was allowed to phrase something with a model | `degraded_reason` on the agent output; absent means deterministic wording |
-| That the behaviour is enforced, not described | `bun test` — 863 declared cases across the current test files, 30 adversarial attacks (16 guard-layer + 14 council-layer); native passing status is not claimed when Bun is unavailable |
+| That the behaviour is enforced, not described | `bun test` — 873 declared cases across the current test files, 30 adversarial test cases (16 guard-layer + 14 council-layer); verified with Bun 1.3.14 |
 
 The same record drives the UI. The browser build is a **pure renderer** over `RunResult`: no screen
 recomputes a number, because a figure computed twice is a figure that can disagree with itself.

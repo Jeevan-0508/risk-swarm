@@ -1,5 +1,7 @@
 /**
- * System-1 / System-2 evolution — shared contract (SYSTEM-1 directive §5, §6, §20).
+ * QUARANTINED EXPERIMENTAL SYSTEM-1 / SYSTEM-2 compatibility contract.
+ * This architecture is not imported by the normal application entrypoint or freight orchestrator;
+ * it remains testable in isolation until a future phase assigns it a production owner.
  *
  * Laya and Jev are typed-decision models: they return a stance from a fixed candidate set plus a
  * confidence, never generated prose. This is a different shape from `core/reasoner/types.ts`'s

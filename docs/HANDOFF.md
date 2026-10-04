@@ -32,7 +32,7 @@ Updated after every slice. Read this first, then `git log --oneline`.
 | Versioned run persistence; a record that fails validation is dropped | `src/core/persistence/serialize.ts` | 6 |
 | Learning loop: outcome -> tighten-only lesson -> ledger with expiry | `src/core/learning/lessons.ts` | 10 |
 | LIVE sources: feed parsing, content hashing, operator-configured registry | `src/core/sources/*` | 11 |
-| Adversarial suite: 15 attacks on the guards | `src/core/adversarial/attacks.test.ts` | 16 |
+| Adversarial suite: 15 named guard attacks (16 test cases) | `src/core/adversarial/attacks.test.ts` | 16 |
 | Ten screens, pure renderer over `RunResult` | `src/app/**` | covered by the engine suites |
 | CI (typecheck, snapshot hashes, tests, build) and Pages deploy | `.github/workflows/*.yml` | — |
 
