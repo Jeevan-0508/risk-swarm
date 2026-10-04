@@ -127,6 +127,34 @@ describe('provider failure is reported, never fabricated', () => {
     expect(out.status).toBe('search_failed');
     if (out.status !== 'search_failed') return;
     expect(out.reason).toContain('HTTP 503');
+    expect(out.execution_status).toBe('FAILED');
+  });
+
+  it('retries one transient 429/5xx response, then preserves the real terminal status', async () => {
+    let calls = 0;
+    const out = await wikipediaProvider().search(failing((async () => {
+      calls += 1;
+      return calls === 1
+        ? new Response('busy', { status: 429 })
+        : new Response(JSON.stringify({ query: { search: [{ title: 'Recovered', snippet: 'a result', timestamp: '2026-09-01T00:00:00Z' }] } }), { status: 200 });
+    }) as unknown as typeof fetch));
+    expect(calls).toBe(2);
+    expect(out.status).toBe('ok');
+    if (out.status !== 'ok') return;
+    expect(out.execution_status).toBe('ANSWERED');
+    expect(out.documents[0].title).toBe('Recovered');
+  });
+
+  it('does not retry beyond the bounded budget when a server stays unavailable', async () => {
+    let calls = 0;
+    const out = await wikipediaProvider().search(failing((async () => {
+      calls += 1;
+      return new Response('still busy', { status: 503 });
+    }) as unknown as typeof fetch));
+    expect(calls).toBe(2);
+    expect(out.status).toBe('search_failed');
+    if (out.status !== 'search_failed') return;
+    expect(out.execution_status).toBe('FAILED');
   });
 
   it('reports SEARCH_FAILED when the body is not JSON', async () => {

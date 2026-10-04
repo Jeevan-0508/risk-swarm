@@ -15,7 +15,7 @@
  * freshness.
  */
 import { sanitiseText } from '../../ingest/sanitize';
-import type { ProviderOutcome, ProviderRequest, ResearchDocument, ResearchProvider } from './types';
+import type { ProviderOutcome, ProviderExecutionStatus, ProviderRequest, ResearchDocument, ResearchProvider } from './types';
 import { providerById } from './types';
 
 const EXCERPT = 600;
@@ -36,40 +36,51 @@ const isoOrNull = (v: unknown): string | null => {
   return Number.isNaN(t) ? null : new Date(t).toISOString();
 };
 
-/** One fetch, with a timeout, returning parsed JSON or a typed failure. Never throws at the caller. */
+const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** One fetch, with a timeout and one bounded transient retry, returning parsed JSON or a typed failure. */
 async function getJson(request: ProviderRequest, url: string): Promise<{ ok: true; body: unknown } | { ok: false; outcome: ProviderOutcome }> {
   const target = request.proxy === null ? url : request.proxy(url);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), request.timeoutMs);
-  try {
-    const res = await request.fetchImpl(target, { signal: controller.signal });
-    if (!res.ok) return { ok: false, outcome: { status: 'search_failed', reason: `SEARCH_FAILED: HTTP ${res.status}` } };
-    const text = await res.text();
-    if (text.trim().length === 0) return { ok: false, outcome: { status: 'empty', reason: 'The provider returned an empty body.' } };
+  const maxRetries = Math.max(0, Math.min(1, request.maxRetries ?? 1));
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), request.timeoutMs);
     try {
-      return { ok: true, body: JSON.parse(text) };
-    } catch {
-      return { ok: false, outcome: { status: 'search_failed', reason: 'SEARCH_FAILED: the response was not JSON.' } };
+      const res = await request.fetchImpl(target, { signal: controller.signal });
+      if (!res.ok) {
+        const retryable = res.status === 429 || res.status >= 500;
+        if (retryable && attempt < maxRetries) {
+          await wait(25 * (attempt + 1));
+          continue;
+        }
+        const execution_status: ProviderExecutionStatus = res.status === 429 ? 'RATE_LIMITED' : 'FAILED';
+        return { ok: false, outcome: { status: 'search_failed', execution_status, reason: `SEARCH_FAILED: HTTP ${res.status}` } };
+      }
+      const text = await res.text();
+      if (text.trim().length === 0) return { ok: false, outcome: { status: 'empty', execution_status: 'EMPTY', reason: 'The provider returned an empty body.' } };
+      try {
+        return { ok: true, body: JSON.parse(text) };
+      } catch {
+        return { ok: false, outcome: { status: 'search_failed', execution_status: 'FAILED', reason: 'SEARCH_FAILED: the response was not JSON.' } };
+      }
+    } catch (err) {
+      const aborted = err instanceof Error && err.name === 'AbortError';
+      if (!aborted && attempt < maxRetries) {
+        await wait(25 * (attempt + 1));
+        continue;
+      }
+      return aborted
+        ? { ok: false, outcome: { status: 'search_failed', execution_status: 'TIMED_OUT', reason: `SEARCH_FAILED: the provider did not answer within ${request.timeoutMs}ms.` } }
+        : { ok: false, outcome: { status: 'unavailable', execution_status: 'UNAVAILABLE', reason: 'PROVIDER_UNAVAILABLE: the request could not be made at all, which in a browser usually means the provider sends no CORS header.' } };
+    } finally {
+      clearTimeout(timer);
     }
-  } catch (err) {
-    // Provider errors can echo request headers, so the message is classified rather than interpolated.
-    const aborted = err instanceof Error && err.name === 'AbortError';
-    return {
-      ok: false,
-      outcome: {
-        status: aborted ? 'search_failed' : 'unavailable',
-        reason: aborted
-          ? `SEARCH_FAILED: the provider did not answer within ${request.timeoutMs}ms.`
-          : 'PROVIDER_UNAVAILABLE: the request could not be made at all, which in a browser usually means the provider sends no CORS header.',
-      },
-    };
-  } finally {
-    clearTimeout(timer);
   }
+  return { ok: false, outcome: { status: 'search_failed', execution_status: 'FAILED', reason: 'SEARCH_FAILED: retry budget exhausted.' } };
 }
 
 const ok = (documents: ResearchDocument[], reason: string): ProviderOutcome =>
-  documents.length === 0 ? { status: 'empty', reason } : { status: 'ok', documents };
+  documents.length === 0 ? { status: 'empty', execution_status: 'EMPTY', reason } : { status: 'ok', execution_status: 'ANSWERED', documents };
 
 const base = (request: ProviderRequest, provider: ResearchDocument['provider']) => ({
   provider,
@@ -266,6 +277,7 @@ export const worldbankProvider = (): ResearchProvider => ({
     if (indicator === undefined) {
       return {
         status: 'empty',
+        execution_status: 'EMPTY',
         reason:
           `No World Bank series matches this query. This provider can only reach ${WORLDBANK_INDICATORS.length} declared ` +
           'indicators, so a rate or percentage cannot be evidenced here rather than being estimated.',
@@ -349,6 +361,7 @@ export const newsProvider = (): ResearchProvider => ({
     if (request.proxy === null) {
       return {
         status: 'unavailable',
+        execution_status: 'UNAVAILABLE',
         reason:
           'PROVIDER_UNAVAILABLE: news search is blocked by CORS from a browser and the reader proxy is off. ' +
           'Enable the proxy to use it, accepting that a third party then sits between this run and every document.',
@@ -364,10 +377,10 @@ export const newsProvider = (): ResearchProvider => ({
     let body: string;
     try {
       const res = await request.fetchImpl(target, { signal: controller.signal });
-      if (!res.ok) return { status: 'search_failed', reason: `SEARCH_FAILED: the proxy answered HTTP ${res.status}.` };
+      if (!res.ok) return { status: 'search_failed', execution_status: res.status === 429 ? 'RATE_LIMITED' : 'FAILED', reason: `SEARCH_FAILED: the proxy answered HTTP ${res.status}.` };
       body = await res.text();
     } catch {
-      return { status: 'search_failed', reason: 'SEARCH_FAILED: the proxied news request could not be completed.' };
+      return { status: 'search_failed', execution_status: 'FAILED', reason: 'SEARCH_FAILED: the proxied news request could not be completed.' };
     } finally {
       clearTimeout(timer);
     }

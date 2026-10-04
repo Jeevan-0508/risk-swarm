@@ -81,7 +81,7 @@ describe('one research pass, composed', () => {
         return { status: 'empty', reason: 'nothing' };
       },
     };
-    await research({ question: QUESTION, proxyEnabled: true }, deps({ providers: [spy], proxy: (u) => `https://proxy/${u}` }));
+    await research({ question: QUESTION, proxyEnabled: true, proxyProviders: ['wikipedia'] }, deps({ providers: [spy], proxy: (u) => `https://proxy/${u}` }));
     expect(sawProxy).toBe('https://proxy/https://x/y');
   });
 

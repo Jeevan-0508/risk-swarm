@@ -119,7 +119,7 @@ const DOMAIN_HINTS: Array<[string, string[]]> = [
 
 /** Geographies the router can name from question text. Extended by a knowledge package, never required. */
 const GEO_HINTS: Array<[string, string[]]> = [
-  ['DE', ['germany', 'german', 'deutschland', 'berlin', 'munich', 'hamburg']],
+  ['DE', ['de', 'germany', 'german', 'deutschland', 'berlin', 'munich', 'hamburg']],
   ['AT', ['austria', 'austrian', 'vienna']],
   ['CH', ['switzerland', 'swiss', 'zurich']],
   ['NL', ['netherlands', 'dutch', 'rotterdam', 'amsterdam']],
@@ -129,7 +129,7 @@ const GEO_HINTS: Array<[string, string[]]> = [
   ['US', ['united states', 'u.s.', 'usa', 'america', 'american']],
   ['IN', ['india', 'indian', 'delhi', 'mumbai', 'hyderabad']],
   ['CN', ['china', 'chinese', 'beijing', 'shanghai']],
-  ['EU', ['european union', 'eu-wide', 'europe', 'european', 'brussels']],
+  ['EU', ['eu', 'european union', 'eu-wide', 'europe', 'european', 'brussels']],
 ];
 
 const DEEP_MARKERS = ['comprehensive', 'in depth', 'in-depth', 'thorough', 'deep dive', 'fully', 'everything about', 'exhaustive'];
@@ -186,9 +186,22 @@ export function entitiesOf(question: string): QuestionEntity[] {
   return out;
 }
 
+function containsTerm(hay: string, term: string): boolean {
+  const needle = term.toLowerCase();
+  let from = 0;
+  while (true) {
+    const at = hay.indexOf(needle, from);
+    if (at < 0) return false;
+    const before = at === 0 ? ' ' : hay[at - 1];
+    const after = at + needle.length >= hay.length ? ' ' : hay[at + needle.length];
+    if (!/[\p{L}\p{N}]/u.test(before) && !/[\p{L}\p{N}]/u.test(after)) return true;
+    from = at + needle.length;
+  }
+}
+
 function matchHints(hay: string, rules: Array<[string, string[]]>): Array<{ key: string; hits: number }> {
   return rules
-    .map(([key, terms]) => ({ key, hits: terms.reduce((n, t) => (hay.includes(t) ? n + 1 : n), 0) }))
+    .map(([key, terms]) => ({ key, hits: terms.reduce((n, t) => (containsTerm(hay, t) ? n + 1 : n), 0) }))
     .filter((r) => r.hits > 0)
     .sort((a, b) => b.hits - a.hits || a.key.localeCompare(b.key));
 }

@@ -21,12 +21,14 @@ import { routeQuestion, type QuestionModel } from '../question/model';
 import { executeResearch, type ResearchEvent, type ResearchExecution } from './execute';
 import { mergeNormalization, normalizeExternal, normalizeInternal, type NormalizationReport } from './normalize';
 import { planResearch, type ResearchPlan } from './plan';
-import type { ResearchProvider } from './providers/types';
+import type { ProviderId, ResearchProvider } from './providers/types';
 
 export interface ResearchInput {
   question: string;
   /** Off by default everywhere. Turning it on inserts a third party into the evidence chain. */
   proxyEnabled: boolean;
+  /** Explicit allow-list for optional proxy use. Proxy-only providers remain enabled automatically. */
+  proxyProviders?: ProviderId[];
   /** Lowers the depth-derived call budget. Never raises it. */
   maxProviderCalls?: number;
 }
@@ -92,6 +94,7 @@ export async function research(
     // A provider must not reach for a proxy the operator did not enable, so this is null unless both the
     // switch is on and a builder was supplied.
     proxy: input.proxyEnabled ? (deps.proxy ?? null) : null,
+    proxyProviderIds: input.proxyEnabled ? (input.proxyProviders ?? ['news_rss']) : [],
     timeoutMs: deps.timeoutMs,
     onEvent,
     clock: deps.clock,

@@ -131,6 +131,21 @@ describe('question decomposition', () => {
   });
 });
 
+describe('named geography extraction', () => {
+  it('recognises explicit EU and European Union geography without broad abbreviation matches', () => {
+    expect(routeQuestion('What are the risks in the EU?').geo).toContain('EU');
+    expect(routeQuestion('What changed in the European Union?').geo).toContain('EU');
+    expect(routeQuestion('What is the value of a neuron?').geo).not.toContain('EU');
+  });
+
+  it('recognises Germany, DE, German market and Europe', () => {
+    expect(routeQuestion('What changed in Germany?').geo).toContain('DE');
+    expect(routeQuestion('What changed in DE?').geo).toContain('DE');
+    expect(routeQuestion('What changed in the German market?').geo).toContain('DE');
+    expect(routeQuestion('What changed across Europe?').geo).toContain('EU');
+  });
+});
+
 describe('a which-X-has-superlative-A-or-B comparison', () => {
   const LIVE = 'which planet has largest diameter in solarsyatem mercury or jupiter?';
 

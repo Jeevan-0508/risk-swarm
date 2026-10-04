@@ -171,11 +171,20 @@ export interface ResearchDocument {
   via_proxy: boolean;
 }
 
+export type ProviderExecutionStatus = 'ANSWERED' | 'EMPTY' | 'UNAVAILABLE' | 'FAILED' | 'RATE_LIMITED' | 'TIMED_OUT';
+
 export type ProviderOutcome =
-  | { status: 'ok'; documents: ResearchDocument[] }
-  | { status: 'empty'; reason: string }
-  | { status: 'search_failed'; reason: string }
-  | { status: 'unavailable'; reason: string };
+  | { status: 'ok'; documents: ResearchDocument[]; execution_status?: 'ANSWERED' }
+  | { status: 'empty'; reason: string; execution_status?: 'EMPTY' }
+  | { status: 'search_failed'; reason: string; execution_status?: 'FAILED' | 'RATE_LIMITED' | 'TIMED_OUT' }
+  | { status: 'unavailable'; reason: string; execution_status?: 'UNAVAILABLE' };
+
+export function providerExecutionStatus(outcome: ProviderOutcome): ProviderExecutionStatus {
+  if (outcome.execution_status !== undefined) return outcome.execution_status;
+  if (outcome.status === 'ok') return 'ANSWERED';
+  if (outcome.status === 'empty') return 'EMPTY';
+  return outcome.status === 'unavailable' ? 'UNAVAILABLE' : 'FAILED';
+}
 
 export interface ProviderRequest {
   query: string;
@@ -187,6 +196,8 @@ export interface ProviderRequest {
   proxy: ((url: string) => string) | null;
   fetchImpl: typeof fetch;
   timeoutMs: number;
+  /** One retry maximum by default, only for transient transport/server responses. */
+  maxRetries?: number;
 }
 
 export interface ResearchProvider {

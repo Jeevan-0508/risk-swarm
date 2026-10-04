@@ -46,6 +46,15 @@ export interface ResearchBudget {
 }
 
 export interface ResearchPlan {
+  /** The user's exact input, retained beside the normalized retrieval seed. */
+  original_question: string;
+  /** Normalized only for retrieval spelling/punctuation; never used to replace the original input. */
+  normalized_question: string;
+  intent: QuestionModel['intent'];
+  domain: string;
+  geography: string[];
+  entities: QuestionModel['entities'];
+  keywords: string[];
   question: QuestionModel;
   dimensions: ResearchDimension[];
   internal: {
@@ -140,6 +149,15 @@ const INTENT_SHAPES: Record<QuestionModel['intent'], string[]> = {
  */
 const COMPARISON_FILLER = new Set(['which', 'has', 'have', 'is', 'are', ...COMPARATIVE_WORDS]);
 
+/** Words that describe the request shape rather than the subject being retrieved. */
+const QUESTION_FILLER = new Set(['what', 'is', 'are', 'does', 'do', 'did', 'evidence', 'exists', 'main', 'please', 'tell', 'me']);
+
+/** Preserve the question's semantic words, including a named geography, instead of replacing them with one entity. */
+export function retrievalSeed(question: QuestionModel): string {
+  const words = question.keywords.filter((word) => !QUESTION_FILLER.has(word.toLowerCase()));
+  return words.slice(0, 10).join(' ');
+}
+
 /** The words a comparison is actually about, once both sides and the comparative itself are removed. */
 function comparisonTopic(question: QuestionModel, sides: [string, string]): string[] {
   const sideWords = new Set(`${sides[0]} ${sides[1]}`.toLowerCase().split(/\s+/).filter((w) => w.length > 0));
@@ -206,7 +224,7 @@ export function planResearch(question: QuestionModel, options: PlanOptions = {})
   const notes: string[] = [...question.notes];
 
   const sides = comparisonSides(question);
-  const subject = subjectOf(question, sides);
+  const subject = sides === null ? retrievalSeed(question) : subjectOf(question, sides);
   const keys = INTENT_SHAPES[question.intent];
   // Only used without a named entity to anchor on: when one exists (e.g. "GDPR vs the EU AI Act"),
   // `subject` already carries both sides via `entitiesOf`, and repeating the topic fragment here would
@@ -267,6 +285,13 @@ export function planResearch(question: QuestionModel, options: PlanOptions = {})
   }
 
   return {
+    original_question: question.query,
+    normalized_question: normalizeQueryText(question.query),
+    intent: question.intent,
+    domain: question.domain,
+    geography: question.geo,
+    entities: question.entities,
+    keywords: question.keywords,
     question,
     dimensions,
     internal: {

@@ -11,14 +11,14 @@
  * the dimension that was cut, so a short result set can never be mistaken for a thorough one.
  */
 import type { ResearchPlan } from './plan';
-import type { ProviderId, ResearchDocument, ResearchProvider } from './providers/types';
+import { providerExecutionStatus, type ProviderExecutionStatus, type ProviderId, ResearchDocument, type ResearchProvider } from './providers/types';
 
 export type ResearchEvent =
   | { kind: 'plan_started'; queries: number; providers: ProviderId[] }
   | { kind: 'query_issued'; dimension: string; provider: ProviderId; query: string }
   | { kind: 'provider_answered'; dimension: string; provider: ProviderId; returned: number }
   | { kind: 'provider_empty'; dimension: string; provider: ProviderId; reason: string }
-  | { kind: 'provider_failed'; dimension: string; provider: ProviderId; status: 'search_failed' | 'unavailable'; reason: string }
+  | { kind: 'provider_failed'; dimension: string; provider: ProviderId; status: ProviderExecutionStatus; reason: string }
   | { kind: 'document_retained'; provider: ProviderId; title: string; source_identity: string }
   | { kind: 'duplicate_dropped'; kept: string; dropped: string; reason: string }
   | { kind: 'limit_reached'; limit: string }
@@ -29,6 +29,7 @@ export interface Attempt {
   provider: ProviderId;
   query: string;
   status: 'ok' | 'empty' | 'search_failed' | 'unavailable' | 'skipped_budget';
+  provider_status: ProviderExecutionStatus | 'SKIPPED';
   reason: string | null;
   returned: number;
   retained: number;
@@ -67,6 +68,8 @@ export interface ResearchExecution {
     providers_empty: number;
     providers_failed: number;
     providers_unavailable: number;
+    providers_rate_limited: number;
+    providers_timed_out: number;
     dated_documents: number;
     undated_documents: number;
   };
@@ -83,6 +86,8 @@ export interface ExecuteDeps {
   now: string;
   /** Set only when the operator turned the reader proxy on. */
   proxy?: ((url: string) => string) | null;
+  /** Explicit provider allow-list for optional proxying; required-proxy providers are always eligible. */
+  proxyProviderIds?: readonly ProviderId[];
   timeoutMs?: number;
   onEvent?: (event: ResearchEvent) => void;
   /** Injected so the elapsed measurement is testable. Defaults to the real clock. */
@@ -126,7 +131,7 @@ export async function executeResearch(plan: ResearchPlan, deps: ExecuteDeps): Pr
     for (const query of dimension.queries) {
       for (const providerId of dimension.providers) {
         if (limit_reached !== null) {
-          attempts.push({ dimension: dimension.key, provider: providerId, query, status: 'skipped_budget', reason: limit_reached, returned: 0, retained: 0, ms: 0 });
+          attempts.push({ dimension: dimension.key, provider: providerId, query, status: 'skipped_budget', provider_status: 'SKIPPED', reason: limit_reached, returned: 0, retained: 0, ms: 0 });
           continue;
         }
         if (queries >= plan.budget.max_provider_calls) {
@@ -142,7 +147,7 @@ export async function executeResearch(plan: ResearchPlan, deps: ExecuteDeps): Pr
 
         const provider = byId.get(providerId);
         if (provider === undefined) {
-          attempts.push({ dimension: dimension.key, provider: providerId, query, status: 'unavailable', reason: 'PROVIDER_UNAVAILABLE: not registered in this build.', returned: 0, retained: 0, ms: 0 });
+          attempts.push({ dimension: dimension.key, provider: providerId, query, status: 'unavailable', provider_status: 'UNAVAILABLE', reason: 'PROVIDER_UNAVAILABLE: not registered in this build.', returned: 0, retained: 0, ms: 0 });
           continue;
         }
 
@@ -154,16 +159,18 @@ export async function executeResearch(plan: ResearchPlan, deps: ExecuteDeps): Pr
           now: deps.now,
           limit: plan.budget.max_results_per_query,
           geo: plan.question.geo,
-          proxy: provider.descriptor.requires_proxy || proxy !== null ? proxy : null,
+          proxy: provider.descriptor.requires_proxy || deps.proxyProviderIds?.includes(providerId) === true ? proxy : null,
           fetchImpl: deps.fetchImpl,
           timeoutMs: deps.timeoutMs ?? 12_000,
+          maxRetries: 1,
         });
         const ms = clock() - t0;
 
         if (outcome.status !== 'ok') {
-          attempts.push({ dimension: dimension.key, provider: providerId, query, status: outcome.status, reason: outcome.reason, returned: 0, retained: 0, ms });
+          const provider_status = providerExecutionStatus(outcome);
+          attempts.push({ dimension: dimension.key, provider: providerId, query, status: outcome.status, provider_status, reason: outcome.reason, returned: 0, retained: 0, ms });
           if (outcome.status === 'empty') emit({ kind: 'provider_empty', dimension: dimension.key, provider: providerId, reason: outcome.reason });
-          else emit({ kind: 'provider_failed', dimension: dimension.key, provider: providerId, status: outcome.status, reason: outcome.reason });
+          else emit({ kind: 'provider_failed', dimension: dimension.key, provider: providerId, status: provider_status, reason: outcome.reason });
           continue;
         }
 
@@ -196,7 +203,7 @@ export async function executeResearch(plan: ResearchPlan, deps: ExecuteDeps): Pr
           retained += 1;
           emit({ kind: 'document_retained', provider: providerId, title: doc.title, source_identity: doc.source_identity });
         }
-        attempts.push({ dimension: dimension.key, provider: providerId, query, status: 'ok', reason: null, returned: outcome.documents.length, retained, ms });
+        attempts.push({ dimension: dimension.key, provider: providerId, query, status: 'ok', provider_status: 'ANSWERED', reason: null, returned: outcome.documents.length, retained, ms });
         if (limit_reached !== null) continue outer;
       }
     }
@@ -212,6 +219,8 @@ export async function executeResearch(plan: ResearchPlan, deps: ExecuteDeps): Pr
   const failed = attempts.filter((a) => a.status === 'search_failed').length;
   const unavailable = attempts.filter((a) => a.status === 'unavailable').length;
   const empty = attempts.filter((a) => a.status === 'empty').length;
+  const rate_limited = attempts.filter((a) => a.provider_status === 'RATE_LIMITED').length;
+  const timed_out = attempts.filter((a) => a.provider_status === 'TIMED_OUT').length;
 
   const status: ResearchExecution['status'] =
     limit_reached !== null ? 'limit_reached' : answered === 0 && attempts.length > 0 ? 'search_failed' : failed + unavailable > 0 ? 'partial' : 'ok';
@@ -243,7 +252,9 @@ export async function executeResearch(plan: ResearchPlan, deps: ExecuteDeps): Pr
       providers_ok: answered,
       providers_empty: empty,
       providers_failed: failed,
-      providers_unavailable: unavailable,
+    providers_unavailable: unavailable,
+    providers_rate_limited: rate_limited,
+    providers_timed_out: timed_out,
       dated_documents: documents.length - undated,
       undated_documents: undated,
     },

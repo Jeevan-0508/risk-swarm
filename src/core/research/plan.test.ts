@@ -14,6 +14,16 @@ describe('the research planner', () => {
     }
   });
 
+  it('keeps the complete subject seed for the freight-fraud question instead of reducing it to Germany', () => {
+    const p = plan('What evidence exists for phantom-carrier fraud in Germany?');
+    expect(p.original_question).toBe('What evidence exists for phantom-carrier fraud in Germany?');
+    expect(p.normalized_question).toContain('phantom-carrier');
+    const queries = p.dimensions.flatMap((d) => d.queries).join(' ').toLowerCase();
+    expect(queries).toContain('phantom-carrier');
+    expect(queries).toContain('fraud');
+    expect(queries).toContain('germany');
+  });
+
   it('is deterministic', () => {
     const q = 'What changed recently in EU AI regulation?';
     expect(JSON.stringify(plan(q))).toBe(JSON.stringify(plan(q)));
