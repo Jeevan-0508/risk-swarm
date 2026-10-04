@@ -233,6 +233,7 @@ describe('the knowledge pack and the seats it stands down', () => {
       question: 'What is the current state of quantum error correction?',
       scope: { geo: ['DE'], mode: ['road'], from: '2024-09-01T00:00:00.000Z', to: '2026-09-01T00:00:00.000Z' },
       pack: openPack(),
+      routeOverride: 'freight',
     });
     const down = open.participation.filter((d) => !d.participating);
     expect(down.length > 0).toBe(true);

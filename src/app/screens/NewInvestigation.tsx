@@ -145,7 +145,7 @@ export function NewInvestigation() {
   const pack = useMemo(() => packById(packId), [packId]);
   const seats = useMemo(() => decideParticipation(routed, pack), [routed, pack]);
   const standDown = seats.filter((d) => !d.participating);
-  const routeDecision = useMemo(() => routeToPipeline(pack), [pack]);
+  const routeDecision = useMemo(() => routeToPipeline(routed, pack, { explicitPackOverride: packOverride !== null }), [routed, pack, packOverride]);
 
   const toggle = (key: 'geo' | 'mode', value: string) =>
     setForm((f) => ({ ...f, [key]: f[key].includes(value) ? f[key].filter((v) => v !== value) : [...f[key], value] }));
@@ -162,7 +162,7 @@ export function NewInvestigation() {
       navigate(`/research?q=${encodeURIComponent(question)}`);
       return;
     }
-    const input: StartInput = { ...form, pack_id: packId, from: iso(fromDate), to: iso(toDate) };
+    const input: StartInput = { ...form, pack_id: packId, pack_override: packOverride !== null, from: iso(fromDate), to: iso(toDate) };
     navigate('/console');
     const id = await start(input);
     select(id);

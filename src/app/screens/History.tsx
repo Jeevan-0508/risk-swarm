@@ -14,14 +14,14 @@ const VERDICT_TONE: Record<string, Tone> = { accepted: 'support', overridden: 'c
 
 export function History() {
   const { runs, activeId, select, discard, discardAll } = useSession();
-  const withResult = runs.filter((r) => r.result !== null);
+  const withResult = runs.filter((r) => r.result !== null && r.result.publication.publishability === 'PUBLISHABLE');
   const ruled = withResult.filter((r) => r.human !== null);
 
   return (
     <Screen>
       <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
         <Metric label="runs held" value={runs.length} />
-        <Metric label="published" value={withResult.length} sub="reached a recommendation" />
+        <Metric label="publishable" value={withResult.length} sub="assessment passed its publication gate" />
         <Metric label="ruled on by a human" value={ruled.length} tone={ruled.length > 0 ? 'support' : 'caution'}
           sub={ruled.length === 0 ? 'nothing here has been decided yet' : 'verdict recorded beside the recommendation'} />
         <Metric label="storage" value={historyIsDurable ? 'browser' : 'session'} mono={false}
@@ -40,6 +40,7 @@ export function History() {
                     <Tag>{r.mode}</Tag>
                     <Tag tone={STATUS_TONE[r.status] ?? 'neutral'}>{r.status}</Tag>
                     {d !== null && <Tag tone={BAND_TONE[d.action_band] ?? 'neutral'}>{d.action_band.replace(/_/g, ' ')}</Tag>}
+                    {r.result !== null && <Tag tone={r.result.publication.publishability === 'PUBLISHABLE' ? 'support' : 'block'}>{r.result.publication.publishability}</Tag>}
                     {d !== null && <Tag tone={SEVERITY_TONE[d.severity_band] ?? 'neutral'}>{d.severity_band} {d.severity_score.toFixed(3)}</Tag>}
                     {d !== null && <Tag tone={d.confidence === null ? 'block' : 'support'}>{d.confidence === null ? 'confidence withheld' : `confidence ${d.confidence.toFixed(2)}`}</Tag>}
                     {r.human !== null && <Tag tone={VERDICT_TONE[r.human.verdict] ?? 'neutral'}>human {r.human.verdict} → {r.human.band}</Tag>}

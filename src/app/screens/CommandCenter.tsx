@@ -50,9 +50,9 @@ export function CommandCenter() {
           <Metric label="red team" value={result ? result.outputs.red_team.verdict.replace(/_/g, ' ') : '—'}
             tone={result?.outputs.red_team.verdict === 'fail' ? 'block' : result ? 'caution' : 'neutral'}
             sub={result ? `${blocking} blocking finding(s) · ${result.outputs.red_team.checks_run} checks run` : 'no run yet'} />
-          <Metric label="risk exposure" value={decision ? decision.action_band.replace(/_/g, ' ') : '—'}
-            tone={decision ? BAND_TONE[decision.action_band] : 'neutral'}
-            sub={decision ? `severity ${decision.severity_band}` : 'run an investigation'} />
+          <Metric label="risk exposure" value={decision ? result?.publication.publishability === 'BLOCKED' ? 'blocked' : decision.action_band.replace(/_/g, ' ') : '—'}
+            tone={decision ? result?.publication.publishability === 'BLOCKED' ? 'block' : BAND_TONE[decision.action_band] : 'neutral'}
+            sub={decision ? `${result?.publication.publishability ?? 'UNAVAILABLE'} · severity ${decision.severity_band}` : 'run an investigation'} />
         </div>
       </Panel>
 
@@ -114,7 +114,7 @@ export function CommandCenter() {
                         </td>
                         <td className="num whitespace-nowrap px-4 py-2.5 text-xs">{r.result ? r.result.graph.all().filter((n) => n.kind === 'evidence').length : '—'}</td>
                         <td className="whitespace-nowrap px-4 py-2.5">
-                          {d ? <Tag tone={BAND_TONE[d.action_band]}>{d.action_band.replace(/_/g, ' ')}</Tag> : <span className="text-fg-mute">—</span>}
+                          {d ? <Tag tone={r.result?.publication.publishability === 'BLOCKED' ? 'block' : BAND_TONE[d.action_band]}>{r.result?.publication.publishability === 'BLOCKED' ? 'BLOCKED' : d.action_band.replace(/_/g, ' ')}</Tag> : <span className="text-fg-mute">—</span>}
                         </td>
                         <td className="num whitespace-nowrap px-4 py-2.5 text-2xs text-fg-mute">{new Date(r.created_at).toISOString().slice(0, 16).replace('T', ' ')}</td>
                       </tr>
@@ -165,7 +165,7 @@ export function CommandCenter() {
             </div>
             <div className="hair-l pl-6">
               <div className="label">recommendation</div>
-              <div className={`mt-1 text-2xl font-light ${decision.confidence === null ? 'text-caution' : ''}`}>{decision.action_band.replace(/_/g, ' ')}</div>
+              <div className={`mt-1 text-2xl font-light ${decision.confidence === null ? 'text-caution' : ''}`}>{result!.publication.publishability === 'BLOCKED' ? 'blocked' : decision.action_band.replace(/_/g, ' ')}</div>
               <div className="mt-4 space-y-1.5 text-xs text-fg-dim">
                 <div>urgency <span className="num text-fg">{decision.urgency}</span></div>
                 <div>owner <span className="text-fg">{decision.owner_role}</span></div>

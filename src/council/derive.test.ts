@@ -176,7 +176,7 @@ describe('seat standing, over real participation records', () => {
   });
 
   it('marks the seats an open pack really stands down - not a fixture\'s idea of one', async () => {
-    const open = await investigate({ ...OPTIONS, run_id: 'RUN-COUNCIL-UI-OPEN', pack: openPack() });
+    const open = await investigate({ ...OPTIONS, run_id: 'RUN-COUNCIL-UI-OPEN', pack: openPack(), routeOverride: 'freight' });
     const standing = seatStanding(open.participation);
     const down = COUNCIL_ORDER.filter((id) => standing[id] !== undefined && !standing[id].participating);
     expect(down.length > 0).toBe(true);

@@ -28,6 +28,7 @@ import { runSentinel, type SentinelReport } from '../sentinel/sentinel';
 import { runPulse, type PulseReport } from '../pulse/pulse';
 import { runDeliberation, type DeliberationReport } from '../deliberation/coordinator';
 import { routeQuestion } from '../question/model';
+import { routeToPipeline } from './route';
 import { freightPack } from '../packs/registry';
 import { packSummary, type KnowledgePack } from '../packs/types';
 import { decideParticipation, type ParticipationDecision } from './participation';
@@ -58,6 +59,8 @@ export interface InvestigateOptions {
    * caller expects, so loading a different pack is an explicit act rather than a silent change.
    */
   pack?: KnowledgePack;
+  /** Explicit low-level override for diagnostic callers that intentionally run a non-taxonomy pack through freight stages. */
+  routeOverride?: 'freight';
   /**
    * Called as each phase completes, with the entry that was just recorded. Awaited, so a UI can pace
    * the reveal on real completions instead of animating a fake progress bar.
@@ -107,12 +110,33 @@ export interface RunResult {
   pack: { id: string; label: string; summary: string };
   /** Who was asked to speak and why. An agent may be present and abstaining. */
   participation: ParticipationDecision[];
+  analysis_status: 'COMPLETE';
+  publication: PublicationStatus;
+}
+
+export type Publishability = 'PUBLISHABLE' | 'BLOCKED' | 'UNAVAILABLE';
+export interface PublicationStatus {
+  analysis_status: 'COMPLETE';
+  publishability: Publishability;
+  publication_blockers: string[];
+}
+
+export class InvestigationRoutingError extends Error {
+  constructor(readonly route: 'research', readonly reason: string) {
+    super(`INVESTIGATION_ROUTING_REQUIRED: ${reason}`);
+    this.name = 'InvestigationRoutingError';
+  }
 }
 
 /** Exported so ORBIT's false-positive-wave scenario can inject signals in the same category this run treats as benign, rather than guessing a string. */
 export const BENIGN_CATEGORY = 'insolven';
 
 export async function investigate(options: InvestigateOptions): Promise<RunResult> {
+  const pack = options.pack ?? freightPack();
+  const question = routeQuestion(options.question);
+  const pipeline = routeToPipeline(question, pack, { forceFreight: options.routeOverride === 'freight' });
+  if (pipeline.route !== 'investigation') throw new InvestigationRoutingError(pipeline.route, pipeline.reason);
+
   const harness: Harness = createHarness({
     loader: options.loader,
     run_id: options.run_id,
@@ -122,10 +146,8 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
     budget: options.budget,
   });
   const { ctx } = harness;
-  const pack = options.pack ?? freightPack();
   // The routed question decides participation. It does not decide what any agent concludes: routing is
   // a statement about which agents have something to work from, never about what the answer is.
-  const question = routeQuestion(options.question);
   const participation = decideParticipation(question, pack);
   const speaks = (agent: ParticipationDecision['agent']) => participation.some((d) => d.agent === agent && d.participating);
   const reasonFor = (agent: ParticipationDecision['agent']) => participation.find((d) => d.agent === agent)?.reason ?? 'No participation decision was recorded.';
@@ -283,6 +305,7 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
       agent: a.agent,
       reasoning_status: a.reasoning_status,
       confidence: a.confidence,
+      execution_status: a.execution?.status,
     })),
     cluster_count: intelligence.clusters.length,
     possible_duplicate_pairs: intelligence.possible_duplicate_pairs.length,
@@ -326,6 +349,8 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
     retrieval: scout.retrieval,
   });
 
+  const publication = publicationStatus(red_team, sentinel);
+
   return {
     run_id: options.run_id,
     question: options.question,
@@ -342,6 +367,24 @@ export async function investigate(options: InvestigateOptions): Promise<RunResul
     deliberation,
     pack: { id: pack.id, label: pack.label, summary: packSummary(pack) },
     participation,
+    analysis_status: 'COMPLETE',
+    publication,
+  };
+}
+
+function publicationStatus(redTeam: RedTeamOutput, sentinel: SentinelReport): PublicationStatus {
+  const blockers = [
+    ...redTeam.findings
+      .filter((finding) => finding.severity === 'blocking' && finding.resolution === 'open')
+      .map((finding) => `RED_TEAM: ${finding.id} ${finding.finding_class}: ${finding.argument}`),
+    ...sentinel.checks
+      .filter((check) => check.status === 'BLOCKED')
+      .map((check) => `SENTINEL: ${check.key}: ${check.detail}`),
+  ];
+  return {
+    analysis_status: 'COMPLETE',
+    publishability: blockers.length > 0 ? 'BLOCKED' : 'PUBLISHABLE',
+    publication_blockers: blockers,
   };
 }
 

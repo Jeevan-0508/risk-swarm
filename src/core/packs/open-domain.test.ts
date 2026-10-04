@@ -25,6 +25,7 @@ async function openRun() {
       now: '2026-09-13T00:00:00.000Z',
       question: QUESTION,
       pack: packById(advice.pack_id),
+      routeOverride: 'freight',
       scope: { geo: [], mode: [], from: '2024-09-01T00:00:00.000Z', to: '2026-09-01T00:00:00.000Z' },
     }),
   };

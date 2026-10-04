@@ -42,6 +42,8 @@ export interface StartInput {
    * always overridable: the operator, not the router, decides what expertise is applied.
    */
   pack_id: string;
+  /** True only when the operator deliberately selected a pack instead of following recommendation. */
+  pack_override?: boolean;
   /** Optional. An empty list means no geographic filter, not "match nothing" - see `fomo.ts`'s filter. */
   geo: string[];
   /** Optional, and meaningless outside a pack whose `supports.mode_analysis` is true. */
@@ -106,6 +108,7 @@ export function runOptions(
     // the freight pack - that was the only pack the engine defaulted to. Reading it as anything else
     // would relabel history, so the historical default is named here rather than re-recommended.
     pack: packById(input.pack_id ?? 'freight-risk'),
+    routeOverride: input.pack_override === true ? 'freight' : undefined,
     scope: { geo: input.geo, mode: input.mode, from: input.from, to: input.to },
     limit: input.limit,
     budget: input.budget,

@@ -341,6 +341,7 @@ describe('attack 15 - a run pushed past its budget to finish the story', () => {
         scope: { geo: ['DE'], mode: ['road'], from: '2024-09-01T00:00:00.000Z', to: '2026-09-01T00:00:00.000Z' },
         signals: hostileSource(Array.from({ length: 30 }, (_, i) => signal(i + 1, { publisher: `P${i}`, url: `https://p${i}.example/a` }))),
         budget: { retrieval: 3 },
+        routeOverride: 'freight',
       });
     } catch (e) {
       failed = true;

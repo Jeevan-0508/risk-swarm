@@ -1,6 +1,6 @@
 import { describe, expect, it } from '../test/bdd';
 import { createFileLoader } from '../integrations/loader.node';
-import { investigate } from './run';
+import { investigate, InvestigationRoutingError } from './run';
 import { BudgetExceededError } from '../agents/harness';
 import { openPack, freightPack } from '../packs/registry';
 
@@ -61,6 +61,14 @@ describe('a full investigation over the pinned snapshots', () => {
     expect(r.rework_history).toEqual([]);
   });
 
+  it('marks the completed assessment blocked for publication when open blocking findings remain', async () => {
+    const r = await run();
+    expect(r.analysis_status).toBe('COMPLETE');
+    expect(r.publication.publishability).toBe('BLOCKED');
+    expect(r.publication.publication_blockers.length).toBeGreaterThan(0);
+    expect(r.publication.publication_blockers.some((blocker) => blocker.startsWith('RED_TEAM:'))).toBe(true);
+  });
+
   it('is byte-for-byte reproducible with no network and no key', async () => {
     const a = await run();
     const b = await run();
@@ -69,7 +77,7 @@ describe('a full investigation over the pinned snapshots', () => {
   });
 
   it('is byte-for-byte reproducible under an open pack too - parameterizing the engine cost no determinism', async () => {
-    const open = () => investigate({ ...OPTIONS, run_id: 'RUN-T-OPEN', pack: openPack() });
+    const open = () => investigate({ ...OPTIONS, run_id: 'RUN-T-OPEN', pack: openPack(), routeOverride: 'freight' });
     const a = await open();
     const b = await open();
     expect(JSON.stringify(b.graph.toJSON())).toBe(JSON.stringify(a.graph.toJSON()));
@@ -79,7 +87,7 @@ describe('a full investigation over the pinned snapshots', () => {
   });
 
   it('does not let one run\'s pack leak into the next, which is what a shared registry object would do', async () => {
-    await investigate({ ...OPTIONS, run_id: 'RUN-T-OPEN-2', pack: openPack() });
+    await investigate({ ...OPTIONS, run_id: 'RUN-T-OPEN-2', pack: openPack(), routeOverride: 'freight' });
     const back = await run();
     expect(back.pack.id).toBe(freightPack().id);
     expect(back.participation.every((d) => d.participating)).toBe(true);
@@ -117,6 +125,11 @@ describe('a full investigation over the pinned snapshots', () => {
 });
 
 describe('the knowledge pack a run loads decides what its agents can do, not what they conclude', () => {
+  it('rejects a direct open-pack invocation instead of silently entering freight retrieval', async () => {
+    await expect(investigate({ ...OPTIONS, question: 'What is the largest planet in the solar system?', pack: openPack() }))
+      .rejects.toBeInstanceOf(InvestigationRoutingError);
+  });
+
   it('defaults to the freight pack, so every existing caller sees the same run it always saw', async () => {
     const r = await run();
     expect(r.pack.id).toBe('freight-risk');
@@ -128,6 +141,7 @@ describe('the knowledge pack a run loads decides what its agents can do, not wha
       ...OPTIONS,
       question: 'What is the mass of the black hole at the centre of the Milky Way?',
       pack: openPack(),
+      routeOverride: 'freight',
     });
     expect(r.pack.id).toBe('open');
     expect(r.outputs.analyst.reasoning_status).toBe('abstained');
@@ -142,17 +156,17 @@ describe('the knowledge pack a run loads decides what its agents can do, not wha
 
   it('retains signals the freight floor would have excluded, when the open pack sets no floor at all', async () => {
     const freight = await run();
-    const open = await investigate({ ...OPTIONS, pack: openPack() });
+    const open = await investigate({ ...OPTIONS, pack: openPack(), routeOverride: 'freight' });
     expect(open.outputs.scout.findings.length).toBeGreaterThanOrEqual(freight.outputs.scout.findings.length);
   });
 
   it('reads the benign baseline from the pack, and shares a category count of zero when the pack names no baseline', async () => {
-    const r = await investigate({ ...OPTIONS, pack: openPack() });
+    const r = await investigate({ ...OPTIONS, pack: openPack(), routeOverride: 'freight' });
     expect(r.benign_category_share).toBe(0);
   });
 
   it('keeps the graph acyclic and every citation resolvable even when two agents abstained', async () => {
-    const r = await investigate({ ...OPTIONS, question: 'Explain quantum computing.', pack: openPack() });
+    const r = await investigate({ ...OPTIONS, question: 'Explain quantum computing.', pack: openPack(), routeOverride: 'freight' });
     expect(r.graph.cycles()).toEqual([]);
     const blocked = r.sentinel.checks.filter((c) => c.status === 'BLOCKED');
     expect(blocked).toEqual([]);

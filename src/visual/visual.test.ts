@@ -201,7 +201,7 @@ describe('agent stations report what a seat really did', () => {
   });
 
   it('separates STOOD_DOWN from IDLE over a real open-pack run - the two are not the same fact', async () => {
-    const open = await investigate({ ...OPTIONS, run_id: 'RUN-VISUAL-OPEN', pack: openPack() });
+    const open = await investigate({ ...OPTIONS, run_id: 'RUN-VISUAL-OPEN', pack: openPack(), routeOverride: 'freight' });
     const seats = stations({
       events: open.deliberation.events,
       cursor: open.deliberation.events.length - 1,

@@ -49,9 +49,16 @@ export function DecisionBrief() {
 
   return (
     <Screen>
-      <Panel title="recommendation" aside={<Tag tone={BAND_TONE[d.action_band] ?? 'neutral'}>{d.action_band.replace(/_/g, ' ')}</Tag>}>
+      <Panel title="assessment result" aside={<div className="flex flex-wrap gap-2"><Tag tone={BAND_TONE[d.action_band] ?? 'neutral'}>{d.action_band.replace(/_/g, ' ')}</Tag><Tag tone={result.publication.publishability === 'PUBLISHABLE' ? 'support' : 'block'}>{result.publication.publishability}</Tag></div>}>
         <h2 className="text-2xl font-light leading-snug tracking-tight text-fg">{d.headline_risk}</h2>
         <p className="mt-2 text-sm leading-relaxed text-fg-mute">{result.question}</p>
+        {result.publication.publishability === 'BLOCKED' && (
+          <div className="mt-4 border-l border-block/60 pl-3 text-sm leading-relaxed text-fg-dim">
+            <p className="font-medium text-block">Assessment complete; publication blocked.</p>
+            <p className="mt-1">The decision remains available as a forensic trust record, but it is not an approved published outcome.</p>
+            <ul className="mt-2 space-y-1 text-xs">{result.publication.publication_blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}</ul>
+          </div>
+        )}
         <div className="mt-6 grid grid-cols-2 gap-6 md:grid-cols-4">
           <Metric label="severity" value={d.severity_band} tone={SEVERITY_TONE[d.severity_band] ?? 'neutral'} sub={d.severity_score.toFixed(3)} mono={false} />
           <Metric label="confidence" value={d.confidence === null ? 'withheld' : d.confidence.toFixed(2)}
