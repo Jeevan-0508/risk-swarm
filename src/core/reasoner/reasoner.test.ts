@@ -93,6 +93,15 @@ describe('llm reasoner', () => {
     expect(out.degraded).toBe(false);
     expect(out.value.statement).toBe('Rephrased risk statement');
     expect(out.est_tokens).toBeGreaterThan(0);
+    expect(out.execution).toEqual({
+      model_called: true,
+      provider: 'openai-compatible',
+      model_id: 'test-model',
+      status: 'SUCCESS',
+      degraded: false,
+      degraded_reason: null,
+      independent: true,
+    });
   });
 
   it('falls back rather than failing when no key is configured', async () => {
@@ -101,6 +110,9 @@ describe('llm reasoner', () => {
     expect(out.degraded).toBe(true);
     expect(out.degraded_reason).toBe('no api key configured');
     expect(out.value.statement).toContain('carrier substitution');
+    expect(out.execution?.status).toBe('DISABLED');
+    expect(out.execution?.model_called).toBe(false);
+    expect(out.execution?.independent).toBe(false);
   });
 
   it('falls back on malformed JSON and on prose', async () => {

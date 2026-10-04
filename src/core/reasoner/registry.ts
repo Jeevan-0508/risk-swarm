@@ -92,7 +92,7 @@ export function reasonerFor(assignment: ModelAssignment, deps: RegistryDeps): Re
   if (assignment.provider === 'google') {
     return createGeminiReasoner({ model: assignment.model, getApiKey, fetchImpl: deps.fetchImpl, maxOutputTokens: deps.maxOutputTokens });
   }
-  return createLlmReasoner({ endpoint: PROVIDER_ENDPOINT[assignment.provider], model: assignment.model, getApiKey, fetchImpl: deps.fetchImpl, maxOutputTokens: deps.maxOutputTokens });
+  return createLlmReasoner({ provider: assignment.provider, endpoint: PROVIDER_ENDPOINT[assignment.provider], model: assignment.model, getApiKey, fetchImpl: deps.fetchImpl, maxOutputTokens: deps.maxOutputTokens });
 }
 
 export function createOlympianReasoners(config: RegistryConfig, deps: RegistryDeps): Record<OlympianAgent, Reasoner> {

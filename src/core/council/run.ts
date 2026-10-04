@@ -1,5 +1,5 @@
 /**
- * EVOLUTION 6.0 — Council orchestration. Exactly four model calls maximum per question
+ * MODEL_COUNCIL. EVOLUTION 6.0 — model-backed Council orchestration. Exactly four model calls maximum per question
  * (`MAX_OLYMPIAN_CALLS`): three independent positions, issued in parallel so none can see another's
  * answer, then one Zeus verdict over the structured result. No debate rounds yet — that is Phase 2.
  *
@@ -56,7 +56,7 @@ export async function runCouncil(
   for (const [i, agent] of REASONING_AGENTS.entries()) {
     const result = settled[i]!;
     positionsForDeliberation[agent] = result;
-    positions[agent] = { position: result.value, provider: result.provider, degraded: result.degraded, degraded_reason: result.degraded_reason, ms: result.ms, est_tokens: result.est_tokens };
+    positions[agent] = { position: result.value, provider: result.provider, degraded: result.degraded, degraded_reason: result.degraded_reason, ms: result.ms, est_tokens: result.est_tokens, execution: result.execution };
     // Elapsed time only means something for a real network call - a deterministic fallback resolves
     // in under a millisecond and printing "0.0s" next to it would read as a measurement, not a fact.
     const wasNetworkCall = result.provider !== 'deterministic';
@@ -95,7 +95,7 @@ export async function runCouncil(
     question,
     positions,
     disagreement,
-    verdict: { verdict: zeus.value, provider: zeus.provider, degraded: zeus.degraded, degraded_reason: zeus.degraded_reason },
+    verdict: { verdict: zeus.value, provider: zeus.provider, degraded: zeus.degraded, degraded_reason: zeus.degraded_reason, execution: zeus.execution },
     trace,
     model_diversity: modelDiversity(config, deps),
   };

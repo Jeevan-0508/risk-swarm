@@ -23,7 +23,8 @@ export const NO_INDEPENDENT_POSITIONS_MESSAGE = 'No independent LLM positions av
  * and so never left this machine. Two deterministic fallbacks that happen to agree are not a consensus —
  * they are the same non-LLM code path run twice, and must not be counted or narrated as independent.
  */
-const isIndependentPosition = (r: ReasonResult<OlympianPosition>): boolean => !r.degraded && r.provider !== 'deterministic';
+const isIndependentPosition = (r: ReasonResult<OlympianPosition>): boolean =>
+  r.execution !== undefined ? r.execution.independent && r.execution.status === 'SUCCESS' : !r.degraded && r.provider !== 'deterministic';
 
 const clamp01 = (n: number): number => (Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0);
 const stdev = (xs: number[]): number => {

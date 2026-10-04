@@ -5,6 +5,7 @@
  * short, displayable string, never a private scratchpad.
  */
 import type { OlympianAgent } from '../reasoner/registry';
+import type { ModelExecution } from '../reasoner/types';
 
 export type ReasoningAgent = Exclude<OlympianAgent, 'ZEUS'>;
 export const REASONING_AGENTS: ReasoningAgent[] = ['ATHENA', 'ARES', 'HADES'];
@@ -56,9 +57,9 @@ export interface CouncilTraceEvent {
 
 export interface CouncilResult {
   question: string;
-  positions: Record<ReasoningAgent, { position: OlympianPosition; provider: string; degraded: boolean; degraded_reason: string | null; ms: number; est_tokens: number }>;
+  positions: Record<ReasoningAgent, { position: OlympianPosition; provider: string; degraded: boolean; degraded_reason: string | null; ms: number; est_tokens: number; execution?: ModelExecution }>;
   disagreement: DisagreementAssessment;
-  verdict: { verdict: CouncilVerdict; provider: string; degraded: boolean; degraded_reason: string | null };
+  verdict: { verdict: CouncilVerdict; provider: string; degraded: boolean; degraded_reason: string | null; execution?: ModelExecution };
   trace: CouncilTraceEvent[];
   model_diversity: { active_agents: number; providers: number; label: string };
 }

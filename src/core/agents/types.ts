@@ -1,6 +1,6 @@
 import type { Minter } from '../domain/build';
 import type { AgentId, ReasoningStatus } from '../domain/model';
-import type { Reasoner } from '../reasoner/types';
+import type { ModelExecution, Reasoner } from '../reasoner/types';
 import type { SignalSource } from '../integrations/fomo';
 import type { PatternMatcher } from '../integrations/atlas';
 import type { RegulatoryMapper } from '../integrations/governance';
@@ -24,6 +24,8 @@ export interface AgentOutput<T> {
   cost: AgentCost;
   /** Set when the model path was asked and degraded, so the UI can show it honestly. */
   degraded_reason?: string | null;
+  /** Present on model-backed role execution; absent on purely deterministic roles. */
+  execution?: ModelExecution;
 }
 
 export interface Tools {

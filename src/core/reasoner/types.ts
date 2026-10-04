@@ -34,6 +34,21 @@ export interface ReasonResult<T> {
   degraded_reason: string | null;
   est_tokens: number;
   ms: number;
+  /** Structured execution truth. Legacy scalar fields remain for compatibility with existing callers. */
+  execution?: ModelExecution;
+}
+
+export type ModelExecutionStatus = 'SUCCESS' | 'DEGRADED' | 'FAILED' | 'DISABLED';
+
+export interface ModelExecution {
+  model_called: boolean;
+  provider: string | null;
+  model_id: string | null;
+  status: ModelExecutionStatus;
+  degraded: boolean;
+  degraded_reason: string | null;
+  /** True only when a real, successful model answer can contribute as an independent position. */
+  independent: boolean;
 }
 
 export interface Reasoner {

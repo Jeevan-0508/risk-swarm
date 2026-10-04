@@ -111,6 +111,7 @@ export async function runAnalyst(ctx: AgentContext, input: AnalystInput): Promis
   // The model, when configured, may only re-word statements the agent already validated. It sees the
   // structured facts as data, never as instructions, and may cite only the evidence listed here.
   let degraded_reason: string | null = null;
+  let execution: AnalystOutput['execution'];
   const superseded: Hypothesis[] = [];
   if (findings.length > 0 && ctx.reasoner.uses_network) {
     const allowed = [...new Set(findings.flatMap((f) => f.supporting_evidence_ids))];
@@ -131,6 +132,7 @@ export async function runAnalyst(ctx: AgentContext, input: AnalystInput): Promis
     });
     ctx.spend('tokens', result.est_tokens);
     degraded_reason = result.degraded ? result.degraded_reason : null;
+    execution = result.execution;
     if (!result.degraded) {
       for (const [i, f] of findings.entries()) {
         superseded.push(f.hypothesis);
@@ -178,6 +180,7 @@ export async function runAnalyst(ctx: AgentContext, input: AnalystInput): Promis
         : `Rule out ${findings[0]!.gates.length} documented false positive(s) for ${findings[0]!.match.pattern_name} with operational data (${STATUS_NOTE[findings[0]!.hypothesis.status]}).`,
     cost: { ...emptyCost(), calls: 1, ms: Date.now() - started },
     degraded_reason,
+    execution,
     superseded,
     patterns_considered: meta.pattern_count,
     unknown_indicator_share,

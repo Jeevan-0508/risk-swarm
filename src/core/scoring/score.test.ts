@@ -189,6 +189,20 @@ describe('disagreement index', () => {
     expect(blocking.value).toBeGreaterThan(material.value);
   });
 
+  it('does not turn abstained or degraded positions into confidence variance', () => {
+    const base = input({ agent_positions: [{ agent: 'analyst', reasoning_status: 'supported', confidence: 0.8 }] });
+    const clean = computeDisagreementIndex(base).terms.find((t) => t.key === 'confidence_variance')!;
+    const noisy = computeDisagreementIndex({
+      ...base,
+      agent_positions: [
+        ...base.agent_positions,
+        { agent: 'abstained', reasoning_status: 'abstained', confidence: 0 },
+        { agent: 'failed-model', reasoning_status: 'supported', confidence: 0, execution_status: 'DEGRADED' },
+      ],
+    }).terms.find((t) => t.key === 'confidence_variance')!;
+    expect(noisy.normalised).toBe(clean.normalised);
+  });
+
   it('ignores objections that were rebutted', () => {
     const r = computeDisagreementIndex(input({ challenges: [{ severity: 'blocking', resolution: 'rebutted' }] }));
     expect(r.terms.find((t) => t.key === 'unresolved_objections')?.normalised).toBe(0);

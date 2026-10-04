@@ -33,7 +33,13 @@ export interface ScoringInput {
   newest_evidence_at: string | null;
   now: string;
   regulatory_deadline_days: number | null;
-  agent_positions: Array<{ agent: string; reasoning_status: ReasoningStatus; confidence: number }>;
+  agent_positions: Array<{
+    agent: string;
+    reasoning_status: ReasoningStatus;
+    confidence: number;
+    /** Model execution state when a role used a reasoner. Degraded/disabled positions are excluded. */
+    execution_status?: 'SUCCESS' | 'DEGRADED' | 'FAILED' | 'DISABLED';
+  }>;
   challenges: Array<{ severity: FindingSeverity; resolution: 'open' | 'accepted' | 'rebutted' }>;
   red_team: Array<{ severity: FindingSeverity; resolution: 'open' | 'accepted' | 'rebutted'; finding_class: string }>;
   evidence_conflicts: number;
@@ -117,12 +123,13 @@ export function computeDisagreementIndex(input: ScoringInput): DisagreementIndex
   const openObjections = [...input.challenges, ...input.red_team].filter((o) => o.resolution === 'open');
   const conflicting = openObjections.filter((o) => o.severity !== 'note').length;
   const unresolvedWeight = openObjections.reduce((n, o) => n + objectionWeight(o.severity), 0);
-  const variance = stdev(input.agent_positions.map((p) => p.confidence));
+  const substantive = input.agent_positions.filter((p) => p.reasoning_status !== 'abstained' && p.execution_status !== 'DEGRADED' && p.execution_status !== 'FAILED' && p.execution_status !== 'DISABLED');
+  const variance = stdev(substantive.map((p) => p.confidence));
 
   const terms = [
     { key: 'conflicting_findings', weight: 30, normalised: clamp01(conflicting / 4), explanation: `${conflicting} open material or blocking findings / 4` },
     { key: 'evidence_conflicts', weight: 25, normalised: clamp01(input.evidence_conflicts / 3), explanation: `${input.evidence_conflicts} evidence conflicts / 3` },
-    { key: 'confidence_variance', weight: 25, normalised: clamp01(variance / 0.35), explanation: `stdev of ${input.agent_positions.length} agent confidences = ${round(variance)} / 0.35` },
+    { key: 'confidence_variance', weight: 25, normalised: clamp01(variance / 0.35), explanation: `stdev of ${substantive.length} substantive role confidences = ${round(variance)} / 0.35` },
     { key: 'unresolved_objections', weight: 20, normalised: clamp01(unresolvedWeight / 4), explanation: `weighted open objections ${unresolvedWeight} / 4 (blocking counts double)` },
   ].map((t) => ({ ...t, contribution: round(t.weight * t.normalised, 2) }));
 
@@ -172,8 +179,9 @@ export function computeScore(input: ScoringInput): ScoreResult {
   );
 
   // ---- factors 8 and 9: agreement and disagreement
-  const supporting = input.agent_positions.filter((p) => p.reasoning_status === 'supported' || p.reasoning_status === 'partially_supported').length;
-  const agent_agreement = input.agent_positions.length === 0 ? 0 : clamp01(supporting / input.agent_positions.length);
+  const substantive = input.agent_positions.filter((p) => p.reasoning_status !== 'abstained' && p.execution_status !== 'DEGRADED' && p.execution_status !== 'FAILED' && p.execution_status !== 'DISABLED');
+  const supporting = substantive.filter((p) => p.reasoning_status === 'supported' || p.reasoning_status === 'partially_supported').length;
+  const agent_agreement = substantive.length === 0 ? 0 : clamp01(supporting / substantive.length);
   const disagreement_index = computeDisagreementIndex(input);
   const agent_disagreement = clamp01(disagreement_index.value / 100);
 
@@ -228,7 +236,7 @@ export function computeScore(input: ScoringInput): ScoreResult {
       key: 'agent_agreement',
       label: 'Agent agreement',
       value: round(agent_agreement),
-      explanation: `${supporting} of ${input.agent_positions.length} agent position(s) support the lead hypothesis; agreement never raises confidence on its own`,
+      explanation: `${supporting} of ${substantive.length} substantive role position(s) support the lead hypothesis; abstentions and degraded executions do not count`,
     },
     agent_disagreement: {
       key: 'agent_disagreement',

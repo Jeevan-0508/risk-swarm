@@ -14,7 +14,15 @@ export function createDeterministicReasoner(): Reasoner {
       const raw = req.fallback();
       const value = req.validate(raw);
       assertNoFabricatedCitations(value, req.allowed_evidence_ids);
-      return { value, provider: 'deterministic', degraded: false, degraded_reason: null, est_tokens: 0, ms: Date.now() - started };
+      return {
+        value,
+        provider: 'deterministic',
+        degraded: false,
+        degraded_reason: null,
+        est_tokens: 0,
+        ms: Date.now() - started,
+        execution: { model_called: false, provider: null, model_id: null, status: 'DISABLED', degraded: false, degraded_reason: null, independent: false },
+      };
     },
   };
 }

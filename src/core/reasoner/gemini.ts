@@ -1,4 +1,4 @@
-import { assertNoFabricatedCitations, type ReasonRequest, type ReasonResult, type Reasoner } from './types';
+import { assertNoFabricatedCitations, type ModelExecution, type ReasonRequest, type ReasonResult, type Reasoner } from './types';
 import { buildPrompt, DEFAULT_REASONER_TIMEOUT_MS, estimateTokens, extractJson, sanitizeProviderMessage } from './shared';
 
 /**
@@ -37,17 +37,18 @@ export function createGeminiReasoner(options: GeminiReasonerOptions): Reasoner {
     async propose<T>(req: ReasonRequest<T>): Promise<ReasonResult<T>> {
       const started = Date.now();
       const fallback = (): T => req.validate(req.fallback());
-      const degrade = (reason: string, est_tokens = 0): ReasonResult<T> => ({
+      const degrade = (reason: string, est_tokens = 0, status: ModelExecution['status'] = 'DEGRADED', model_called = true): ReasonResult<T> => ({
         value: fallback(),
         provider: this.id,
         degraded: true,
         degraded_reason: reason,
         est_tokens,
         ms: Date.now() - started,
+        execution: { model_called, provider: 'google', model_id: options.model, status, degraded: true, degraded_reason: reason, independent: false },
       });
 
       const key = options.getApiKey();
-      if (!key) return degrade('no api key configured');
+      if (!key) return degrade('no api key configured', 0, 'DISABLED', false);
 
       const prompt = buildPrompt(req);
       const est_tokens = estimateTokens(prompt);
@@ -102,7 +103,15 @@ export function createGeminiReasoner(options: GeminiReasonerOptions): Reasoner {
       try {
         const value = req.validate(parsed);
         assertNoFabricatedCitations(value, req.allowed_evidence_ids);
-        return { value, provider: this.id, degraded: false, degraded_reason: null, est_tokens: est_tokens + estimateTokens(text), ms: Date.now() - started };
+        return {
+          value,
+          provider: this.id,
+          degraded: false,
+          degraded_reason: null,
+          est_tokens: est_tokens + estimateTokens(text),
+          ms: Date.now() - started,
+          execution: { model_called: true, provider: 'google', model_id: options.model, status: 'SUCCESS', degraded: false, degraded_reason: null, independent: true },
+        };
       } catch (err) {
         return degrade(err instanceof Error ? err.message : 'output failed validation', est_tokens);
       }

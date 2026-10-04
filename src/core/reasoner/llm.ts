@@ -1,4 +1,4 @@
-import { assertNoFabricatedCitations, type ReasonRequest, type ReasonResult, type Reasoner } from './types';
+import { assertNoFabricatedCitations, type ModelExecution, type ReasonRequest, type ReasonResult, type Reasoner } from './types';
 import { buildPrompt, DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_REASONER_TIMEOUT_MS, estimateTokens, extractJson, sanitizeProviderMessage } from './shared';
 
 /**
@@ -14,6 +14,7 @@ import { buildPrompt, DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_REASONER_TIMEOUT_MS, es
 export interface LlmReasonerOptions {
   endpoint: string;
   model: string;
+  provider?: string;
   getApiKey: () => string | null;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
@@ -79,17 +80,18 @@ export function createLlmReasoner(options: LlmReasonerOptions): Reasoner {
     async propose<T>(req: ReasonRequest<T>): Promise<ReasonResult<T>> {
       const started = Date.now();
       const fallback = (): T => req.validate(req.fallback());
-      const degrade = (reason: string, est_tokens = 0): ReasonResult<T> => ({
+      const degrade = (reason: string, est_tokens = 0, status: ModelExecution['status'] = 'DEGRADED', model_called = true): ReasonResult<T> => ({
         value: fallback(),
         provider: this.id,
         degraded: true,
         degraded_reason: reason,
         est_tokens,
         ms: Date.now() - started,
+        execution: { model_called, provider: options.provider ?? 'openai-compatible', model_id: options.model, status, degraded: true, degraded_reason: reason, independent: false },
       });
 
       const key = options.getApiKey();
-      if (!key) return degrade('no api key configured');
+      if (!key) return degrade('no api key configured', 0, 'DISABLED', false);
 
       const prompt = buildPrompt(req);
       const est_tokens = estimateTokens(prompt);
@@ -142,7 +144,7 @@ export function createLlmReasoner(options: LlmReasonerOptions): Reasoner {
           // production bundle, so this line and everything in it never ships. Only ever the shape of
           // the exchange, never its content: no prompt text, no response body, no reasoning/tool_calls
           // text, no key, no header.
-          if (import.meta.env.DEV) {
+          if (Boolean((import.meta as ImportMeta & { env?: { DEV?: boolean } }).env?.DEV)) {
             console.debug('[llm reasoner] request/response diagnostic', {
               model: options.model,
               max_tokens: options.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
@@ -184,7 +186,7 @@ export function createLlmReasoner(options: LlmReasonerOptions): Reasoner {
         // Phase 1.7a live-debug brief: dev-only, safe-metadata-only. Never the response text itself —
         // only enough shape to tell markdown-fenced/prose-wrapped/schema-echoed/truncated apart without
         // ever printing what the model actually said.
-        if (import.meta.env.DEV) {
+        if (Boolean((import.meta as ImportMeta & { env?: { DEV?: boolean } }).env?.DEV)) {
           console.debug('[llm reasoner] JSON extraction failed', {
             model: options.model,
             finish_reason: finishReasonForDiagnostics,
@@ -200,7 +202,15 @@ export function createLlmReasoner(options: LlmReasonerOptions): Reasoner {
       try {
         const value = req.validate(parsed);
         assertNoFabricatedCitations(value, req.allowed_evidence_ids);
-        return { value, provider: this.id, degraded: false, degraded_reason: null, est_tokens: est_tokens + estimateTokens(text), ms: Date.now() - started };
+        return {
+          value,
+          provider: this.id,
+          degraded: false,
+          degraded_reason: null,
+          est_tokens: est_tokens + estimateTokens(text),
+          ms: Date.now() - started,
+          execution: { model_called: true, provider: options.provider ?? 'openai-compatible', model_id: options.model, status: 'SUCCESS', degraded: false, degraded_reason: null, independent: true },
+        };
       } catch (err) {
         return degrade(err instanceof Error ? err.message : 'output failed validation', est_tokens);
       }
