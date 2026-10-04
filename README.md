@@ -390,7 +390,7 @@ domain boundary, and it is gone.
   network cannot live inside that, so retrieval is its own screen and its own act. Nothing it fetches
   rewrites a stored run.
 - **The system searches itself first.** Screen 12 searches a committed index of this repository's own
-  taxonomy, controls and documentation — 156 records over 13 sources — and prints each hit's path, byte
+  taxonomy, controls and documentation — 185 records over 15 sources — and prints each hit's path, byte
   count and sha256.
 - **The taxonomy has a door with a person behind it.** A research pass may *propose* a category
   (`KnowledgeDelta`); nothing is knowledge until screen 14 validates it and a named human approves it, with
