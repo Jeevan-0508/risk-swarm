@@ -1,4 +1,4 @@
-import { assertNoFabricatedCitations, type ModelExecution, type ReasonRequest, type ReasonResult, type Reasoner } from './types';
+import { assertNoFabricatedCitations, type ModelExecution, type ProviderDiagnostics, type ReasonRequest, type ReasonResult, type Reasoner } from './types';
 import { buildPrompt, DEFAULT_REASONER_TIMEOUT_MS, estimateTokens, extractJson, sanitizeProviderMessage } from './shared';
 
 /**
@@ -26,6 +26,42 @@ export interface GeminiReasonerOptions {
   baseUrl?: string;
 }
 
+type GeminiCandidate = {
+  content?: { parts?: Array<{ text?: string }> };
+  finishReason?: string;
+  safetyRatings?: unknown;
+};
+
+type GeminiBody = {
+  candidates?: GeminiCandidate[];
+  promptFeedback?: { blockReason?: string; safetyRatings?: unknown };
+};
+
+function emptyDiagnostics(): ProviderDiagnostics {
+  return {
+    provider: 'google',
+    http_status: null,
+    http_ok: null,
+    candidate_count: 0,
+    content_present: false,
+    part_count: 0,
+    text_present: false,
+    text_length: 0,
+    finish_reason: null,
+    prompt_blocked: false,
+    safety_metadata_present: false,
+    response_json_parsed: false,
+    model_json_extracted: false,
+    specialist_validation_reached: false,
+    failure_stage: 'REQUEST',
+    failure_reason_code: 'PROVIDER_REQUEST_FAILED',
+  };
+}
+
+function failedDiagnostics(diagnostics: ProviderDiagnostics, failure_stage: ProviderDiagnostics['failure_stage'], failure_reason_code: ProviderDiagnostics['failure_reason_code']): ProviderDiagnostics {
+  return { ...diagnostics, failure_stage, failure_reason_code };
+}
+
 export function createGeminiReasoner(options: GeminiReasonerOptions): Reasoner {
   const fetchImpl = options.fetchImpl ?? fetch;
   const timeoutMs = options.timeoutMs ?? DEFAULT_REASONER_TIMEOUT_MS;
@@ -37,18 +73,19 @@ export function createGeminiReasoner(options: GeminiReasonerOptions): Reasoner {
     async propose<T>(req: ReasonRequest<T>): Promise<ReasonResult<T>> {
       const started = Date.now();
       const fallback = (): T => req.validate(req.fallback());
-      const degrade = (reason: string, est_tokens = 0, status: ModelExecution['status'] = 'DEGRADED', model_called = true): ReasonResult<T> => ({
+      let diagnostics = emptyDiagnostics();
+      const degrade = (reason: string, est_tokens = 0, status: ModelExecution['status'] = 'DEGRADED', model_called = true, observed = diagnostics): ReasonResult<T> => ({
         value: fallback(),
         provider: this.id,
         degraded: true,
         degraded_reason: reason,
         est_tokens,
         ms: Date.now() - started,
-        execution: { model_called, provider: 'google', model_id: options.model, status, degraded: true, degraded_reason: reason, independent: false },
+        execution: { model_called, provider: 'google', model_id: options.model, status, degraded: true, degraded_reason: reason, independent: false, diagnostics: observed },
       });
 
       const key = options.getApiKey();
-      if (!key) return degrade('no api key configured', 0, 'DISABLED', false);
+      if (!key) return degrade('no api key configured', 0, 'DISABLED', false, failedDiagnostics(diagnostics, 'REQUEST', 'PROVIDER_REQUEST_FAILED'));
 
       const prompt = buildPrompt(req);
       const est_tokens = estimateTokens(prompt);
@@ -72,9 +109,57 @@ export function createGeminiReasoner(options: GeminiReasonerOptions): Reasoner {
             }),
             signal: controller.signal,
           });
-          if (!res.ok) return degrade(`provider returned HTTP ${res.status}`, est_tokens);
-          const body = (await res.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-          text = body.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+          diagnostics = { ...diagnostics, http_status: res.status, http_ok: res.ok };
+          if (!res.ok) {
+            diagnostics = failedDiagnostics(diagnostics, 'HTTP', 'PROVIDER_HTTP_ERROR');
+            return degrade(`provider returned HTTP ${res.status}`, est_tokens, 'DEGRADED', true, diagnostics);
+          }
+
+          let body: GeminiBody;
+          try {
+            body = (await res.json()) as GeminiBody;
+          } catch {
+            diagnostics = failedDiagnostics({ ...diagnostics, response_json_parsed: false }, 'RESPONSE_JSON', 'PROVIDER_RESPONSE_JSON_INVALID');
+            return degrade('provider response was not valid JSON', est_tokens, 'DEGRADED', true, diagnostics);
+          }
+
+          const candidates = Array.isArray(body.candidates) ? body.candidates : [];
+          const candidate = candidates[0];
+          const content = candidate?.content;
+          const parts = content && Array.isArray(content.parts) ? content.parts : [];
+          const firstText = parts[0]?.text;
+          diagnostics = {
+            ...diagnostics,
+            candidate_count: candidates.length,
+            content_present: content !== undefined,
+            part_count: parts.length,
+            text_present: typeof firstText === 'string' && firstText.trim().length > 0,
+            text_length: typeof firstText === 'string' ? firstText.length : 0,
+            finish_reason: typeof candidate?.finishReason === 'string' ? candidate.finishReason : null,
+            prompt_blocked: typeof body.promptFeedback?.blockReason === 'string',
+            safety_metadata_present: candidate?.safetyRatings !== undefined || body.promptFeedback?.safetyRatings !== undefined,
+            response_json_parsed: true,
+          };
+
+          if (candidates.length === 0) {
+            diagnostics = failedDiagnostics(diagnostics, 'RESPONSE_STRUCTURE', 'PROVIDER_NO_CANDIDATES');
+            return degrade('provider returned HTTP 200 — no candidates', est_tokens, 'DEGRADED', true, diagnostics);
+          }
+          if (content === undefined) {
+            diagnostics = failedDiagnostics(diagnostics, 'RESPONSE_STRUCTURE', 'PROVIDER_CONTENT_MISSING');
+            return degrade('provider returned HTTP 200 — candidate content missing', est_tokens, 'DEGRADED', true, diagnostics);
+          }
+          if (!Array.isArray(content.parts) || content.parts.length === 0) {
+            diagnostics = failedDiagnostics(diagnostics, 'RESPONSE_STRUCTURE', 'PROVIDER_PARTS_MISSING');
+            return degrade('provider returned HTTP 200 — candidate parts missing', est_tokens, 'DEGRADED', true, diagnostics);
+          }
+          if (typeof firstText !== 'string' || !firstText.trim()) {
+            diagnostics = failedDiagnostics(diagnostics, 'MODEL_TEXT', 'PROVIDER_TEXT_EMPTY');
+            return degrade('provider returned HTTP 200 — candidate text empty', est_tokens, 'DEGRADED', true, diagnostics);
+          }
+          // Preserve the existing first-part extraction contract. Multi-part joining would be a
+          // provider behavior change, so this phase observes part structure without broadening it.
+          text = firstText;
         } finally {
           clearTimeout(timer);
         }
@@ -88,17 +173,21 @@ export function createGeminiReasoner(options: GeminiReasonerOptions): Reasoner {
             : err instanceof Error
               ? `provider request failed — ${sanitizeProviderMessage(err.message)}`
               : 'provider request failed';
-        return degrade(reason, est_tokens);
+        const failure_stage = err instanceof Error && err.name === 'AbortError' ? 'REQUEST' : 'REQUEST';
+        const failure_reason_code = err instanceof Error && err.name === 'AbortError' ? 'PROVIDER_TIMEOUT' : 'PROVIDER_REQUEST_FAILED';
+        diagnostics = failedDiagnostics(diagnostics, failure_stage, failure_reason_code);
+        return degrade(reason, est_tokens, 'DEGRADED', true, diagnostics);
       }
-
-      if (!text.trim()) return degrade('empty response', est_tokens);
 
       let parsed: unknown;
       try {
         parsed = extractJson(text);
       } catch {
-        return degrade('response was not valid JSON', est_tokens);
+        diagnostics = failedDiagnostics({ ...diagnostics, model_json_extracted: false }, 'MODEL_JSON', 'MODEL_JSON_INVALID');
+        return degrade('response was not valid JSON', est_tokens, 'DEGRADED', true, diagnostics);
       }
+
+      diagnostics = { ...diagnostics, model_json_extracted: true, specialist_validation_reached: true };
 
       try {
         const value = req.validate(parsed);
@@ -110,10 +199,11 @@ export function createGeminiReasoner(options: GeminiReasonerOptions): Reasoner {
           degraded_reason: null,
           est_tokens: est_tokens + estimateTokens(text),
           ms: Date.now() - started,
-          execution: { model_called: true, provider: 'google', model_id: options.model, status: 'SUCCESS', degraded: false, degraded_reason: null, independent: true },
+          execution: { model_called: true, provider: 'google', model_id: options.model, status: 'SUCCESS', degraded: false, degraded_reason: null, independent: true, diagnostics: { ...diagnostics, failure_stage: 'NONE', failure_reason_code: 'NONE' } },
         };
       } catch (err) {
-        return degrade(err instanceof Error ? err.message : 'output failed validation', est_tokens);
+        diagnostics = failedDiagnostics(diagnostics, 'SPECIALIST_VALIDATION', 'SPECIALIST_OUTPUT_INVALID');
+        return degrade(err instanceof Error ? err.message : 'output failed validation', est_tokens, 'DEGRADED', true, diagnostics);
       }
     },
   };

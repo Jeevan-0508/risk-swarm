@@ -74,7 +74,9 @@ describe('gemini reasoner', () => {
     const r = createGeminiReasoner({ ...base, fetchImpl: (async () => ({ ok: true, status: 200, json: async () => ({}) })) as unknown as typeof fetch });
     const out = await r.propose(req());
     expect(out.degraded).toBe(true);
-    expect(out.degraded_reason).toBe('empty response');
+    expect(out.degraded_reason).toBe('provider returned HTTP 200 — no candidates');
+    expect(out.execution?.diagnostics?.failure_stage).toBe('RESPONSE_STRUCTURE');
+    expect(out.execution?.diagnostics?.failure_reason_code).toBe('PROVIDER_NO_CANDIDATES');
   });
 
   it('degrades on a provider error and never leaks the key-bearing url', async () => {
@@ -110,5 +112,96 @@ describe('gemini reasoner', () => {
     const out = await createGeminiReasoner({ ...base, timeoutMs: 100, fetchImpl: hanging }).propose(req());
     expect(out.degraded).toBe(true);
     expect(out.degraded_reason).toBe('provider timed out after 0.1s');
+    expect(out.execution?.diagnostics?.failure_reason_code).toBe('PROVIDER_TIMEOUT');
+  });
+
+  it('records only structural metadata for HTTP failures, malformed bodies, and response shapes', async () => {
+    const response = (body: unknown, ok = true, status = 200): typeof fetch =>
+      (async (url: string) => {
+        if (!url.includes('key=sk-test')) throw new Error('key not attached to request');
+        return { ok, status, json: async () => body };
+      }) as unknown as typeof fetch;
+    const cases = [
+      { name: '401', body: { error: { message: 'TEST_SECRET_DO_NOT_LEAK' } }, ok: false, status: 401, stage: 'HTTP', code: 'PROVIDER_HTTP_ERROR' },
+      { name: '429', body: {}, ok: false, status: 429, stage: 'HTTP', code: 'PROVIDER_HTTP_ERROR' },
+      { name: '503', body: {}, ok: false, status: 503, stage: 'HTTP', code: 'PROVIDER_HTTP_ERROR' },
+      { name: 'no candidates', body: {}, ok: true, status: 200, stage: 'RESPONSE_STRUCTURE', code: 'PROVIDER_NO_CANDIDATES' },
+      { name: 'missing content', body: { candidates: [{}] }, ok: true, status: 200, stage: 'RESPONSE_STRUCTURE', code: 'PROVIDER_CONTENT_MISSING' },
+      { name: 'missing parts', body: { candidates: [{ content: {} }] }, ok: true, status: 200, stage: 'RESPONSE_STRUCTURE', code: 'PROVIDER_PARTS_MISSING' },
+      { name: 'empty text', body: { candidates: [{ content: { parts: [{ text: '   ' }] } }] }, ok: true, status: 200, stage: 'MODEL_TEXT', code: 'PROVIDER_TEXT_EMPTY' },
+    ] as const;
+    for (const testCase of cases) {
+      const out = await createGeminiReasoner({ ...base, fetchImpl: response(testCase.body, testCase.ok, testCase.status) }).propose(req());
+      expect(out.degraded, testCase.name).toBe(true);
+      expect(out.execution?.diagnostics?.http_status, testCase.name).toBe(testCase.status);
+      expect(out.execution?.diagnostics?.failure_stage, testCase.name).toBe(testCase.stage);
+      expect(out.execution?.diagnostics?.failure_reason_code, testCase.name).toBe(testCase.code);
+      expect(JSON.stringify(out.execution?.diagnostics), testCase.name).not.toContain('TEST_SECRET_DO_NOT_LEAK');
+    }
+  });
+
+  it('distinguishes invalid response JSON from invalid model JSON and specialist output', async () => {
+    const response = (json: () => Promise<unknown>): typeof fetch =>
+      (async (url: string) => {
+        if (!url.includes('key=sk-test')) throw new Error('key not attached to request');
+        return { ok: true, status: 200, json };
+      }) as unknown as typeof fetch;
+    const malformedResponse = await createGeminiReasoner({ ...base, fetchImpl: response(async () => { throw new Error('TEST_SECRET_DO_NOT_LEAK'); }) }).propose(req());
+    expect(malformedResponse.execution?.diagnostics?.failure_stage).toBe('RESPONSE_JSON');
+    expect(malformedResponse.execution?.diagnostics?.failure_reason_code).toBe('PROVIDER_RESPONSE_JSON_INVALID');
+    expect(JSON.stringify(malformedResponse.execution?.diagnostics)).not.toContain('TEST_SECRET_DO_NOT_LEAK');
+
+    const invalidJson = await createGeminiReasoner({ ...base, fetchImpl: response(async () => ({ candidates: [{ content: { parts: [{ text: 'TEST_SECRET_DO_NOT_LEAK' }] } }] })) }).propose(req());
+    expect(invalidJson.execution?.diagnostics?.failure_stage).toBe('MODEL_JSON');
+    expect(invalidJson.execution?.diagnostics?.failure_reason_code).toBe('MODEL_JSON_INVALID');
+    expect(invalidJson.execution?.diagnostics?.text_present).toBe(true);
+    expect(JSON.stringify(invalidJson.execution?.diagnostics)).not.toContain('TEST_SECRET_DO_NOT_LEAK');
+
+    const invalidSchema = await createGeminiReasoner({ ...base, fetchImpl: response(async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify({ statement: 'ok', evidence: ['E-999'] }) }] } }] })) }).propose(req());
+    expect(invalidSchema.execution?.diagnostics?.failure_stage).toBe('SPECIALIST_VALIDATION');
+    expect(invalidSchema.execution?.diagnostics?.failure_reason_code).toBe('SPECIALIST_OUTPUT_INVALID');
+    expect(invalidSchema.execution?.diagnostics?.model_json_extracted).toBe(true);
+    expect(invalidSchema.execution?.diagnostics?.specialist_validation_reached).toBe(true);
+  });
+
+  it('records successful extraction without retaining model text, keys, or headers', async () => {
+    const sentinel = 'TEST_SECRET_DO_NOT_LEAK';
+    const fetchImpl = (async (url: string) => {
+      if (!url.includes('key=sk-test')) throw new Error('key not attached to request');
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          promptFeedback: { safetyRatings: [{ category: 'synthetic' }] },
+          candidates: [{ finishReason: 'STOP', safetyRatings: [{ category: 'synthetic' }], content: { parts: [{ text: JSON.stringify({ statement: sentinel, evidence: ['E-001'] }) }] } }],
+        }),
+      };
+    }) as unknown as typeof fetch;
+    const out = await createGeminiReasoner({ ...base, fetchImpl }).propose(req());
+    const diagnostics = out.execution?.diagnostics;
+    expect(out.degraded).toBe(false);
+    expect(diagnostics?.failure_stage).toBe('NONE');
+    expect(diagnostics?.failure_reason_code).toBe('NONE');
+    expect(diagnostics?.candidate_count).toBe(1);
+    expect(diagnostics?.content_present).toBe(true);
+    expect(diagnostics?.part_count).toBe(1);
+    expect(diagnostics?.text_present).toBe(true);
+    expect(diagnostics?.finish_reason).toBe('STOP');
+    expect(diagnostics?.prompt_blocked).toBe(false);
+    expect(diagnostics?.safety_metadata_present).toBe(true);
+    expect(JSON.stringify(diagnostics)).not.toContain(sentinel);
+    expect(JSON.stringify(diagnostics)).not.toContain('sk-test');
+    expect(JSON.stringify(diagnostics)).not.toContain('authorization');
+  });
+
+  it('keeps shared JSON extraction behavior for a Gemini markdown code fence', async () => {
+    const fetchImpl = (async (url: string) => {
+      if (!url.includes('key=sk-test')) throw new Error('key not attached to request');
+      return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: '```json\n{"statement":"fenced","evidence":["E-001"]}\n```' }] } }] }) };
+    }) as unknown as typeof fetch;
+    const out = await createGeminiReasoner({ ...base, fetchImpl }).propose(req());
+    expect(out.degraded).toBe(false);
+    expect(out.value.statement).toBe('fenced');
+    expect(out.execution?.diagnostics?.model_json_extracted).toBe(true);
   });
 });

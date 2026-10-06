@@ -38,6 +38,37 @@ export interface ReasonResult<T> {
   execution?: ModelExecution;
 }
 
+/** Structural provider diagnostics only; never contains response text, headers, URLs, or credentials. */
+export interface ProviderDiagnostics {
+  readonly provider: string;
+  readonly http_status: number | null;
+  readonly http_ok: boolean | null;
+  readonly candidate_count: number;
+  readonly content_present: boolean;
+  readonly part_count: number;
+  readonly text_present: boolean;
+  readonly text_length: number;
+  readonly finish_reason: string | null;
+  readonly prompt_blocked: boolean;
+  readonly safety_metadata_present: boolean;
+  readonly response_json_parsed: boolean;
+  readonly model_json_extracted: boolean;
+  readonly specialist_validation_reached: boolean;
+  readonly failure_stage: 'REQUEST' | 'HTTP' | 'RESPONSE_JSON' | 'RESPONSE_STRUCTURE' | 'MODEL_TEXT' | 'MODEL_JSON' | 'SPECIALIST_VALIDATION' | 'NONE';
+  readonly failure_reason_code:
+    | 'PROVIDER_REQUEST_FAILED'
+    | 'PROVIDER_TIMEOUT'
+    | 'PROVIDER_HTTP_ERROR'
+    | 'PROVIDER_RESPONSE_JSON_INVALID'
+    | 'PROVIDER_NO_CANDIDATES'
+    | 'PROVIDER_CONTENT_MISSING'
+    | 'PROVIDER_PARTS_MISSING'
+    | 'PROVIDER_TEXT_EMPTY'
+    | 'MODEL_JSON_INVALID'
+    | 'SPECIALIST_OUTPUT_INVALID'
+    | 'NONE';
+}
+
 export type ModelExecutionStatus = 'SUCCESS' | 'DEGRADED' | 'FAILED' | 'DISABLED';
 
 export interface ModelExecution {
@@ -49,6 +80,8 @@ export interface ModelExecution {
   degraded_reason: string | null;
   /** True only when a real, successful model answer can contribute as an independent position. */
   independent: boolean;
+  /** Optional provider diagnostics; absent for deterministic and legacy reasoners. */
+  diagnostics?: ProviderDiagnostics;
 }
 
 export interface Reasoner {
