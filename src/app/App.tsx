@@ -45,6 +45,7 @@ const ScenarioRoom = lazy(() => import('@app/screens/ScenarioRoom').then((m) => 
  * unlike the showcase, because it reads a real run's real transcript.
  */
 const Council = lazy(() => import('../council/Council'));
+const SwarmCouncil = lazy(() => import('../swarm/ui/SwarmCouncilPage'));
 
 const NAV: Array<{ to: string; n: string; label: string }> = [
   { to: '/', n: '01', label: 'Command Center' },
@@ -214,6 +215,16 @@ export function App() {
             <ScreenErrorBoundary>
               <Suspense fallback={<div className="grid h-full place-items-center"><span className="label">loading</span></div>}>
                 <Council />
+              </Suspense>
+            </ScreenErrorBoundary>
+          }
+        />
+        <Route
+          path="/swarm-council"
+          element={
+            <ScreenErrorBoundary>
+              <Suspense fallback={<div className="grid h-full place-items-center"><span className="label">loading</span></div>}>
+                <SwarmCouncil />
               </Suspense>
             </ScreenErrorBoundary>
           }
