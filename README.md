@@ -5,6 +5,8 @@
 <p align="center">
   <a href="https://jeevan-0508.github.io/risk-swarm/">Open the command center</a> ·
   <a href="#the-investigation-flow">Investigation flow</a> ·
+  <a href="docs/ARCHITECTURE.md">Architecture</a> ·
+  <a href="docs/getting-started.md">Technical docs</a> ·
   <a href="#run-locally">Run locally</a>
 </p>
 
@@ -45,6 +47,41 @@ Most agent demos show the answer. RISK//SWARM shows the work around the answer: 
 <summary><strong>Technical notes</strong></summary>
 
 The app is a browser-first React and TypeScript experience with deterministic scenario data and explicit provenance. It is a portfolio demonstrator for inspectable multi-agent workflows, not an autonomous decision-maker or a claim of production deployment.
+
+</details>
+
+<details>
+<summary><strong>Engineering reference</strong></summary>
+
+The console currently routes these fifteen screens:
+
+| 01 Command Center |  |
+| 02 New Investigation |  |
+| 03 Agent Console |  |
+| 04 Evidence Graph |  |
+| 05 Disagreement Room |  |
+| 06 Red Team |  |
+| 07 Decision Brief |  |
+| 08 History |  |
+| 09 Agent Performance |  |
+| 10 Knowledge & Provenance |  |
+| 11 Scenario Room |  |
+| 12 Internal Knowledge |  |
+| 13 Research |  |
+| 14 Knowledge Delta |  |
+| 15 Model Configuration |  |
+
+The research layer uses eight keyless public providers. One of the eight cannot be read cross-origin and is handled through the documented proxy boundary. The internal knowledge index currently contains 185 records over 15 sources.
+
+The source map is intentionally explicit:
+
+src/app/  route shell, screens, persistence, and UI state
+src/core/  evidence, scoring, agents, graph, and policy engine
+src/council/  deterministic deliberation transcript and replay
+src/visual/  evidence graph, sphere, stations, and integrity visuals
+src/showcase/  Pantheon and portfolio-facing visual surfaces
+
+The adversarial suite holds 16 attacks on the guards; the deliberation suite adds 14 more, for 30 attacks across the two layers.
 
 </details>
 
