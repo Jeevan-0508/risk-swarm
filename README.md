@@ -97,3 +97,15 @@ bun run dev
 [RISK//MESH](https://github.com/Jeevan-0508/Risk-Mesh) · [RISK//REPLAY](https://github.com/Jeevan-0508/risk-replay) · [POLICY//AUDIT](https://github.com/Jeevan-0508/policy-audit)
 
 <p align="center"><sub>Built by <a href="https://github.com/Jeevan-0508">Jeevan Siddhabhaktula</a> · MIT licensed</sub></p>
+
+
+## What this project demonstrates
+
+- **Inspectable multi-agent workflow design** — independent evidence gathering, explicit roles, disagreement, red-team challenge, and a recorded human decision.
+- **Guardrails around untrusted model output** — schema validation, provenance checks, source clustering, confidence caps, budget limits, kill-switch behaviour, and safe-failure tests.
+- **Decision traceability** — a typed evidence graph and deterministic scenario data make the demo path citable and replayable.
+- **Engineering discipline** — the repository separates application screens, core engines, council/replay logic, visual surfaces, and a documented unit → adversarial → build → E2E verification strategy.
+
+## Maturity and boundaries
+
+RISK//SWARM is an independently developed browser-first portfolio demonstrator. Its README and test strategy describe the implemented boundaries; they do not claim production deployment, autonomous decision authority, or model-output quality. Live providers are treated as untrusted and remain fenced by validation and deterministic controls. Read [the test strategy](docs/TEST-STRATEGY.md) and [architecture notes](docs/ARCHITECTURE.md) for the evidence behind these claims.
