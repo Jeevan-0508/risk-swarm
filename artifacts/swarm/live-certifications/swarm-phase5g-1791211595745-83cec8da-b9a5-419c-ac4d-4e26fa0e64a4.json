@@ -1,0 +1,3068 @@
+{
+  "artifact_schema_version": "SWARM_PHASE5G_CERTIFICATION_ARTIFACT_V1",
+  "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+  "run_fingerprint": "fnv1a:632328cd",
+  "protocol_version": "2.0.0-alpha.1",
+  "started_at": "2026-01-01T00:00:00.000Z",
+  "completed_at": "2026-11-06T10:51:59.672Z",
+  "execution_status": "COMPLETED",
+  "certification_candidate_status": "YES",
+  "provider_configuration": {
+    "fallback_enabled": false,
+    "max_output_tokens": 4096,
+    "model": "grok-4.7",
+    "provider": "xai",
+    "retry_enabled": false,
+    "zeus_enabled": false
+  },
+  "case": {
+    "case": {
+      "case_id": "case-revision_after_challenge",
+      "created_at": "2026-01-01T00:00:00Z",
+      "created_by": "phase-2-fixture-catalog",
+      "policy": {
+        "allow_evidence_reseal": false,
+        "allow_provider_fallback": false,
+        "max_challenge_rounds": 1,
+        "max_challenges": 24,
+        "max_evidence_items": 64,
+        "max_provider_calls": 20,
+        "max_revisions": 24,
+        "require_human_review": true
+      },
+      "protocol_version": "2.0.0-alpha.1",
+      "question": "Offline fixture question for REVISION_AFTER_CHALLENGE.",
+      "scope": {
+        "from": "2026-01-01T00:00:00Z",
+        "geo": [
+          "GLOBAL"
+        ],
+        "mode": [
+          "OFFLINE_FIXTURE"
+        ],
+        "to": "2026-01-01T00:00:00Z"
+      },
+      "status": "CASE_CREATED"
+    },
+    "case_id": "case-revision_after_challenge"
+  },
+  "evidence": {
+    "evidence_item_ids": [
+      "ev-a",
+      "ev-b"
+    ],
+    "fingerprint_after": "fnv1a:362a2671",
+    "fingerprint_before": "fnv1a:362a2671",
+    "item_count": 2,
+    "package_id": "EP-case-revision_after_challenge-019c0baf",
+    "fixture_nonce": "@X:B@"
+  },
+  "budgets": {
+    "challenge_generation_request_count": 1,
+    "challenge_response_request_count": 2,
+    "global_provider_request_budget": 11,
+    "round1_request_count": 4,
+    "total_request_count": 7,
+    "zeus_request_count": 0
+  },
+  "request_ledger": [
+    {
+      "artifact_validation_status": "PASS",
+      "effective_max_output_tokens": 4096,
+      "failure_code": null,
+      "failure_stage": null,
+      "fallback_used": false,
+      "finish_reason": null,
+      "http_status": null,
+      "model": "grok-4.7",
+      "operation": "ROUND1_ANALYSIS",
+      "output_tokens": null,
+      "provider": "xai",
+      "request_budget_category": "ROUND1",
+      "request_completed_at": "2026-11-06T10:51:59.462Z",
+      "request_id": "model-request-case-revision_after_challenge-ATHENA-1-round1",
+      "request_started_at": "2026-11-06T10:51:59.448Z",
+      "request_status": "REQUEST_COMPLETED",
+      "requested_max_output_tokens": 4096,
+      "retry_index": 0,
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "seat_id": "ATHENA"
+    },
+    {
+      "artifact_validation_status": "PASS",
+      "effective_max_output_tokens": 4096,
+      "failure_code": null,
+      "failure_stage": null,
+      "fallback_used": false,
+      "finish_reason": null,
+      "http_status": null,
+      "model": "grok-4.7",
+      "operation": "ROUND1_ANALYSIS",
+      "output_tokens": null,
+      "provider": "xai",
+      "request_budget_category": "ROUND1",
+      "request_completed_at": "2026-11-06T10:51:59.466Z",
+      "request_id": "model-request-case-revision_after_challenge-ARES-2-round1",
+      "request_started_at": "2026-11-06T10:51:59.450Z",
+      "request_status": "REQUEST_COMPLETED",
+      "requested_max_output_tokens": 4096,
+      "retry_index": 0,
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "seat_id": "ARES"
+    },
+    {
+      "artifact_validation_status": "PASS",
+      "effective_max_output_tokens": 4096,
+      "failure_code": null,
+      "failure_stage": null,
+      "fallback_used": false,
+      "finish_reason": null,
+      "http_status": null,
+      "model": "grok-4.7",
+      "operation": "ROUND1_ANALYSIS",
+      "output_tokens": null,
+      "provider": "xai",
+      "request_budget_category": "ROUND1",
+      "request_completed_at": "2026-11-06T10:51:59.470Z",
+      "request_id": "model-request-case-revision_after_challenge-HADES-3-round1",
+      "request_started_at": "2026-11-06T10:51:59.452Z",
+      "request_status": "REQUEST_COMPLETED",
+      "requested_max_output_tokens": 4096,
+      "retry_index": 0,
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "seat_id": "HADES"
+    },
+    {
+      "artifact_validation_status": "PASS",
+      "effective_max_output_tokens": 4096,
+      "failure_code": null,
+      "failure_stage": null,
+      "fallback_used": false,
+      "finish_reason": null,
+      "http_status": null,
+      "model": "grok-4.7",
+      "operation": "ROUND1_ANALYSIS",
+      "output_tokens": null,
+      "provider": "xai",
+      "request_budget_category": "ROUND1",
+      "request_completed_at": "2026-11-06T10:51:59.475Z",
+      "request_id": "model-request-case-revision_after_challenge-APOLLO-4-round1",
+      "request_started_at": "2026-11-06T10:51:59.456Z",
+      "request_status": "REQUEST_COMPLETED",
+      "requested_max_output_tokens": 4096,
+      "retry_index": 0,
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "seat_id": "APOLLO"
+    },
+    {
+      "artifact_validation_status": "PASS",
+      "effective_max_output_tokens": 4096,
+      "failure_code": null,
+      "failure_stage": null,
+      "fallback_used": false,
+      "finish_reason": null,
+      "http_status": null,
+      "model": "grok-4.7",
+      "operation": "CHALLENGE_GENERATION",
+      "output_tokens": null,
+      "provider": "xai",
+      "request_budget_category": "CHALLENGE_GENERATION",
+      "request_completed_at": "2026-11-06T10:51:59.537Z",
+      "request_id": "model-request-case-revision_after_challenge-ARES-phase5-challenges-5",
+      "request_started_at": "2026-11-06T10:51:59.532Z",
+      "request_status": "REQUEST_COMPLETED",
+      "requested_max_output_tokens": 4096,
+      "retry_index": 0,
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "seat_id": "ARES"
+    },
+    {
+      "artifact_validation_status": "PASS",
+      "effective_max_output_tokens": 4096,
+      "failure_code": null,
+      "failure_stage": null,
+      "fallback_used": false,
+      "finish_reason": null,
+      "http_status": null,
+      "model": "grok-4.7",
+      "operation": "CHALLENGE_RESPONSE",
+      "output_tokens": null,
+      "provider": "xai",
+      "request_budget_category": "CHALLENGE_RESPONSE",
+      "request_completed_at": "2026-11-06T10:51:59.594Z",
+      "request_id": "model-request-case-revision_after_challenge-ATHENA-6-challenge",
+      "request_started_at": "2026-11-06T10:51:59.581Z",
+      "request_status": "REQUEST_COMPLETED",
+      "requested_max_output_tokens": 4096,
+      "retry_index": 0,
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "seat_id": "ATHENA"
+    },
+    {
+      "artifact_validation_status": "PASS",
+      "effective_max_output_tokens": 4096,
+      "failure_code": null,
+      "failure_stage": null,
+      "fallback_used": false,
+      "finish_reason": null,
+      "http_status": null,
+      "model": "grok-4.7",
+      "operation": "CHALLENGE_RESPONSE",
+      "output_tokens": null,
+      "provider": "xai",
+      "request_budget_category": "CHALLENGE_RESPONSE",
+      "request_completed_at": "2026-11-06T10:51:59.597Z",
+      "request_id": "model-request-case-revision_after_challenge-HADES-7-challenge",
+      "request_started_at": "2026-11-06T10:51:59.587Z",
+      "request_status": "REQUEST_COMPLETED",
+      "requested_max_output_tokens": 4096,
+      "retry_index": 0,
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "seat_id": "HADES"
+    }
+  ],
+  "round1": {
+    "position_fingerprints": {
+      "position-apollo-1-7": "fnv1a:9565e8d1",
+      "position-ares-1-3": "fnv1a:6a6ba939",
+      "position-athena-1-1": "fnv1a:b5704f8e",
+      "position-hades-1-5": "fnv1a:2b996b7f"
+    },
+    "position_immutability": "PASS",
+    "positions_locked": true,
+    "seats": [
+      {
+        "confidence": 0.72,
+        "execution_status": "SUCCESS",
+        "model": "grok-4.7",
+        "position": {
+          "abstained": false,
+          "abstention_reason": null,
+          "assumptions": [],
+          "case_id": "case-revision_after_challenge",
+          "claims": [
+            {
+              "assumptions": [],
+              "claim_id": "position-athena-1-1-claim-1",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "position_id": "position-athena-1-1",
+              "statement": "The supplied evidence records an observable control signal.",
+              "status": "SUPPORTED",
+              "type": "OBSERVATION",
+              "uncertainty": "The downstream effect is not fully observed."
+            }
+          ],
+          "conclusion": "The supplied evidence supports a bounded governance risk with disclosed uncertainty.",
+          "confidence": 0.72,
+          "control_gaps": [
+            {
+              "assumptions": [],
+              "case_id": "case-revision_after_challenge",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "gap_id": "position-athena-1-1-gap-1",
+              "position_id": "position-athena-1-1",
+              "priority": "HIGH",
+              "statement": "Bounded control-effectiveness evidence is incomplete.",
+              "uncertainty": "The package does not distinguish bypass from logging omission."
+            }
+          ],
+          "counterarguments": [
+            "A logging defect may explain the observed gap."
+          ],
+          "created_at": "2026-11-06T10:51:59.461Z",
+          "evidence_ids": [
+            "ev-a"
+          ],
+          "evidence_requests": [],
+          "execution": {
+            "diagnostics": {
+              "agent_position_conversion": "PASS",
+              "configured_max_output_tokens": 4096,
+              "dto_schema_validation": "PASS",
+              "finish_reason": "stop",
+              "http_status": 200,
+              "json_parse": "PASS",
+              "model_inference_succeeded": true,
+              "model_output_present": true,
+              "output_accepted": true,
+              "output_tokens": 100,
+              "provider_attempted": true,
+              "provider_output_extracted": true,
+              "provider_reply_received": true,
+              "provider_schema_fingerprint": "fnv1a:835100c1",
+              "seat_contract_version": "ATHENA_PROMPT_V1",
+              "seat_semantic_validation": "PASS",
+              "seat_template_fingerprint": "fnv1a-c6c6ebc5",
+              "seat_validation": true,
+              "simulated_provider_call": true,
+              "structured_schema_passed": true,
+              "structured_validation": true,
+              "truncation_detected": false,
+              "validation_reason": null
+            },
+            "duration_ms": 11,
+            "ended_at": "2026-11-06T10:51:59.461Z",
+            "executed_model": "grok-4.7",
+            "executed_provider": "xai",
+            "failure_reason_code": null,
+            "failure_stage": null,
+            "fallback_reason": null,
+            "fallback_used": false,
+            "independent": true,
+            "model_called": true,
+            "request_id": "model-request-case-revision_after_challenge-ATHENA-round1-1",
+            "requested_model": "grok-4.7",
+            "requested_provider": "xai",
+            "started_at": "2026-11-06T10:51:59.450Z",
+            "status": "SUCCESS"
+          },
+          "position_id": "position-athena-1-1",
+          "position_references": [],
+          "recommendation": "Preserve human review and obtain bounded control-effectiveness evidence.",
+          "risk_findings": [
+            {
+              "assumptions": [],
+              "case_id": "case-revision_after_challenge",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "finding_id": "position-athena-1-1-finding-1",
+              "position_id": "position-athena-1-1",
+              "risk_level": "HIGH",
+              "statement": "The control may not reliably produce an auditable record.",
+              "uncertainty": "The alternative explanation remains unresolved."
+            }
+          ],
+          "risk_level": "HIGH",
+          "round": 1,
+          "seat_id": "ATHENA",
+          "status": "LOCKED",
+          "uncertainties": [
+            "The sealed package does not establish downstream harm."
+          ]
+        },
+        "position_fingerprint": "fnv1a:b5704f8e",
+        "position_id": "position-athena-1-1",
+        "privacy_blindness": "ROUND1_BLIND",
+        "provider": "xai",
+        "risk_level": "HIGH",
+        "round": 1,
+        "seat_id": "ATHENA",
+        "validation_status": "ACCEPTED"
+      },
+      {
+        "confidence": 0.72,
+        "execution_status": "SUCCESS",
+        "model": "grok-4.7",
+        "position": {
+          "abstained": false,
+          "abstention_reason": null,
+          "assumptions": [],
+          "case_id": "case-revision_after_challenge",
+          "claims": [
+            {
+              "assumptions": [],
+              "claim_id": "position-ares-1-3-claim-1",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "position_id": "position-ares-1-3",
+              "statement": "The supplied evidence records an observable control signal.",
+              "status": "SUPPORTED",
+              "type": "OBSERVATION",
+              "uncertainty": "The downstream effect is not fully observed."
+            }
+          ],
+          "conclusion": "The supplied evidence supports a bounded governance risk with disclosed uncertainty.",
+          "confidence": 0.72,
+          "control_gaps": [
+            {
+              "assumptions": [],
+              "case_id": "case-revision_after_challenge",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "gap_id": "position-ares-1-3-gap-1",
+              "position_id": "position-ares-1-3",
+              "priority": "HIGH",
+              "statement": "Bounded control-effectiveness evidence is incomplete.",
+              "uncertainty": "The package does not distinguish bypass from logging omission."
+            }
+          ],
+          "counterarguments": [
+            "A logging defect may explain the observed gap."
+          ],
+          "created_at": "2026-11-06T10:51:59.462Z",
+          "evidence_ids": [
+            "ev-a"
+          ],
+          "evidence_requests": [],
+          "execution": {
+            "diagnostics": {
+              "agent_position_conversion": "PASS",
+              "configured_max_output_tokens": 4096,
+              "dto_schema_validation": "PASS",
+              "finish_reason": "stop",
+              "http_status": 200,
+              "json_parse": "PASS",
+              "model_inference_succeeded": true,
+              "model_output_present": true,
+              "output_accepted": true,
+              "output_tokens": 100,
+              "provider_attempted": true,
+              "provider_output_extracted": true,
+              "provider_reply_received": true,
+              "provider_schema_fingerprint": "fnv1a:835100c1",
+              "seat_contract_version": "ARES_PROMPT_V1",
+              "seat_semantic_validation": "PASS",
+              "seat_template_fingerprint": "fnv1a-ca425891",
+              "seat_validation": true,
+              "simulated_provider_call": true,
+              "structured_schema_passed": true,
+              "structured_validation": true,
+              "truncation_detected": false,
+              "validation_reason": null
+            },
+            "duration_ms": 10,
+            "ended_at": "2026-11-06T10:51:59.462Z",
+            "executed_model": "grok-4.7",
+            "executed_provider": "xai",
+            "failure_reason_code": null,
+            "failure_stage": null,
+            "fallback_reason": null,
+            "fallback_used": false,
+            "independent": true,
+            "model_called": true,
+            "request_id": "model-request-case-revision_after_challenge-ARES-round1-3",
+            "requested_model": "grok-4.7",
+            "requested_provider": "xai",
+            "started_at": "2026-11-06T10:51:59.452Z",
+            "status": "SUCCESS"
+          },
+          "position_id": "position-ares-1-3",
+          "position_references": [],
+          "recommendation": "Preserve human review and obtain bounded control-effectiveness evidence.",
+          "risk_findings": [
+            {
+              "assumptions": [],
+              "case_id": "case-revision_after_challenge",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "finding_id": "position-ares-1-3-finding-1",
+              "position_id": "position-ares-1-3",
+              "risk_level": "HIGH",
+              "statement": "The control may not reliably produce an auditable record.",
+              "uncertainty": "The alternative explanation remains unresolved."
+            }
+          ],
+          "risk_level": "LOW",
+          "round": 1,
+          "seat_id": "ARES",
+          "status": "LOCKED",
+          "uncertainties": [
+            "The sealed package does not establish downstream harm."
+          ]
+        },
+        "position_fingerprint": "fnv1a:6a6ba939",
+        "position_id": "position-ares-1-3",
+        "privacy_blindness": "ROUND1_BLIND",
+        "provider": "xai",
+        "risk_level": "LOW",
+        "round": 1,
+        "seat_id": "ARES",
+        "validation_status": "ACCEPTED"
+      },
+      {
+        "confidence": 0.72,
+        "execution_status": "SUCCESS",
+        "model": "grok-4.7",
+        "position": {
+          "abstained": false,
+          "abstention_reason": null,
+          "assumptions": [],
+          "case_id": "case-revision_after_challenge",
+          "claims": [
+            {
+              "assumptions": [],
+              "claim_id": "position-hades-1-5-claim-1",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "position_id": "position-hades-1-5",
+              "statement": "The supplied evidence records an observable control signal.",
+              "status": "SUPPORTED",
+              "type": "OBSERVATION",
+              "uncertainty": "The downstream effect is not fully observed."
+            }
+          ],
+          "conclusion": "The supplied evidence supports a bounded governance risk with disclosed uncertainty.",
+          "confidence": 0.72,
+          "control_gaps": [
+            {
+              "assumptions": [],
+              "case_id": "case-revision_after_challenge",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "gap_id": "position-hades-1-5-gap-1",
+              "position_id": "position-hades-1-5",
+              "priority": "HIGH",
+              "statement": "Bounded control-effectiveness evidence is incomplete.",
+              "uncertainty": "The package does not distinguish bypass from logging omission."
+            }
+          ],
+          "counterarguments": [
+            "A logging defect may explain the observed gap."
+          ],
+          "created_at": "2026-11-06T10:51:59.462Z",
+          "evidence_ids": [
+            "ev-a"
+          ],
+          "evidence_requests": [],
+          "execution": {
+            "diagnostics": {
+              "agent_position_conversion": "PASS",
+              "configured_max_output_tokens": 4096,
+              "dto_schema_validation": "PASS",
+              "finish_reason": "stop",
+              "http_status": 200,
+              "json_parse": "PASS",
+              "model_inference_succeeded": true,
+              "model_output_present": true,
+              "output_accepted": true,
+              "output_tokens": 100,
+              "provider_attempted": true,
+              "provider_output_extracted": true,
+              "provider_reply_received": true,
+              "provider_schema_fingerprint": "fnv1a:835100c1",
+              "seat_contract_version": "HADES_PROMPT_V1",
+              "seat_semantic_validation": "PASS",
+              "seat_template_fingerprint": "fnv1a-ac3e0dc7",
+              "seat_validation": true,
+              "simulated_provider_call": true,
+              "structured_schema_passed": true,
+              "structured_validation": true,
+              "truncation_detected": false,
+              "validation_reason": null
+            },
+            "duration_ms": 6,
+            "ended_at": "2026-11-06T10:51:59.462Z",
+            "executed_model": "grok-4.7",
+            "executed_provider": "xai",
+            "failure_reason_code": null,
+            "failure_stage": null,
+            "fallback_reason": null,
+            "fallback_used": false,
+            "independent": true,
+            "model_called": true,
+            "request_id": "model-request-case-revision_after_challenge-HADES-round1-5",
+            "requested_model": "grok-4.7",
+            "requested_provider": "xai",
+            "started_at": "2026-11-06T10:51:59.456Z",
+            "status": "SUCCESS"
+          },
+          "position_id": "position-hades-1-5",
+          "position_references": [],
+          "recommendation": "Preserve human review and obtain bounded control-effectiveness evidence.",
+          "risk_findings": [
+            {
+              "assumptions": [],
+              "case_id": "case-revision_after_challenge",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "finding_id": "position-hades-1-5-finding-1",
+              "position_id": "position-hades-1-5",
+              "risk_level": "HIGH",
+              "statement": "The control may not reliably produce an auditable record.",
+              "uncertainty": "The alternative explanation remains unresolved."
+            }
+          ],
+          "risk_level": "HIGH",
+          "round": 1,
+          "seat_id": "HADES",
+          "status": "LOCKED",
+          "uncertainties": [
+            "The sealed package does not establish downstream harm."
+          ]
+        },
+        "position_fingerprint": "fnv1a:2b996b7f",
+        "position_id": "position-hades-1-5",
+        "privacy_blindness": "ROUND1_BLIND",
+        "provider": "xai",
+        "risk_level": "HIGH",
+        "round": 1,
+        "seat_id": "HADES",
+        "validation_status": "ACCEPTED"
+      },
+      {
+        "confidence": 0.72,
+        "execution_status": "REJECTED",
+        "model": "grok-4.7",
+        "position": {
+          "abstained": false,
+          "abstention_reason": null,
+          "assumptions": [],
+          "case_id": "case-revision_after_challenge",
+          "claims": [
+            {
+              "assumptions": [],
+              "claim_id": "position-apollo-1-7-claim-1",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "position_id": "position-apollo-1-7",
+              "statement": "The supplied evidence records an observable control signal.",
+              "status": "SUPPORTED",
+              "type": "OBSERVATION",
+              "uncertainty": "The downstream effect is not fully observed."
+            }
+          ],
+          "conclusion": "The supplied evidence supports a bounded governance risk with disclosed uncertainty.",
+          "confidence": 0.72,
+          "control_gaps": [
+            {
+              "assumptions": [],
+              "case_id": "case-revision_after_challenge",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "gap_id": "position-apollo-1-7-gap-1",
+              "position_id": "position-apollo-1-7",
+              "priority": "HIGH",
+              "statement": "Bounded control-effectiveness evidence is incomplete.",
+              "uncertainty": "The package does not distinguish bypass from logging omission."
+            }
+          ],
+          "counterarguments": [
+            "A logging defect may explain the observed gap."
+          ],
+          "created_at": "2026-11-06T10:51:59.462Z",
+          "evidence_ids": [
+            "ev-a"
+          ],
+          "evidence_requests": [],
+          "execution": {
+            "diagnostics": {
+              "agent_position_conversion": "PASS",
+              "configured_max_output_tokens": 4096,
+              "dto_schema_validation": "FAIL",
+              "finish_reason": "stop",
+              "http_status": 200,
+              "json_parse": "PASS",
+              "model_inference_succeeded": true,
+              "model_output_present": true,
+              "output_accepted": false,
+              "output_tokens": 100,
+              "provider_attempted": true,
+              "provider_output_extracted": true,
+              "provider_reply_received": true,
+              "provider_schema_fingerprint": "fnv1a:835100c1",
+              "seat_contract_version": "APOLLO_PROMPT_V1",
+              "seat_semantic_validation": "PASS",
+              "seat_template_fingerprint": "fnv1a-eba20b38",
+              "seat_validation": true,
+              "simulated_provider_call": true,
+              "structured_schema_passed": true,
+              "structured_validation": true,
+              "truncation_detected": false,
+              "validation_reason": null
+            },
+            "duration_ms": 3,
+            "ended_at": "2026-11-06T10:51:59.462Z",
+            "executed_model": "grok-4.7",
+            "executed_provider": "xai",
+            "failure_reason_code": null,
+            "failure_stage": null,
+            "fallback_reason": null,
+            "fallback_used": false,
+            "independent": true,
+            "model_called": true,
+            "request_id": "model-request-case-revision_after_challenge-APOLLO-round1-7",
+            "requested_model": "grok-4.7",
+            "requested_provider": "xai",
+            "started_at": "2026-11-06T10:51:59.459Z",
+            "status": "REJECTED"
+          },
+          "position_id": "position-apollo-1-7",
+          "position_references": [],
+          "recommendation": "Preserve human review and obtain bounded control-effectiveness evidence.",
+          "risk_findings": [
+            {
+              "assumptions": [],
+              "case_id": "case-revision_after_challenge",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "finding_id": "position-apollo-1-7-finding-1",
+              "position_id": "position-apollo-1-7",
+              "risk_level": "HIGH",
+              "statement": "The control may not reliably produce an auditable record.",
+              "uncertainty": "The alternative explanation remains unresolved."
+            }
+          ],
+          "risk_level": "MEDIUM",
+          "round": 1,
+          "seat_id": "APOLLO",
+          "status": "LOCKED",
+          "uncertainties": [
+            "The sealed package does not establish downstream harm."
+          ]
+        },
+        "position_fingerprint": "fnv1a:9565e8d1",
+        "position_id": "position-apollo-1-7",
+        "privacy_blindness": "ROUND1_BLIND",
+        "provider": "xai",
+        "risk_level": "MEDIUM",
+        "round": 1,
+        "seat_id": "APOLLO",
+        "validation_status": "REJECTED"
+      }
+    ]
+  },
+  "disagreements_pre_challenge": [
+    {
+      "basis": "Risk levels differ: ATHENA=HIGH, ARES=LOW, HADES=HIGH, APOLLO=MEDIUM.",
+      "case_id": "case-revision_after_challenge",
+      "disagreement_id": "disagreement-risk_rating-0",
+      "evidence_ids": [
+        "ev-a"
+      ],
+      "materiality": "BLOCKING",
+      "phase": "PRE_CHALLENGE",
+      "positions_by_seat": {
+        "APOLLO": "position-apollo-1-7",
+        "ARES": "position-ares-1-3",
+        "ATHENA": "position-athena-1-1",
+        "HADES": "position-hades-1-5"
+      },
+      "status": "OPEN",
+      "subject_ids": [
+        "position-athena-1-1",
+        "position-ares-1-3",
+        "position-hades-1-5",
+        "position-apollo-1-7"
+      ],
+      "type": "RISK_RATING",
+      "unresolved": true
+    }
+  ],
+  "challenge_round": {
+    "admission_boundary": "BEFORE_REDUCER",
+    "admitted_challenge_count": 2,
+    "candidate_dispositions": [
+      {
+        "candidate_index": 0,
+        "challenge_id": "challenge-1",
+        "challenge_type": "SEVERITY",
+        "disagreement_id": "disagreement-risk_rating-0",
+        "disposition": "ADMITTED",
+        "evidence_reference_count": 1,
+        "reason": "CANONICAL_SELECTION",
+        "requested_action": "DEFEND",
+        "target_id": "position-athena-1-1-claim-1",
+        "target_position": "position-athena-1-1",
+        "target_position_id": "position-athena-1-1",
+        "target_seat": "ATHENA",
+        "target_type": "CLAIM",
+        "to_seat": "ATHENA"
+      },
+      {
+        "candidate_index": 1,
+        "challenge_id": "challenge-2",
+        "challenge_type": "SEVERITY",
+        "disagreement_id": "disagreement-risk_rating-0",
+        "disposition": "ADMITTED",
+        "evidence_reference_count": 1,
+        "reason": "CANONICAL_SELECTION",
+        "requested_action": "DEFEND",
+        "target_id": "position-hades-1-5-claim-1",
+        "target_position": "position-hades-1-5",
+        "target_position_id": "position-hades-1-5",
+        "target_seat": "HADES",
+        "target_type": "CLAIM",
+        "to_seat": "HADES"
+      }
+    ],
+    "challenges": [
+      {
+        "case_id": "case-revision_after_challenge",
+        "challenge_id": "challenge-1",
+        "challenge_text": "Address the risk_rating disagreement using only the sealed evidence and your own Round 1 position.",
+        "challenge_type": "SEVERITY",
+        "disagreement_id": "disagreement-risk_rating-0",
+        "evidence_ids": [
+          "ev-a"
+        ],
+        "from_seat": "ARES",
+        "reasoning": "ARES challenges ATHENA — Risk Analyst: Risk levels differ: ATHENA=HIGH, ARES=LOW, HADES=HIGH, APOLLO=MEDIUM.",
+        "requested_action": "DEFEND",
+        "round": 1,
+        "target_claim": "position-athena-1-1-claim-1",
+        "target_position": "position-athena-1-1",
+        "target_type": "CLAIM",
+        "to_seat": "ATHENA"
+      },
+      {
+        "case_id": "case-revision_after_challenge",
+        "challenge_id": "challenge-2",
+        "challenge_text": "Address the risk-rating disagreement using only the sealed evidence and your own Round 1 position.",
+        "challenge_type": "SEVERITY",
+        "disagreement_id": "disagreement-risk_rating-0",
+        "evidence_ids": [
+          "ev-a"
+        ],
+        "from_seat": "ARES",
+        "reasoning": "ARES challenges HADES on the same bounded risk-rating disagreement.",
+        "requested_action": "DEFEND",
+        "round": 1,
+        "target_claim": "position-hades-1-5-claim-1",
+        "target_position": "position-hades-1-5",
+        "target_type": "CLAIM",
+        "to_seat": "HADES"
+      }
+    ],
+    "compatible_candidate_count": 2,
+    "deduplicated_candidate_count": 2,
+    "dto_valid_candidate_count": 2,
+    "privacy_boundary": "PASS",
+    "provider_candidate_count": 2,
+    "responses": [
+      {
+        "action": "REVISE",
+        "case_id": "case-revision_after_challenge",
+        "challenge_id": "challenge-1",
+        "evidence_ids": [],
+        "rationale": "Seat response unavailable: structured output failed validation",
+        "responding_seat": "ATHENA",
+        "response_id": "response-challenge-1",
+        "revision_id": "revision-challenge-1",
+        "revision_lineage": [
+          "position-athena-1-1"
+        ],
+        "round": 1,
+        "source_position": "position-athena-1-1"
+      },
+      {
+        "action": "REVISE",
+        "case_id": "case-revision_after_challenge",
+        "challenge_id": "challenge-2",
+        "evidence_ids": [],
+        "rationale": "Seat response unavailable: structured output failed validation",
+        "responding_seat": "HADES",
+        "response_id": "response-challenge-2",
+        "revision_id": "revision-challenge-2",
+        "revision_lineage": [
+          "position-hades-1-5"
+        ],
+        "round": 1,
+        "source_position": "position-hades-1-5"
+      }
+    ],
+    "selected_candidate_count": 2,
+    "selected_disagreement_ids": [
+      "disagreement-risk_rating-0",
+      "disagreement-risk_rating-0"
+    ],
+    "semantic_valid_candidate_count": 2
+  },
+  "revisions": [],
+  "disagreements_post_challenge": {
+    "disagreements": [
+      {
+        "basis": "Risk levels differ: APOLLO=MEDIUM, ARES=LOW, ATHENA=HIGH, HADES=HIGH.",
+        "case_id": "case-revision_after_challenge",
+        "disagreement_id": "disagreement-risk_rating-0",
+        "evidence_ids": [
+          "ev-a"
+        ],
+        "materiality": "BLOCKING",
+        "positions_by_seat": {
+          "APOLLO": "position-apollo-1-7",
+          "ARES": "position-ares-1-3",
+          "ATHENA": "position-athena-1-1",
+          "HADES": "position-hades-1-5"
+        },
+        "status": "OPEN",
+        "subject_ids": [
+          "position-apollo-1-7",
+          "position-ares-1-3",
+          "position-athena-1-1",
+          "position-hades-1-5"
+        ],
+        "type": "RISK_RATING",
+        "unresolved": true
+      }
+    ],
+    "narrowed_count": 0,
+    "open_count": 1,
+    "resolved_count": 0
+  },
+  "apollo_audit": {
+    "audit_fingerprint": "fnv1a:c018aed1",
+    "blocker_count": 0,
+    "finding_count": 10,
+    "findings": [
+      {
+        "case_id": "case-revision_after_challenge",
+        "check_id": "evidence_package_integrity",
+        "detail": "Sealed evidence package hash and immutability checks passed.",
+        "evidence_ids": [],
+        "finding_id": "audit-1",
+        "remediation": null,
+        "source": "DETERMINISTIC",
+        "status": "VERIFIED",
+        "subject_ids": []
+      },
+      {
+        "case_id": "case-revision_after_challenge",
+        "check_id": "citation_integrity",
+        "detail": "All accepted position, claim, finding, control, and request citations resolve in the sealed package.",
+        "evidence_ids": [
+          "ev-a",
+          "ev-a",
+          "ev-a",
+          "ev-a"
+        ],
+        "finding_id": "audit-2",
+        "remediation": null,
+        "source": "DETERMINISTIC",
+        "status": "VERIFIED",
+        "subject_ids": [
+          "position-apollo-1-7",
+          "position-ares-1-3",
+          "position-athena-1-1",
+          "position-hades-1-5"
+        ]
+      },
+      {
+        "case_id": "case-revision_after_challenge",
+        "check_id": "round1_blind_dispatch",
+        "detail": "Round 1 dispatch records exactly the four eligible seats and excludes Zeus.",
+        "evidence_ids": [],
+        "finding_id": "audit-3",
+        "remediation": null,
+        "source": "DETERMINISTIC",
+        "status": "VERIFIED",
+        "subject_ids": []
+      },
+      {
+        "case_id": "case-revision_after_challenge",
+        "check_id": "revision_lineage_integrity",
+        "detail": "Every revision preserves old position, new position, challenge, and response references.",
+        "evidence_ids": [],
+        "finding_id": "audit-4",
+        "remediation": null,
+        "source": "DETERMINISTIC",
+        "status": "VERIFIED",
+        "subject_ids": []
+      },
+      {
+        "case_id": "case-revision_after_challenge",
+        "check_id": "protocol_budget_integrity",
+        "detail": "Challenge, revision, and challenge-round counts remain within policy bounds.",
+        "evidence_ids": [],
+        "finding_id": "audit-5",
+        "remediation": null,
+        "source": "DETERMINISTIC",
+        "status": "VERIFIED",
+        "subject_ids": [
+          "challenge-1",
+          "challenge-2"
+        ]
+      },
+      {
+        "case_id": "case-revision_after_challenge",
+        "check_id": "seat_authority_boundaries",
+        "detail": "No accepted position claims human or regulatory decision authority.",
+        "evidence_ids": [],
+        "finding_id": "audit-6",
+        "remediation": null,
+        "source": "DETERMINISTIC",
+        "status": "VERIFIED",
+        "subject_ids": []
+      },
+      {
+        "case_id": "case-revision_after_challenge",
+        "check_id": "seat_participation_truth",
+        "detail": "All eligible Round 1 seats completed independent positions.",
+        "evidence_ids": [],
+        "finding_id": "audit-7",
+        "remediation": null,
+        "source": "DETERMINISTIC",
+        "status": "VERIFIED",
+        "subject_ids": []
+      },
+      {
+        "case_id": "case-revision_after_challenge",
+        "check_id": "evidence_request_boundary",
+        "detail": "No retrieval request was silently applied to the sealed package.",
+        "evidence_ids": [],
+        "finding_id": "audit-8",
+        "remediation": null,
+        "source": "DETERMINISTIC",
+        "status": "VERIFIED",
+        "subject_ids": []
+      },
+      {
+        "case_id": "case-revision_after_challenge",
+        "check_id": "unresolved_disagreement_preservation",
+        "detail": "1 material disagreement(s) remain unresolved and must reach synthesis.",
+        "evidence_ids": [
+          "ev-a"
+        ],
+        "finding_id": "audit-9",
+        "remediation": "Preserve each disagreement and its minority positions in the synthesis.",
+        "source": "DETERMINISTIC",
+        "status": "WARNING",
+        "subject_ids": [
+          "disagreement-risk_rating-0"
+        ]
+      },
+      {
+        "case_id": "case-revision_after_challenge",
+        "check_id": "round1_execution_truth",
+        "detail": "All accepted positions carry successful independent execution truth.",
+        "evidence_ids": [
+          "ev-a",
+          "ev-a",
+          "ev-a",
+          "ev-a"
+        ],
+        "finding_id": "audit-10",
+        "remediation": null,
+        "source": "DETERMINISTIC",
+        "status": "VERIFIED",
+        "subject_ids": [
+          "position-apollo-1-7",
+          "position-ares-1-3",
+          "position-athena-1-1",
+          "position-hades-1-5"
+        ]
+      }
+    ],
+    "warning_count": 1
+  },
+  "zeus_readiness": {
+    "called": false,
+    "enabled": false,
+    "gate": "PASS",
+    "reasons": [
+      "Protocol audit passed; Zeus synthesis is ready for a separate controlled phase and human decision remains pending."
+    ],
+    "request_count": 0
+  },
+  "human_authority": {
+    "decision": "PENDING",
+    "violations": 0
+  },
+  "execution_events": [
+    {
+      "event_id": "offline-event-1",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "CASE_CREATED",
+      "protocol_phase": "PROTOCOL",
+      "sequence": 1,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [],
+      "status_metadata": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "SYSTEM",
+        "case": {
+          "case_id": "case-revision_after_challenge",
+          "created_at": "2026-01-01T00:00:00Z",
+          "created_by": "phase-2-fixture-catalog",
+          "policy": {
+            "allow_evidence_reseal": false,
+            "allow_provider_fallback": false,
+            "max_challenge_rounds": 1,
+            "max_challenges": 24,
+            "max_evidence_items": 64,
+            "max_provider_calls": 20,
+            "max_revisions": 24,
+            "require_human_review": true
+          },
+          "protocol_version": "2.0.0-alpha.1",
+          "question": "Offline fixture question for REVISION_AFTER_CHALLENGE.",
+          "scope": {
+            "from": "2026-01-01T00:00:00Z",
+            "geo": [
+              "GLOBAL"
+            ],
+            "mode": [
+              "OFFLINE_FIXTURE"
+            ],
+            "to": "2026-01-01T00:00:00Z"
+          },
+          "status": "CASE_CREATED"
+        },
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-1",
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 1,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "CASE_CREATED"
+      }
+    },
+    {
+      "event_id": "offline-event-2",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "EVIDENCE_SEALED",
+      "protocol_phase": "PROTOCOL",
+      "sequence": 2,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [],
+      "status_metadata": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-2",
+        "evidence_package": {
+          "case_id": "case-revision_after_challenge",
+          "items": [
+            {
+              "claim": "Policy requires human review for automated rejection decisions.",
+              "evidence_id": "ev-a",
+              "excerpt": "Fixture evidence excerpt.",
+              "incident_claim": false,
+              "integrity_hash": "fixture-hash-ev-a",
+              "observed_at": "2026-01-01T00:00:00Z",
+              "relevance": 0.9,
+              "reliability": 0.9,
+              "retrieved_at": "2026-01-01T00:00:00Z",
+              "source_identity": "fixture://ev-a",
+              "source_type": "FIXTURE",
+              "tier": 2,
+              "title": "Fixture ev-a",
+              "url": "https://fixture.invalid/ev-a"
+            },
+            {
+              "claim": "A production summary reports exceptions to that control path.",
+              "evidence_id": "ev-b",
+              "excerpt": "Fixture evidence excerpt.",
+              "incident_claim": false,
+              "integrity_hash": "fixture-hash-ev-b",
+              "observed_at": "2026-01-01T00:00:00Z",
+              "relevance": 0.9,
+              "reliability": 0.9,
+              "retrieved_at": "2026-01-01T00:00:00Z",
+              "source_identity": "fixture://ev-b",
+              "source_type": "FIXTURE",
+              "tier": 2,
+              "title": "Fixture ev-b",
+              "url": "https://fixture.invalid/ev-b"
+            }
+          ],
+          "known_conflicts": [],
+          "known_gaps": [],
+          "package_hash": "fnv1a:362a2671",
+          "package_id": "EP-case-revision_after_challenge-019c0baf",
+          "protocol_version": "2.0.0-alpha.1",
+          "sealed_at": "2026-01-01T00:00:00Z"
+        },
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 2,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "EVIDENCE_SEALED"
+      }
+    },
+    {
+      "event_id": "offline-event-3",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "INDEPENDENT_ANALYSIS_STARTED",
+      "protocol_phase": "ROUND1",
+      "sequence": 3,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [],
+      "status_metadata": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-3",
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 3,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "INDEPENDENT_ANALYSIS_STARTED"
+      }
+    },
+    {
+      "event_id": "offline-event-4",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "SEAT_STARTED",
+      "protocol_phase": "ROUND1",
+      "sequence": 4,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "ATHENA"
+      ],
+      "status_metadata": {
+        "actor": "ATHENA",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "ATHENA",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-4",
+        "protocol_version": "2.0.0-alpha.1",
+        "seat_id": "ATHENA",
+        "sequence": 4,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "SEAT_STARTED"
+      }
+    },
+    {
+      "event_id": "offline-event-5",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "SEAT_STARTED",
+      "protocol_phase": "ROUND1",
+      "sequence": 5,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "ARES"
+      ],
+      "status_metadata": {
+        "actor": "ARES",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "ARES",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-5",
+        "protocol_version": "2.0.0-alpha.1",
+        "seat_id": "ARES",
+        "sequence": 5,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "SEAT_STARTED"
+      }
+    },
+    {
+      "event_id": "offline-event-6",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "SEAT_STARTED",
+      "protocol_phase": "ROUND1",
+      "sequence": 6,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "HADES"
+      ],
+      "status_metadata": {
+        "actor": "HADES",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "HADES",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-6",
+        "protocol_version": "2.0.0-alpha.1",
+        "seat_id": "HADES",
+        "sequence": 6,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "SEAT_STARTED"
+      }
+    },
+    {
+      "event_id": "offline-event-7",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "SEAT_STARTED",
+      "protocol_phase": "ROUND1",
+      "sequence": 7,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "APOLLO"
+      ],
+      "status_metadata": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-7",
+        "protocol_version": "2.0.0-alpha.1",
+        "seat_id": "APOLLO",
+        "sequence": 7,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "SEAT_STARTED"
+      }
+    },
+    {
+      "event_id": "offline-event-8",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "POSITION_PROPOSED",
+      "protocol_phase": "ROUND1",
+      "sequence": 8,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "position-athena-1-1"
+      ],
+      "status_metadata": {
+        "actor": "ATHENA",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "ATHENA",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-8",
+        "position": {
+          "abstained": false,
+          "abstention_reason": null,
+          "assumptions": [],
+          "case_id": "case-revision_after_challenge",
+          "claims": [
+            {
+              "assumptions": [],
+              "claim_id": "position-athena-1-1-claim-1",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "position_id": "position-athena-1-1",
+              "statement": "The supplied evidence records an observable control signal.",
+              "status": "SUPPORTED",
+              "type": "OBSERVATION",
+              "uncertainty": "The downstream effect is not fully observed."
+            }
+          ],
+          "conclusion": "The supplied evidence supports a bounded governance risk with disclosed uncertainty.",
+          "confidence": 0.72,
+          "control_gaps": [
+            {
+              "assumptions": [],
+              "case_id": "case-revision_after_challenge",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "gap_id": "position-athena-1-1-gap-1",
+              "position_id": "position-athena-1-1",
+              "priority": "HIGH",
+              "statement": "Bounded control-effectiveness evidence is incomplete.",
+              "uncertainty": "The package does not distinguish bypass from logging omission."
+            }
+          ],
+          "counterarguments": [
+            "A logging defect may explain the observed gap."
+          ],
+          "created_at": "2026-11-06T10:51:59.461Z",
+          "evidence_ids": [
+            "ev-a"
+          ],
+          "evidence_requests": [],
+          "execution": {
+            "diagnostics": {
+              "agent_position_conversion": "PASS",
+              "configured_max_output_tokens": 4096,
+              "dto_schema_validation": "PASS",
+              "finish_reason": "stop",
+              "http_status": 200,
+              "json_parse": "PASS",
+              "model_inference_succeeded": true,
+              "model_output_present": true,
+              "output_accepted": true,
+              "output_tokens": 100,
+              "provider_attempted": true,
+              "provider_output_extracted": true,
+              "provider_reply_received": true,
+              "provider_schema_fingerprint": "fnv1a:835100c1",
+              "seat_contract_version": "ATHENA_PROMPT_V1",
+              "seat_semantic_validation": "PASS",
+              "seat_template_fingerprint": "fnv1a-c6c6ebc5",
+              "seat_validation": true,
+              "simulated_provider_call": true,
+              "structured_schema_passed": true,
+              "structured_validation": true,
+              "truncation_detected": false,
+              "validation_reason": null
+            },
+            "duration_ms": 11,
+            "ended_at": "2026-11-06T10:51:59.461Z",
+            "executed_model": "grok-4.7",
+            "executed_provider": "xai",
+            "failure_reason_code": null,
+            "failure_stage": null,
+            "fallback_reason": null,
+            "fallback_used": false,
+            "independent": true,
+            "model_called": true,
+            "request_id": "model-request-case-revision_after_challenge-ATHENA-round1-1",
+            "requested_model": "grok-4.7",
+            "requested_provider": "xai",
+            "started_at": "2026-11-06T10:51:59.450Z",
+            "status": "SUCCESS"
+          },
+          "position_id": "position-athena-1-1",
+          "position_references": [],
+          "recommendation": "Preserve human review and obtain bounded control-effectiveness evidence.",
+          "risk_findings": [
+            {
+              "assumptions": [],
+              "case_id": "case-revision_after_challenge",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "finding_id": "position-athena-1-1-finding-1",
+              "position_id": "position-athena-1-1",
+              "risk_level": "HIGH",
+              "statement": "The control may not reliably produce an auditable record.",
+              "uncertainty": "The alternative explanation remains unresolved."
+            }
+          ],
+          "risk_level": "HIGH",
+          "round": 1,
+          "seat_id": "ATHENA",
+          "status": "PROPOSED",
+          "uncertainties": [
+            "The sealed package does not establish downstream harm."
+          ]
+        },
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 8,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "POSITION_PROPOSED"
+      }
+    },
+    {
+      "event_id": "offline-event-9",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "SEAT_COMPLETED",
+      "protocol_phase": "ROUND1",
+      "sequence": 9,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "ATHENA",
+        "position-athena-1-1"
+      ],
+      "status_metadata": {
+        "actor": "ATHENA",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "ATHENA",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-9",
+        "execution": {
+          "diagnostics": {
+            "agent_position_conversion": "PASS",
+            "configured_max_output_tokens": 4096,
+            "dto_schema_validation": "PASS",
+            "finish_reason": "stop",
+            "http_status": 200,
+            "json_parse": "PASS",
+            "model_inference_succeeded": true,
+            "model_output_present": true,
+            "output_accepted": true,
+            "output_tokens": 100,
+            "provider_attempted": true,
+            "provider_output_extracted": true,
+            "provider_reply_received": true,
+            "provider_schema_fingerprint": "fnv1a:835100c1",
+            "seat_contract_version": "ATHENA_PROMPT_V1",
+            "seat_semantic_validation": "PASS",
+            "seat_template_fingerprint": "fnv1a-c6c6ebc5",
+            "seat_validation": true,
+            "simulated_provider_call": true,
+            "structured_schema_passed": true,
+            "structured_validation": true,
+            "truncation_detected": false,
+            "validation_reason": null
+          },
+          "duration_ms": 11,
+          "ended_at": "2026-11-06T10:51:59.461Z",
+          "executed_model": "grok-4.7",
+          "executed_provider": "xai",
+          "failure_reason_code": null,
+          "failure_stage": null,
+          "fallback_reason": null,
+          "fallback_used": false,
+          "independent": true,
+          "model_called": true,
+          "request_id": "model-request-case-revision_after_challenge-ATHENA-round1-1",
+          "requested_model": "grok-4.7",
+          "requested_provider": "xai",
+          "started_at": "2026-11-06T10:51:59.450Z",
+          "status": "SUCCESS"
+        },
+        "position_id": "position-athena-1-1",
+        "protocol_version": "2.0.0-alpha.1",
+        "seat_id": "ATHENA",
+        "sequence": 9,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "SEAT_COMPLETED"
+      }
+    },
+    {
+      "event_id": "offline-event-10",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "POSITION_PROPOSED",
+      "protocol_phase": "ROUND1",
+      "sequence": 10,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "position-ares-1-3"
+      ],
+      "status_metadata": {
+        "actor": "ARES",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "ARES",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-10",
+        "position": {
+          "abstained": false,
+          "abstention_reason": null,
+          "assumptions": [],
+          "case_id": "case-revision_after_challenge",
+          "claims": [
+            {
+              "assumptions": [],
+              "claim_id": "position-ares-1-3-claim-1",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "position_id": "position-ares-1-3",
+              "statement": "The supplied evidence records an observable control signal.",
+              "status": "SUPPORTED",
+              "type": "OBSERVATION",
+              "uncertainty": "The downstream effect is not fully observed."
+            }
+          ],
+          "conclusion": "The supplied evidence supports a bounded governance risk with disclosed uncertainty.",
+          "confidence": 0.72,
+          "control_gaps": [
+            {
+              "assumptions": [],
+              "case_id": "case-revision_after_challenge",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "gap_id": "position-ares-1-3-gap-1",
+              "position_id": "position-ares-1-3",
+              "priority": "HIGH",
+              "statement": "Bounded control-effectiveness evidence is incomplete.",
+              "uncertainty": "The package does not distinguish bypass from logging omission."
+            }
+          ],
+          "counterarguments": [
+            "A logging defect may explain the observed gap."
+          ],
+          "created_at": "2026-11-06T10:51:59.462Z",
+          "evidence_ids": [
+            "ev-a"
+          ],
+          "evidence_requests": [],
+          "execution": {
+            "diagnostics": {
+              "agent_position_conversion": "PASS",
+              "configured_max_output_tokens": 4096,
+              "dto_schema_validation": "PASS",
+              "finish_reason": "stop",
+              "http_status": 200,
+              "json_parse": "PASS",
+              "model_inference_succeeded": true,
+              "model_output_present": true,
+              "output_accepted": true,
+              "output_tokens": 100,
+              "provider_attempted": true,
+              "provider_output_extracted": true,
+              "provider_reply_received": true,
+              "provider_schema_fingerprint": "fnv1a:835100c1",
+              "seat_contract_version": "ARES_PROMPT_V1",
+              "seat_semantic_validation": "PASS",
+              "seat_template_fingerprint": "fnv1a-ca425891",
+              "seat_validation": true,
+              "simulated_provider_call": true,
+              "structured_schema_passed": true,
+              "structured_validation": true,
+              "truncation_detected": false,
+              "validation_reason": null
+            },
+            "duration_ms": 10,
+            "ended_at": "2026-11-06T10:51:59.462Z",
+            "executed_model": "grok-4.7",
+            "executed_provider": "xai",
+            "failure_reason_code": null,
+            "failure_stage": null,
+            "fallback_reason": null,
+            "fallback_used": false,
+            "independent": true,
+            "model_called": true,
+            "request_id": "model-request-case-revision_after_challenge-ARES-round1-3",
+            "requested_model": "grok-4.7",
+            "requested_provider": "xai",
+            "started_at": "2026-11-06T10:51:59.452Z",
+            "status": "SUCCESS"
+          },
+          "position_id": "position-ares-1-3",
+          "position_references": [],
+          "recommendation": "Preserve human review and obtain bounded control-effectiveness evidence.",
+          "risk_findings": [
+            {
+              "assumptions": [],
+              "case_id": "case-revision_after_challenge",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "finding_id": "position-ares-1-3-finding-1",
+              "position_id": "position-ares-1-3",
+              "risk_level": "HIGH",
+              "statement": "The control may not reliably produce an auditable record.",
+              "uncertainty": "The alternative explanation remains unresolved."
+            }
+          ],
+          "risk_level": "LOW",
+          "round": 1,
+          "seat_id": "ARES",
+          "status": "PROPOSED",
+          "uncertainties": [
+            "The sealed package does not establish downstream harm."
+          ]
+        },
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 10,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "POSITION_PROPOSED"
+      }
+    },
+    {
+      "event_id": "offline-event-11",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "SEAT_COMPLETED",
+      "protocol_phase": "ROUND1",
+      "sequence": 11,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "ARES",
+        "position-ares-1-3"
+      ],
+      "status_metadata": {
+        "actor": "ARES",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "ARES",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-11",
+        "execution": {
+          "diagnostics": {
+            "agent_position_conversion": "PASS",
+            "configured_max_output_tokens": 4096,
+            "dto_schema_validation": "PASS",
+            "finish_reason": "stop",
+            "http_status": 200,
+            "json_parse": "PASS",
+            "model_inference_succeeded": true,
+            "model_output_present": true,
+            "output_accepted": true,
+            "output_tokens": 100,
+            "provider_attempted": true,
+            "provider_output_extracted": true,
+            "provider_reply_received": true,
+            "provider_schema_fingerprint": "fnv1a:835100c1",
+            "seat_contract_version": "ARES_PROMPT_V1",
+            "seat_semantic_validation": "PASS",
+            "seat_template_fingerprint": "fnv1a-ca425891",
+            "seat_validation": true,
+            "simulated_provider_call": true,
+            "structured_schema_passed": true,
+            "structured_validation": true,
+            "truncation_detected": false,
+            "validation_reason": null
+          },
+          "duration_ms": 10,
+          "ended_at": "2026-11-06T10:51:59.462Z",
+          "executed_model": "grok-4.7",
+          "executed_provider": "xai",
+          "failure_reason_code": null,
+          "failure_stage": null,
+          "fallback_reason": null,
+          "fallback_used": false,
+          "independent": true,
+          "model_called": true,
+          "request_id": "model-request-case-revision_after_challenge-ARES-round1-3",
+          "requested_model": "grok-4.7",
+          "requested_provider": "xai",
+          "started_at": "2026-11-06T10:51:59.452Z",
+          "status": "SUCCESS"
+        },
+        "position_id": "position-ares-1-3",
+        "protocol_version": "2.0.0-alpha.1",
+        "seat_id": "ARES",
+        "sequence": 11,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "SEAT_COMPLETED"
+      }
+    },
+    {
+      "event_id": "offline-event-12",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "POSITION_PROPOSED",
+      "protocol_phase": "ROUND1",
+      "sequence": 12,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "position-hades-1-5"
+      ],
+      "status_metadata": {
+        "actor": "HADES",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "HADES",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-12",
+        "position": {
+          "abstained": false,
+          "abstention_reason": null,
+          "assumptions": [],
+          "case_id": "case-revision_after_challenge",
+          "claims": [
+            {
+              "assumptions": [],
+              "claim_id": "position-hades-1-5-claim-1",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "position_id": "position-hades-1-5",
+              "statement": "The supplied evidence records an observable control signal.",
+              "status": "SUPPORTED",
+              "type": "OBSERVATION",
+              "uncertainty": "The downstream effect is not fully observed."
+            }
+          ],
+          "conclusion": "The supplied evidence supports a bounded governance risk with disclosed uncertainty.",
+          "confidence": 0.72,
+          "control_gaps": [
+            {
+              "assumptions": [],
+              "case_id": "case-revision_after_challenge",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "gap_id": "position-hades-1-5-gap-1",
+              "position_id": "position-hades-1-5",
+              "priority": "HIGH",
+              "statement": "Bounded control-effectiveness evidence is incomplete.",
+              "uncertainty": "The package does not distinguish bypass from logging omission."
+            }
+          ],
+          "counterarguments": [
+            "A logging defect may explain the observed gap."
+          ],
+          "created_at": "2026-11-06T10:51:59.462Z",
+          "evidence_ids": [
+            "ev-a"
+          ],
+          "evidence_requests": [],
+          "execution": {
+            "diagnostics": {
+              "agent_position_conversion": "PASS",
+              "configured_max_output_tokens": 4096,
+              "dto_schema_validation": "PASS",
+              "finish_reason": "stop",
+              "http_status": 200,
+              "json_parse": "PASS",
+              "model_inference_succeeded": true,
+              "model_output_present": true,
+              "output_accepted": true,
+              "output_tokens": 100,
+              "provider_attempted": true,
+              "provider_output_extracted": true,
+              "provider_reply_received": true,
+              "provider_schema_fingerprint": "fnv1a:835100c1",
+              "seat_contract_version": "HADES_PROMPT_V1",
+              "seat_semantic_validation": "PASS",
+              "seat_template_fingerprint": "fnv1a-ac3e0dc7",
+              "seat_validation": true,
+              "simulated_provider_call": true,
+              "structured_schema_passed": true,
+              "structured_validation": true,
+              "truncation_detected": false,
+              "validation_reason": null
+            },
+            "duration_ms": 6,
+            "ended_at": "2026-11-06T10:51:59.462Z",
+            "executed_model": "grok-4.7",
+            "executed_provider": "xai",
+            "failure_reason_code": null,
+            "failure_stage": null,
+            "fallback_reason": null,
+            "fallback_used": false,
+            "independent": true,
+            "model_called": true,
+            "request_id": "model-request-case-revision_after_challenge-HADES-round1-5",
+            "requested_model": "grok-4.7",
+            "requested_provider": "xai",
+            "started_at": "2026-11-06T10:51:59.456Z",
+            "status": "SUCCESS"
+          },
+          "position_id": "position-hades-1-5",
+          "position_references": [],
+          "recommendation": "Preserve human review and obtain bounded control-effectiveness evidence.",
+          "risk_findings": [
+            {
+              "assumptions": [],
+              "case_id": "case-revision_after_challenge",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "finding_id": "position-hades-1-5-finding-1",
+              "position_id": "position-hades-1-5",
+              "risk_level": "HIGH",
+              "statement": "The control may not reliably produce an auditable record.",
+              "uncertainty": "The alternative explanation remains unresolved."
+            }
+          ],
+          "risk_level": "HIGH",
+          "round": 1,
+          "seat_id": "HADES",
+          "status": "PROPOSED",
+          "uncertainties": [
+            "The sealed package does not establish downstream harm."
+          ]
+        },
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 12,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "POSITION_PROPOSED"
+      }
+    },
+    {
+      "event_id": "offline-event-13",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "SEAT_COMPLETED",
+      "protocol_phase": "ROUND1",
+      "sequence": 13,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "HADES",
+        "position-hades-1-5"
+      ],
+      "status_metadata": {
+        "actor": "HADES",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "HADES",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-13",
+        "execution": {
+          "diagnostics": {
+            "agent_position_conversion": "PASS",
+            "configured_max_output_tokens": 4096,
+            "dto_schema_validation": "PASS",
+            "finish_reason": "stop",
+            "http_status": 200,
+            "json_parse": "PASS",
+            "model_inference_succeeded": true,
+            "model_output_present": true,
+            "output_accepted": true,
+            "output_tokens": 100,
+            "provider_attempted": true,
+            "provider_output_extracted": true,
+            "provider_reply_received": true,
+            "provider_schema_fingerprint": "fnv1a:835100c1",
+            "seat_contract_version": "HADES_PROMPT_V1",
+            "seat_semantic_validation": "PASS",
+            "seat_template_fingerprint": "fnv1a-ac3e0dc7",
+            "seat_validation": true,
+            "simulated_provider_call": true,
+            "structured_schema_passed": true,
+            "structured_validation": true,
+            "truncation_detected": false,
+            "validation_reason": null
+          },
+          "duration_ms": 6,
+          "ended_at": "2026-11-06T10:51:59.462Z",
+          "executed_model": "grok-4.7",
+          "executed_provider": "xai",
+          "failure_reason_code": null,
+          "failure_stage": null,
+          "fallback_reason": null,
+          "fallback_used": false,
+          "independent": true,
+          "model_called": true,
+          "request_id": "model-request-case-revision_after_challenge-HADES-round1-5",
+          "requested_model": "grok-4.7",
+          "requested_provider": "xai",
+          "started_at": "2026-11-06T10:51:59.456Z",
+          "status": "SUCCESS"
+        },
+        "position_id": "position-hades-1-5",
+        "protocol_version": "2.0.0-alpha.1",
+        "seat_id": "HADES",
+        "sequence": 13,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "SEAT_COMPLETED"
+      }
+    },
+    {
+      "event_id": "offline-event-14",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "POSITION_PROPOSED",
+      "protocol_phase": "ROUND1",
+      "sequence": 14,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "position-apollo-1-7"
+      ],
+      "status_metadata": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-14",
+        "position": {
+          "abstained": false,
+          "abstention_reason": null,
+          "assumptions": [],
+          "case_id": "case-revision_after_challenge",
+          "claims": [
+            {
+              "assumptions": [],
+              "claim_id": "position-apollo-1-7-claim-1",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "position_id": "position-apollo-1-7",
+              "statement": "The supplied evidence records an observable control signal.",
+              "status": "SUPPORTED",
+              "type": "OBSERVATION",
+              "uncertainty": "The downstream effect is not fully observed."
+            }
+          ],
+          "conclusion": "The supplied evidence supports a bounded governance risk with disclosed uncertainty.",
+          "confidence": 0.72,
+          "control_gaps": [
+            {
+              "assumptions": [],
+              "case_id": "case-revision_after_challenge",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "gap_id": "position-apollo-1-7-gap-1",
+              "position_id": "position-apollo-1-7",
+              "priority": "HIGH",
+              "statement": "Bounded control-effectiveness evidence is incomplete.",
+              "uncertainty": "The package does not distinguish bypass from logging omission."
+            }
+          ],
+          "counterarguments": [
+            "A logging defect may explain the observed gap."
+          ],
+          "created_at": "2026-11-06T10:51:59.462Z",
+          "evidence_ids": [
+            "ev-a"
+          ],
+          "evidence_requests": [],
+          "execution": {
+            "diagnostics": {
+              "agent_position_conversion": "PASS",
+              "configured_max_output_tokens": 4096,
+              "dto_schema_validation": "PASS",
+              "finish_reason": "stop",
+              "http_status": 200,
+              "json_parse": "PASS",
+              "model_inference_succeeded": true,
+              "model_output_present": true,
+              "output_accepted": true,
+              "output_tokens": 100,
+              "provider_attempted": true,
+              "provider_output_extracted": true,
+              "provider_reply_received": true,
+              "provider_schema_fingerprint": "fnv1a:835100c1",
+              "seat_contract_version": "APOLLO_PROMPT_V1",
+              "seat_semantic_validation": "PASS",
+              "seat_template_fingerprint": "fnv1a-eba20b38",
+              "seat_validation": true,
+              "simulated_provider_call": true,
+              "structured_schema_passed": true,
+              "structured_validation": true,
+              "truncation_detected": false,
+              "validation_reason": null
+            },
+            "duration_ms": 3,
+            "ended_at": "2026-11-06T10:51:59.462Z",
+            "executed_model": "grok-4.7",
+            "executed_provider": "xai",
+            "failure_reason_code": null,
+            "failure_stage": null,
+            "fallback_reason": null,
+            "fallback_used": false,
+            "independent": true,
+            "model_called": true,
+            "request_id": "model-request-case-revision_after_challenge-APOLLO-round1-7",
+            "requested_model": "grok-4.7",
+            "requested_provider": "xai",
+            "started_at": "2026-11-06T10:51:59.459Z",
+            "status": "SUCCESS"
+          },
+          "position_id": "position-apollo-1-7",
+          "position_references": [],
+          "recommendation": "Preserve human review and obtain bounded control-effectiveness evidence.",
+          "risk_findings": [
+            {
+              "assumptions": [],
+              "case_id": "case-revision_after_challenge",
+              "evidence_ids": [
+                "ev-a"
+              ],
+              "finding_id": "position-apollo-1-7-finding-1",
+              "position_id": "position-apollo-1-7",
+              "risk_level": "HIGH",
+              "statement": "The control may not reliably produce an auditable record.",
+              "uncertainty": "The alternative explanation remains unresolved."
+            }
+          ],
+          "risk_level": "MEDIUM",
+          "round": 1,
+          "seat_id": "APOLLO",
+          "status": "PROPOSED",
+          "uncertainties": [
+            "The sealed package does not establish downstream harm."
+          ]
+        },
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 14,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "POSITION_PROPOSED"
+      }
+    },
+    {
+      "event_id": "offline-event-15",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "SEAT_COMPLETED",
+      "protocol_phase": "ROUND1",
+      "sequence": 15,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "APOLLO",
+        "position-apollo-1-7"
+      ],
+      "status_metadata": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-15",
+        "execution": {
+          "diagnostics": {
+            "agent_position_conversion": "PASS",
+            "configured_max_output_tokens": 4096,
+            "dto_schema_validation": "PASS",
+            "finish_reason": "stop",
+            "http_status": 200,
+            "json_parse": "PASS",
+            "model_inference_succeeded": true,
+            "model_output_present": true,
+            "output_accepted": true,
+            "output_tokens": 100,
+            "provider_attempted": true,
+            "provider_output_extracted": true,
+            "provider_reply_received": true,
+            "provider_schema_fingerprint": "fnv1a:835100c1",
+            "seat_contract_version": "APOLLO_PROMPT_V1",
+            "seat_semantic_validation": "PASS",
+            "seat_template_fingerprint": "fnv1a-eba20b38",
+            "seat_validation": true,
+            "simulated_provider_call": true,
+            "structured_schema_passed": true,
+            "structured_validation": true,
+            "truncation_detected": false,
+            "validation_reason": null
+          },
+          "duration_ms": 3,
+          "ended_at": "2026-11-06T10:51:59.462Z",
+          "executed_model": "grok-4.7",
+          "executed_provider": "xai",
+          "failure_reason_code": null,
+          "failure_stage": null,
+          "fallback_reason": null,
+          "fallback_used": false,
+          "independent": true,
+          "model_called": true,
+          "request_id": "model-request-case-revision_after_challenge-APOLLO-round1-7",
+          "requested_model": "grok-4.7",
+          "requested_provider": "xai",
+          "started_at": "2026-11-06T10:51:59.459Z",
+          "status": "SUCCESS"
+        },
+        "position_id": "position-apollo-1-7",
+        "protocol_version": "2.0.0-alpha.1",
+        "seat_id": "APOLLO",
+        "sequence": 15,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "SEAT_COMPLETED"
+      }
+    },
+    {
+      "event_id": "offline-event-16",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "POSITIONS_LOCKED",
+      "protocol_phase": "ROUND1",
+      "sequence": 16,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [],
+      "status_metadata": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-16",
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 16,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "POSITIONS_LOCKED"
+      }
+    },
+    {
+      "event_id": "offline-event-17",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "DISAGREEMENT_IDENTIFIED",
+      "protocol_phase": "CHALLENGE_ROUND",
+      "sequence": 17,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [],
+      "status_metadata": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge",
+        "disagreement": {
+          "basis": "Risk levels differ: ATHENA=HIGH, ARES=LOW, HADES=HIGH, APOLLO=MEDIUM.",
+          "case_id": "case-revision_after_challenge",
+          "disagreement_id": "disagreement-risk_rating-0",
+          "evidence_ids": [
+            "ev-a"
+          ],
+          "materiality": "BLOCKING",
+          "positions_by_seat": {
+            "APOLLO": "position-apollo-1-7",
+            "ARES": "position-ares-1-3",
+            "ATHENA": "position-athena-1-1",
+            "HADES": "position-hades-1-5"
+          },
+          "status": "OPEN",
+          "subject_ids": [
+            "position-athena-1-1",
+            "position-ares-1-3",
+            "position-hades-1-5",
+            "position-apollo-1-7"
+          ],
+          "type": "RISK_RATING",
+          "unresolved": true
+        },
+        "event_id": "offline-event-17",
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 17,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "DISAGREEMENT_IDENTIFIED"
+      }
+    },
+    {
+      "event_id": "offline-event-18",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "DISAGREEMENTS_FINALIZED",
+      "protocol_phase": "CHALLENGE_ROUND",
+      "sequence": 18,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [],
+      "status_metadata": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-18",
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 18,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "DISAGREEMENTS_FINALIZED"
+      }
+    },
+    {
+      "event_id": "offline-event-19",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "CHALLENGE_ROUND_STARTED",
+      "protocol_phase": "CHALLENGE_ROUND",
+      "sequence": 19,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [],
+      "status_metadata": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-19",
+        "protocol_version": "2.0.0-alpha.1",
+        "round": 1,
+        "sequence": 19,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "CHALLENGE_ROUND_STARTED"
+      }
+    },
+    {
+      "event_id": "offline-event-20",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "CHALLENGE_GENERATION_STARTED",
+      "protocol_phase": "CHALLENGE_ROUND",
+      "sequence": 20,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [],
+      "status_metadata": {
+        "actor": "ARES",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "ARES",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-20",
+        "protocol_version": "2.0.0-alpha.1",
+        "round": 1,
+        "sequence": 20,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "CHALLENGE_GENERATION_STARTED"
+      }
+    },
+    {
+      "event_id": "offline-event-21",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "CHALLENGE_EMITTED",
+      "protocol_phase": "CHALLENGE_ROUND",
+      "sequence": 21,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "challenge-1",
+        "disagreement-risk_rating-0"
+      ],
+      "status_metadata": {
+        "actor": "ARES",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "ARES",
+        "case_id": "case-revision_after_challenge",
+        "challenge": {
+          "case_id": "case-revision_after_challenge",
+          "challenge_id": "challenge-1",
+          "challenge_text": "Address the risk_rating disagreement using only the sealed evidence and your own Round 1 position.",
+          "challenge_type": "SEVERITY",
+          "disagreement_id": "disagreement-risk_rating-0",
+          "evidence_ids": [
+            "ev-a"
+          ],
+          "from_seat": "ARES",
+          "reasoning": "ARES challenges ATHENA — Risk Analyst: Risk levels differ: ATHENA=HIGH, ARES=LOW, HADES=HIGH, APOLLO=MEDIUM.",
+          "requested_action": "DEFEND",
+          "round": 1,
+          "target_claim": "position-athena-1-1-claim-1",
+          "target_position": "position-athena-1-1",
+          "target_type": "CLAIM",
+          "to_seat": "ATHENA"
+        },
+        "event_id": "offline-event-21",
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 21,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "CHALLENGE_EMITTED"
+      }
+    },
+    {
+      "event_id": "offline-event-22",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "CHALLENGE_EMITTED",
+      "protocol_phase": "CHALLENGE_ROUND",
+      "sequence": 22,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "challenge-2",
+        "disagreement-risk_rating-0"
+      ],
+      "status_metadata": {
+        "actor": "ARES",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "ARES",
+        "case_id": "case-revision_after_challenge",
+        "challenge": {
+          "case_id": "case-revision_after_challenge",
+          "challenge_id": "challenge-2",
+          "challenge_text": "Address the risk-rating disagreement using only the sealed evidence and your own Round 1 position.",
+          "challenge_type": "SEVERITY",
+          "disagreement_id": "disagreement-risk_rating-0",
+          "evidence_ids": [
+            "ev-a"
+          ],
+          "from_seat": "ARES",
+          "reasoning": "ARES challenges HADES on the same bounded risk-rating disagreement.",
+          "requested_action": "DEFEND",
+          "round": 1,
+          "target_claim": "position-hades-1-5-claim-1",
+          "target_position": "position-hades-1-5",
+          "target_type": "CLAIM",
+          "to_seat": "HADES"
+        },
+        "event_id": "offline-event-22",
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 22,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "CHALLENGE_EMITTED"
+      }
+    },
+    {
+      "event_id": "offline-event-23",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "CHALLENGES_GENERATED",
+      "protocol_phase": "CHALLENGE_ROUND",
+      "sequence": 23,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [],
+      "status_metadata": {
+        "actor": "ARES",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "ARES",
+        "case_id": "case-revision_after_challenge",
+        "challenge_ids": [
+          "challenge-1",
+          "challenge-2"
+        ],
+        "event_id": "offline-event-23",
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 23,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "CHALLENGES_GENERATED"
+      }
+    },
+    {
+      "event_id": "offline-event-24",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "CHALLENGE_RESPONSE_STARTED",
+      "protocol_phase": "CHALLENGE_ROUND",
+      "sequence": 24,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "challenge-1"
+      ],
+      "status_metadata": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge",
+        "challenge_id": "challenge-1",
+        "event_id": "offline-event-24",
+        "protocol_version": "2.0.0-alpha.1",
+        "responding_seat": "ATHENA",
+        "sequence": 24,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "CHALLENGE_RESPONSE_STARTED"
+      }
+    },
+    {
+      "event_id": "offline-event-25",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "CHALLENGE_RESPONSE_STARTED",
+      "protocol_phase": "CHALLENGE_ROUND",
+      "sequence": 25,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "challenge-2"
+      ],
+      "status_metadata": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge",
+        "challenge_id": "challenge-2",
+        "event_id": "offline-event-25",
+        "protocol_version": "2.0.0-alpha.1",
+        "responding_seat": "HADES",
+        "sequence": 25,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "CHALLENGE_RESPONSE_STARTED"
+      }
+    },
+    {
+      "event_id": "offline-event-26",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "CHALLENGE_RESPONSE_RECORDED",
+      "protocol_phase": "CHALLENGE_ROUND",
+      "sequence": 26,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "challenge-1",
+        "response-challenge-1"
+      ],
+      "status_metadata": {
+        "actor": "ATHENA",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "ATHENA",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-26",
+        "protocol_version": "2.0.0-alpha.1",
+        "response": {
+          "action": "ABSTAIN",
+          "case_id": "case-revision_after_challenge",
+          "challenge_id": "challenge-1",
+          "evidence_ids": [],
+          "rationale": "Seat response unavailable: structured output failed validation",
+          "responding_seat": "ATHENA",
+          "response_id": "response-challenge-1",
+          "revision_id": null,
+          "revision_lineage": [
+            "position-athena-1-1"
+          ],
+          "round": 1,
+          "source_position": "position-athena-1-1"
+        },
+        "sequence": 26,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "CHALLENGE_RESPONSE_RECORDED"
+      }
+    },
+    {
+      "event_id": "offline-event-27",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "CHALLENGE_RESPONSE_RECORDED",
+      "protocol_phase": "CHALLENGE_ROUND",
+      "sequence": 27,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "challenge-2",
+        "response-challenge-2"
+      ],
+      "status_metadata": {
+        "actor": "HADES",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "HADES",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-27",
+        "protocol_version": "2.0.0-alpha.1",
+        "response": {
+          "action": "ABSTAIN",
+          "case_id": "case-revision_after_challenge",
+          "challenge_id": "challenge-2",
+          "evidence_ids": [],
+          "rationale": "Seat response unavailable: structured output failed validation",
+          "responding_seat": "HADES",
+          "response_id": "response-challenge-2",
+          "revision_id": null,
+          "revision_lineage": [
+            "position-hades-1-5"
+          ],
+          "round": 1,
+          "source_position": "position-hades-1-5"
+        },
+        "sequence": 27,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "CHALLENGE_RESPONSE_RECORDED"
+      }
+    },
+    {
+      "event_id": "offline-event-28",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "REVISIONS_LOCKED",
+      "protocol_phase": "REVISIONS",
+      "sequence": 28,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [],
+      "status_metadata": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-28",
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 28,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "REVISIONS_LOCKED"
+      }
+    },
+    {
+      "event_id": "offline-event-29",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "DISAGREEMENTS_REEVALUATED",
+      "protocol_phase": "PROTOCOL",
+      "sequence": 29,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [],
+      "status_metadata": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge",
+        "disagreements": [
+          {
+            "basis": "Risk levels differ: APOLLO=MEDIUM, ARES=LOW, ATHENA=HIGH, HADES=HIGH.",
+            "case_id": "case-revision_after_challenge",
+            "disagreement_id": "disagreement-risk_rating-0",
+            "evidence_ids": [
+              "ev-a"
+            ],
+            "materiality": "BLOCKING",
+            "positions_by_seat": {
+              "APOLLO": "position-apollo-1-7",
+              "ARES": "position-ares-1-3",
+              "ATHENA": "position-athena-1-1",
+              "HADES": "position-hades-1-5"
+            },
+            "status": "OPEN",
+            "subject_ids": [
+              "position-apollo-1-7",
+              "position-ares-1-3",
+              "position-athena-1-1",
+              "position-hades-1-5"
+            ],
+            "type": "RISK_RATING",
+            "unresolved": true
+          }
+        ],
+        "event_id": "offline-event-29",
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 29,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "DISAGREEMENTS_REEVALUATED"
+      }
+    },
+    {
+      "event_id": "offline-event-30",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "AUDIT_STARTED",
+      "protocol_phase": "APOLLO_AUDIT",
+      "sequence": 30,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [],
+      "status_metadata": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-30",
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 30,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "AUDIT_STARTED"
+      }
+    },
+    {
+      "event_id": "offline-event-31",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "AUDIT_FINDING_RECORDED",
+      "protocol_phase": "APOLLO_AUDIT",
+      "sequence": 31,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "audit-1"
+      ],
+      "status_metadata": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-31",
+        "finding": {
+          "case_id": "case-revision_after_challenge",
+          "check_id": "evidence_package_integrity",
+          "detail": "Sealed evidence package hash and immutability checks passed.",
+          "evidence_ids": [],
+          "finding_id": "audit-1",
+          "remediation": null,
+          "source": "DETERMINISTIC",
+          "status": "VERIFIED",
+          "subject_ids": []
+        },
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 31,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "AUDIT_FINDING_RECORDED"
+      }
+    },
+    {
+      "event_id": "offline-event-32",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "AUDIT_FINDING_RECORDED",
+      "protocol_phase": "APOLLO_AUDIT",
+      "sequence": 32,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "audit-2"
+      ],
+      "status_metadata": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-32",
+        "finding": {
+          "case_id": "case-revision_after_challenge",
+          "check_id": "citation_integrity",
+          "detail": "All accepted position, claim, finding, control, and request citations resolve in the sealed package.",
+          "evidence_ids": [
+            "ev-a",
+            "ev-a",
+            "ev-a",
+            "ev-a"
+          ],
+          "finding_id": "audit-2",
+          "remediation": null,
+          "source": "DETERMINISTIC",
+          "status": "VERIFIED",
+          "subject_ids": [
+            "position-apollo-1-7",
+            "position-ares-1-3",
+            "position-athena-1-1",
+            "position-hades-1-5"
+          ]
+        },
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 32,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "AUDIT_FINDING_RECORDED"
+      }
+    },
+    {
+      "event_id": "offline-event-33",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "AUDIT_FINDING_RECORDED",
+      "protocol_phase": "APOLLO_AUDIT",
+      "sequence": 33,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "audit-3"
+      ],
+      "status_metadata": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-33",
+        "finding": {
+          "case_id": "case-revision_after_challenge",
+          "check_id": "round1_blind_dispatch",
+          "detail": "Round 1 dispatch records exactly the four eligible seats and excludes Zeus.",
+          "evidence_ids": [],
+          "finding_id": "audit-3",
+          "remediation": null,
+          "source": "DETERMINISTIC",
+          "status": "VERIFIED",
+          "subject_ids": []
+        },
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 33,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "AUDIT_FINDING_RECORDED"
+      }
+    },
+    {
+      "event_id": "offline-event-34",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "AUDIT_FINDING_RECORDED",
+      "protocol_phase": "APOLLO_AUDIT",
+      "sequence": 34,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "audit-4"
+      ],
+      "status_metadata": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-34",
+        "finding": {
+          "case_id": "case-revision_after_challenge",
+          "check_id": "revision_lineage_integrity",
+          "detail": "Every revision preserves old position, new position, challenge, and response references.",
+          "evidence_ids": [],
+          "finding_id": "audit-4",
+          "remediation": null,
+          "source": "DETERMINISTIC",
+          "status": "VERIFIED",
+          "subject_ids": []
+        },
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 34,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "AUDIT_FINDING_RECORDED"
+      }
+    },
+    {
+      "event_id": "offline-event-35",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "AUDIT_FINDING_RECORDED",
+      "protocol_phase": "APOLLO_AUDIT",
+      "sequence": 35,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "audit-5"
+      ],
+      "status_metadata": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-35",
+        "finding": {
+          "case_id": "case-revision_after_challenge",
+          "check_id": "protocol_budget_integrity",
+          "detail": "Challenge, revision, and challenge-round counts remain within policy bounds.",
+          "evidence_ids": [],
+          "finding_id": "audit-5",
+          "remediation": null,
+          "source": "DETERMINISTIC",
+          "status": "VERIFIED",
+          "subject_ids": [
+            "challenge-1",
+            "challenge-2"
+          ]
+        },
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 35,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "AUDIT_FINDING_RECORDED"
+      }
+    },
+    {
+      "event_id": "offline-event-36",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "AUDIT_FINDING_RECORDED",
+      "protocol_phase": "APOLLO_AUDIT",
+      "sequence": 36,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "audit-6"
+      ],
+      "status_metadata": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-36",
+        "finding": {
+          "case_id": "case-revision_after_challenge",
+          "check_id": "seat_authority_boundaries",
+          "detail": "No accepted position claims human or regulatory decision authority.",
+          "evidence_ids": [],
+          "finding_id": "audit-6",
+          "remediation": null,
+          "source": "DETERMINISTIC",
+          "status": "VERIFIED",
+          "subject_ids": []
+        },
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 36,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "AUDIT_FINDING_RECORDED"
+      }
+    },
+    {
+      "event_id": "offline-event-37",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "AUDIT_FINDING_RECORDED",
+      "protocol_phase": "APOLLO_AUDIT",
+      "sequence": 37,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "audit-7"
+      ],
+      "status_metadata": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-37",
+        "finding": {
+          "case_id": "case-revision_after_challenge",
+          "check_id": "seat_participation_truth",
+          "detail": "All eligible Round 1 seats completed independent positions.",
+          "evidence_ids": [],
+          "finding_id": "audit-7",
+          "remediation": null,
+          "source": "DETERMINISTIC",
+          "status": "VERIFIED",
+          "subject_ids": []
+        },
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 37,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "AUDIT_FINDING_RECORDED"
+      }
+    },
+    {
+      "event_id": "offline-event-38",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "AUDIT_FINDING_RECORDED",
+      "protocol_phase": "APOLLO_AUDIT",
+      "sequence": 38,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "audit-8"
+      ],
+      "status_metadata": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-38",
+        "finding": {
+          "case_id": "case-revision_after_challenge",
+          "check_id": "evidence_request_boundary",
+          "detail": "No retrieval request was silently applied to the sealed package.",
+          "evidence_ids": [],
+          "finding_id": "audit-8",
+          "remediation": null,
+          "source": "DETERMINISTIC",
+          "status": "VERIFIED",
+          "subject_ids": []
+        },
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 38,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "AUDIT_FINDING_RECORDED"
+      }
+    },
+    {
+      "event_id": "offline-event-39",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "AUDIT_FINDING_RECORDED",
+      "protocol_phase": "APOLLO_AUDIT",
+      "sequence": 39,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "audit-9"
+      ],
+      "status_metadata": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-39",
+        "finding": {
+          "case_id": "case-revision_after_challenge",
+          "check_id": "unresolved_disagreement_preservation",
+          "detail": "1 material disagreement(s) remain unresolved and must reach synthesis.",
+          "evidence_ids": [
+            "ev-a"
+          ],
+          "finding_id": "audit-9",
+          "remediation": "Preserve each disagreement and its minority positions in the synthesis.",
+          "source": "DETERMINISTIC",
+          "status": "WARNING",
+          "subject_ids": [
+            "disagreement-risk_rating-0"
+          ]
+        },
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 39,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "AUDIT_FINDING_RECORDED"
+      }
+    },
+    {
+      "event_id": "offline-event-40",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "AUDIT_FINDING_RECORDED",
+      "protocol_phase": "APOLLO_AUDIT",
+      "sequence": 40,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [
+        "audit-10"
+      ],
+      "status_metadata": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-40",
+        "finding": {
+          "case_id": "case-revision_after_challenge",
+          "check_id": "round1_execution_truth",
+          "detail": "All accepted positions carry successful independent execution truth.",
+          "evidence_ids": [
+            "ev-a",
+            "ev-a",
+            "ev-a",
+            "ev-a"
+          ],
+          "finding_id": "audit-10",
+          "remediation": null,
+          "source": "DETERMINISTIC",
+          "status": "VERIFIED",
+          "subject_ids": [
+            "position-apollo-1-7",
+            "position-ares-1-3",
+            "position-athena-1-1",
+            "position-hades-1-5"
+          ]
+        },
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 40,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "AUDIT_FINDING_RECORDED"
+      }
+    },
+    {
+      "event_id": "offline-event-41",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "AUDIT_COMPLETED",
+      "protocol_phase": "APOLLO_AUDIT",
+      "sequence": 41,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [],
+      "status_metadata": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-41",
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 41,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "AUDIT_COMPLETED"
+      }
+    },
+    {
+      "event_id": "offline-event-42",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "POST_CHALLENGE_AUDIT_COMPLETED",
+      "protocol_phase": "CHALLENGE_ROUND",
+      "sequence": 42,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [],
+      "status_metadata": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "APOLLO",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-42",
+        "protocol_version": "2.0.0-alpha.1",
+        "sequence": 42,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "POST_CHALLENGE_AUDIT_COMPLETED"
+      }
+    },
+    {
+      "event_id": "offline-event-43",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "ZEUS_READINESS_EVALUATED",
+      "protocol_phase": "ZEUS_READINESS",
+      "sequence": 43,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [],
+      "status_metadata": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-43",
+        "protocol_version": "2.0.0-alpha.1",
+        "ready": true,
+        "reason": "Protocol audit passed; Zeus synthesis is ready for a separate controlled phase and human decision remains pending.",
+        "sequence": 43,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "ZEUS_READINESS_EVALUATED"
+      }
+    },
+    {
+      "event_id": "offline-event-44",
+      "run_id": "swarm-phase5g-1791211595745-83cec8da-b9a5-419c-ac4d-4e26fa0e64a4",
+      "event_type": "ROUND_STOPPED",
+      "protocol_phase": "PROTOCOL",
+      "sequence": 44,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "related_object_ids": [],
+      "status_metadata": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge"
+      },
+      "payload": {
+        "actor": "SYSTEM",
+        "case_id": "case-revision_after_challenge",
+        "event_id": "offline-event-44",
+        "protocol_version": "2.0.0-alpha.1",
+        "reason": "Phase 5 adversarial round stops before Zeus synthesis; human decision remains pending.",
+        "sequence": 44,
+        "timestamp": "2026-01-01T00:00:00Z",
+        "type": "ROUND_STOPPED"
+      }
+    }
+  ],
+  "replay_metadata": {
+    "event_count": 44,
+    "reducer": "replaySwarmEvents",
+    "replayable": true,
+    "source": "persisted_artifact"
+  },
+  "security_attestation": {
+    "artifact_schema_validation": "PASS",
+    "event_ordering": "PASS",
+    "hidden_reasoning_scan": "PASS",
+    "request_ledger_reconciliation": "PASS",
+    "secret_scan": "PASS"
+  }
+}
